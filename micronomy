@@ -1,0 +1,258 @@
+#!/usr/bin/env perl6
+#
+# First shot at a CLI for Maconomy
+#
+
+use JSON::Tiny;
+use Cro::HTTP::Client;
+use Terminal::Readsecret;
+
+my %*SUB-MAIN-OPTS = :named-anywhere;
+my $config = "%*ENV<HOME>" ~ '/.micronomy';
+my $session = "$config/session";
+my @days = <Mån Tis Ons Tor Fre Lör Sön>;
+my $defaultServer = "https://b3iaccess.deltekenterprise.com";
+my $registration = "containers/v1/b3/timeregistration/data;any";
+
+sub error(Str $message) {
+    $*ERR.say: "ERROR: $message";
+    exit 1;
+}
+
+multi MAIN(
+    'login',
+    Str :u(:$user) is copy,
+    Str :p(:$pass) is copy,
+    Str :s(:$server) = $defaultServer,
+) {
+    $user //= prompt('Username: ');
+    $pass //= getsecret('Password: ');
+    my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
+
+    my $resp = await Cro::HTTP::Client.get(
+        $uri,
+        auth => {
+            username => $user,
+            password => $pass
+        },
+        headers => {
+            Maconomy-Authentication => 'X-Reconnect',
+        },
+    );
+
+    my @headers = $resp.headers;
+    my $token;
+    for @headers -> $header {
+        next if $header.name ne 'Maconomy-Reconnect';
+        $token = $header.value;
+        last;
+    }
+
+    mkdir $config;
+    spurt $session, $token;
+}
+
+multi MAIN(
+    'logout',
+    Str :s(:$server) = $defaultServer,
+) {
+    my $token = session;
+
+    my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
+    my $resp = await Cro::HTTP::Client.get(
+        $uri,
+        headers => {
+            Authorization => "X-Reconnect $token",
+            Maconomy-Authentication => "X-Log-Out",
+        },
+    );
+    unlink $session;
+}
+
+multi MAIN(
+    'get',
+    Str :s(:$server) = $defaultServer,
+    Str :w(:$week),
+    Str :f(:$file) is copy,
+    Bool :j(:$json),
+) {
+    my %week;
+    if $file {
+        output(from-json(slurp $file));
+    } else {
+        my $token = session;
+        my $date = week($week);
+        output(get($server, $token, $date), $json);
+    }
+}
+
+multi MAIN(
+    'set',
+    Str :s(:$server) = $defaultServer,
+    Str :w(:$week),
+    Int :r(:$row)!,
+    Int :d(:$day)!,
+    Str :h(:$hours)!,
+    Bool :j(:$json) = False,
+) {
+    my $token = session;
+    my $date = week($week);
+    my %content = get($server, $token, $date);
+    my $concurrency = %content<panes><table><records>[$row]<meta><concurrencyControl>;
+
+    my $uri = "$server/$registration/table/$row?card.datevar=$date";
+    my $resp = await Cro::HTTP::Client.post(
+        $uri,
+        headers => {
+            Authorization => "X-Reconnect $token",
+            Content-Type => "application/json",
+            Accept => "application/json",
+            Maconomy-Concurrency-Control => $concurrency,
+        },
+        body => '{"data":{"numberday' ~ $day ~ '": ' ~ $hours ~ '}}',
+    );
+
+    %content = await $resp.body;
+    error "failed to send data to $server [$resp.status]" unless $resp.status == 200;
+    output(%content, $json);
+}
+
+multi MAIN(
+    'approve',
+    Str :s(:$server) = $defaultServer,
+    Str :w(:$week),
+    Str :r(:$reason),
+    Bool :j(:$json) = False,
+) {
+    my $token = session;
+    my $date = week($week);
+    my %content = get($server, $token, $date);
+    my $concurrency = %content<panes><card><records>[0]<meta><concurrencyControl>;
+
+    #&card.employeenumbervar=$employee
+    my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
+    $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
+    my $resp = await Cro::HTTP::Client.post(
+        $uri,
+        headers => {
+            Authorization => "X-Reconnect $token",
+            Content-Type => "application/json",
+            Accept => "application/json",
+            Maconomy-Concurrency-Control => $concurrency,
+        },
+    );
+
+    %content = await $resp.body;
+    error "failed to send data to $server" unless $resp.status == 200;
+    output(%content, $json);
+}
+
+sub session() {
+    my $session = "$config/session";
+    error 'no session found' unless $session.IO.e;
+    return slurp $session;
+}
+
+sub week(Str $spec --> Str) {
+    unless $spec.defined {
+        # empty spec; return yesterday before noon and today after noon; ie. last week on Monday mornings
+        return DateTime.now.earlier(hours => 12).yyyy-mm-dd;
+    }
+
+    my $date;
+    given $spec {
+        # YYYY-WW or WW (with optional AB suffix)
+        when m:i/^ [
+                    $<year> = [\d**4] \D? $<week> = [\d**2] |
+                    $<week> = [\d**1..2]
+                ] $<suffix> = [<[ab]>?] $/ {
+            my $year = $<year> // Date.today.year;
+            my $monday = Date.new("$year-01-01").truncated-to('week');
+            my $target = $<suffix>.lc eq "b" ?? $monday.later(days => 6) !! $monday;
+            my $firstweek = $monday.week-number == 1 ?? 1 !! 0;
+            my $diff = $<week> - $firstweek;
+            $date = $target.later(week => $diff).gist;
+        }
+        # ±N (with optional AB suffix)
+        when m:i/^
+                $<diff> = [<[+-]> \d+]
+                $<suffix> = [<[ab]>?] $/ {
+            my $monday = Date.today.truncated-to('week');
+            my $target = $<suffix>.lc eq "b" ?? $monday.later(days => 6) !! $monday;
+            $date = $target.later(week => $<diff>).gist;
+        }
+        # YYYY-MM-DD
+        when /^ [
+            $<year> = [\d**4]
+            $<delimiter> = [\D?]
+            $<month> = [\d**2]
+            $<delimiter>
+            $<date> = [\d**2]
+        ] $/ {
+            $date = "$<year>-$<month>-$<date>";
+        }
+        # unknown format
+        default {
+            my $error = qq:to/END/;
+                Can't parse week '$spec'. Expected
+                    week - eg. '4', '04', '04b' or '4A'
+                    year-week - eg. '2020-04', '202004B', or '2020/04a'
+                    date - eg. '2020.01.26'
+                END
+            error $error.chomp;
+        }
+    }
+    return $date;
+}
+
+sub get(Str $server, Str $token, Str $date) {
+    my $uri = "$server/$registration?card.datevar=$date";
+    my $resp = await Cro::HTTP::Client.get(
+        $uri,
+        headers => {
+            Authorization => "X-Reconnect $token",
+        },
+    );
+    my %content = await $resp.body;
+    error "failed to read data from $server [$resp.status]" unless $resp.status == 200;
+    return %content;
+}
+
+sub output(%content, Bool $json = False) {
+    if $json {
+        say to-json %content;
+        return;
+    }
+
+    my %week = %content<panes>;
+    my $state = 'Öppen';
+    $state = 'Avlämnad' if %week<table><records>[0]<data><submitted>;
+    $state = 'Godkänd' if %week<card><records>[0]<data><approvedvar>;
+
+    printf("%s, vecka %d, %s\n",
+           %week<card><records>[0]<data><employeenamevar>,
+           %week<card><records>[0]<data><weeknumbervar>,
+           $state
+          );
+
+    printf '%43s', '';
+    for ^7 -> $day {
+        printf '%-7s', @days[$day]
+    }
+    say '';
+    printf '%42s', '';
+    for 1..7 -> $day {
+        printf '%-7s', substr(%week<card><records>[0]<data>{"dateday{$day}var"}, 5);
+    }
+    say '';
+    for ^%week<table><meta><rowCount> -> $row {
+        my $title = %week<table><records>[$row]<data><entrytext>;
+        my $len = chars $title;
+        $title ~= ' / ' ~ substr(%week<table><records>[$row]<data><jobnamevar>, 0, 38 - $len);
+        printf '%-42s', $title;
+        for 1..7 -> $day {
+            printf '%5.2f  ', %week<table><records>[$row]<data>{"numberday{$day}"};
+        }
+        say '';
+    }
+}
