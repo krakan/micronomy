@@ -18,6 +18,7 @@ RUN curl -LJO https://rakudostar.com/latest/star/source && \
     make && \
     make install
 
-RUN zef install JSON::Tiny Cro::HTTP::Client Terminal::Readsecret
+ENV PATH=$PATH:/rakudo/install/bin:/rakudo/install/share/perl6/site/bin
+RUN zef install JSON::Tiny Cro::HTTP::Client
+RUN zef install --force-test Terminal::Readsecret
 COPY micronomy /usr/local/bin/micronomy
-ENTRYPOINT /usr/local/bin/micronomy
