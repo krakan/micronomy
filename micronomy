@@ -239,14 +239,16 @@ sub output(%content, Bool $json = False) {
         return;
     }
 
-    my %week = %content<panes>;
+    my %card = %content<panes><card><records>[0]<data>;
+    my %table = %content<panes><table>;
+
     my $state = 'Öppen';
-    $state = 'Avlämnad' if %week<table><records>[0]<data><submitted>;
-    $state = 'Godkänd' if %week<card><records>[0]<data><approvedvar>;
+    $state = 'Avlämnad' if %table<records>[0]<data><submitted>;
+    $state = 'Godkänd' if %card<approvedvar>;
 
     printf("%s, vecka %d, %s\n",
-           %week<card><records>[0]<data><employeenamevar>,
-           %week<card><records>[0]<data><weeknumbervar>,
+           %card<employeenamevar>,
+           %card<weeknumbervar>,
            $state
           );
 
@@ -257,29 +259,29 @@ sub output(%content, Bool $json = False) {
     say '';
     printf '%42s', '';
     for 1..7 -> $day {
-        printf '%-7s', substr(%week<card><records>[0]<data>{"dateday{$day}var"}, 5);
+        printf '%-7s', substr(%card{"dateday{$day}var"}, 5);
     }
     say '';
-    for ^%week<table><meta><rowCount> -> $row {
-        printf '%-42s', substr(title($row, %content), 0, 40);
+    for ^%table<meta><rowCount> -> $row {
+        printf '%-42s', substr(title($row, %table), 0, 40);
         for 1..7 -> $day {
-            printf '%5.2f  ', %week<table><records>[$row]<data>{"numberday{$day}"};
+            printf '%5.2f  ', %table<records>[$row]<data>{"numberday{$day}"};
         }
         say '';
     }
 }
 
-sub title(Int $row, %content --> Str) {
-    my %week = %content<panes>;
-    my $title = %week<table><records>[$row]<data><entrytext>;
+sub title(Int $row, %table --> Str) {
+    my %row = %table<records>[$row]<data>;
+    my $title = %row<entrytext>;
     my $len = chars $title;
-    $title ~= ' / ' ~ %week<table><records>[$row]<data><jobnamevar>;
+    $title ~= ' / ' ~ %row<jobnamevar>;
 }
 
 sub parseRows(Str $part, %content) {
     my $match;
     for ^%content<panes><table><meta><rowCount> -> $row {
-        if title($row, %content) ~~ / $part / {
+        if title($row, %content<panes><table>) ~~ / $part / {
             error "found multiple matching rows for '$part'" if $match.defined;
             $match = $row;
         }
