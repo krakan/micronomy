@@ -73,7 +73,7 @@ multi MAIN(
     'get',
     Str :s(:$server) = $defaultServer,
     Str :w(:$week),
-    Str :f(:$file) is copy,
+    Str :f(:$file),
     Bool :j(:$json),
 ) {
     my %week;
@@ -90,14 +90,29 @@ multi MAIN(
     'set',
     Str :s(:$server) = $defaultServer,
     Str :w(:$week),
-    Int :r(:$row)!,
-    Int :d(:$day)!,
+    Str :r(:$row)! is copy,
+    Str :d(:$day)! is copy,
     Str :h(:$hours)!,
+    Str :f(:$file),
     Bool :j(:$json) = False,
 ) {
     my $token = session;
     my $date = week($week);
-    my %content = get($server, $token, $date);
+
+    my %content;
+    if $file {
+        %content = from-json(slurp $file);
+    } else {
+        %content = get($server, $token, $date);
+    }
+
+    if $row ~~ /\D/ {
+        $row = parseRows($row, %content);
+    }
+    if $day ~~ /\D/ {
+        $day = parseDays($day);
+    }
+
     my $concurrency = %content<panes><table><records>[$row]<meta><concurrencyControl>;
 
     my $uri = "$server/$registration/table/$row?card.datevar=$date";
@@ -246,13 +261,52 @@ sub output(%content, Bool $json = False) {
     }
     say '';
     for ^%week<table><meta><rowCount> -> $row {
-        my $title = %week<table><records>[$row]<data><entrytext>;
-        my $len = chars $title;
-        $title ~= ' / ' ~ substr(%week<table><records>[$row]<data><jobnamevar>, 0, 38 - $len);
-        printf '%-42s', $title;
+        printf '%-42s', substr(title($row, %content), 0, 40);
         for 1..7 -> $day {
             printf '%5.2f  ', %week<table><records>[$row]<data>{"numberday{$day}"};
         }
         say '';
+    }
+}
+
+sub title(Int $row, %content --> Str) {
+    my %week = %content<panes>;
+    my $title = %week<table><records>[$row]<data><entrytext>;
+    my $len = chars $title;
+    $title ~= ' / ' ~ %week<table><records>[$row]<data><jobnamevar>;
+}
+
+sub parseRows(Str $part, %content) {
+    my $match;
+    for ^%content<panes><table><meta><rowCount> -> $row {
+        if title($row, %content) ~~ / $part / {
+            error "found multiple matching rows for '$part'" if $match.defined;
+            $match = $row;
+        }
+    }
+    error "failed to find a row matching '$part'" unless $match.defined;;
+    return "$match";
+}
+
+sub parseDays(Str $day --> Str) {
+    # TODO: this is ugly
+    given $day.lc {
+        when substr('måndag',    0, $day.chars) {"1"}
+        when substr('monday',    0, $day.chars) {"1"}
+        when substr('tisdag',    0, $day.chars) {"2"}
+        when substr('tuesday',   0, $day.chars) {"2"}
+        when substr('onsdag',    0, $day.chars) {"3"}
+        when substr('wednesday', 0, $day.chars) {"3"}
+        when substr('torsdag',   0, $day.chars) {"4"}
+        when substr('thursday',  0, $day.chars) {"4"}
+        when substr('fredag',    0, $day.chars) {"5"}
+        when substr('friday',    0, $day.chars) {"5"}
+        when substr('lördag',    0, $day.chars) {"6"}
+        when substr('saturday',  0, $day.chars) {"6"}
+        when substr('söndag',    0, $day.chars) {"7"}
+        when substr('sunday',    0, $day.chars) {"7"}
+        default {
+            error "Failed to parse day '$day'"
+        }
     }
 }
