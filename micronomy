@@ -278,16 +278,28 @@ sub title(Int $row, %table --> Str) {
     $title ~= ' / ' ~ %row<jobnamevar>;
 }
 
-sub parseRows(Str $part, %content) {
-    my $match;
+sub parseRows(Str $part, %content --> Str) {
+    my @matches;
     for ^%content<panes><table><meta><rowCount> -> $row {
         if title($row, %content<panes><table>) ~~ / $part / {
-            error "found multiple matching rows for '$part'" if $match.defined;
-            $match = $row;
+            @matches.push($row);
         }
     }
-    error "failed to find a row matching '$part'" unless $match.defined;;
-    return "$match";
+    given @matches.elems {
+        when 0 {
+            error "failed to find a row matching '$part'";;
+        }
+        when 1 {
+            return "@matches[0]";
+        }
+        default {
+            my $error = "found multiple matching rows for '$part':";
+            for @matches -> $row {
+                $error ~= "\n    " ~ title($row, %content<panes><table>);
+            }
+            error $error;
+        }
+    }
 }
 
 sub parseDays(Str $day --> Str) {
@@ -308,7 +320,7 @@ sub parseDays(Str $day --> Str) {
         when substr('söndag',    0, $day.chars) {"7"}
         when substr('sunday',    0, $day.chars) {"7"}
         default {
-            error "Failed to parse day '$day'"
+            error "Failed to parse week day '$day'"
         }
     }
 }
