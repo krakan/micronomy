@@ -10,7 +10,9 @@ use Terminal::Readsecret;
 my %*SUB-MAIN-OPTS = :named-anywhere;
 my $config = "%*ENV<HOME>" ~ '/.micronomy';
 my $session = "$config/session";
-my @days = <Mån Tis Ons Tor Fre Lör Sön>;
+my %days;
+%days<sv> = <Måndag Tisdag Onsdag Torsdag Fredag Lördag Söndag>;
+%days<en> = <Monday Tuesday Wednesday Thursday Friday Saturday Sunday>;
 my $defaultServer = "https://b3iaccess.deltekenterprise.com";
 my $registration = "containers/v1/b3/timeregistration/data;any";
 
@@ -254,7 +256,7 @@ sub output(%content, Bool $json = False) {
 
     printf '%43s', '';
     for ^7 -> $day {
-        printf '%-7s', @days[$day]
+        printf '%-7s', substr(%days<sv>[$day], 0, 3)
     }
     say '';
     printf '%42s', '';
@@ -302,25 +304,22 @@ sub parseRows(Str $part, %content --> Str) {
     }
 }
 
-sub parseDays(Str $day --> Str) {
-    # TODO: this is ugly
-    given $day.lc {
-        when substr('måndag',    0, $day.chars) {"1"}
-        when substr('monday',    0, $day.chars) {"1"}
-        when substr('tisdag',    0, $day.chars) {"2"}
-        when substr('tuesday',   0, $day.chars) {"2"}
-        when substr('onsdag',    0, $day.chars) {"3"}
-        when substr('wednesday', 0, $day.chars) {"3"}
-        when substr('torsdag',   0, $day.chars) {"4"}
-        when substr('thursday',  0, $day.chars) {"4"}
-        when substr('fredag',    0, $day.chars) {"5"}
-        when substr('friday',    0, $day.chars) {"5"}
-        when substr('lördag',    0, $day.chars) {"6"}
-        when substr('saturday',  0, $day.chars) {"6"}
-        when substr('söndag',    0, $day.chars) {"7"}
-        when substr('sunday',    0, $day.chars) {"7"}
-        default {
-            error "Failed to parse week day '$day'"
+sub parseDays(Str $partial --> Str) {
+    my (%daynumbers, $i);
+    for %days.keys -> $lang {
+        $i = 1;
+        for @(%days{$lang}) -> $day {
+            %daynumbers{$day.lc} = $i++;
         }
     }
+
+    my $daynumber = 0;
+    for %daynumbers.keys -> $day {
+        if $partial.lc eq substr($day, 0, $partial.chars) {
+            error "Week day '$partial' is ambivalent" if $daynumber and  $daynumber != %daynumbers{$day};
+            $daynumber = "%daynumbers{$day}";
+        }
+    }
+    error "Failed to parse week day '$partial'" unless $daynumber;
+    return $daynumber;
 }
