@@ -61,4 +61,26 @@ class Micronomy {
             redirect "/login?username=$username&reason=$status", :see-other;
         }
     }
+
+    method logout(:$username, :$token) {
+        my $status;
+        if $token {
+            my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
+            my $resp = await Cro::HTTP::Client.get(
+                $uri,
+                headers => {
+                    Authorization => "X-Reconnect $token",
+                    Maconomy-Authentication => "X-Log-Out",
+                },
+            );
+
+            CATCH {
+                when X::Cro::HTTP::Error {
+                    # ignore errors
+                }
+            }
+        }
+        set-cookie "sessionToken", "";
+        redirect "/login?username=$username&reason=Logged%20out", :see-other;
+    }
 }

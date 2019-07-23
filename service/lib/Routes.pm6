@@ -18,5 +18,10 @@ sub routes(Micronomy $micronomy) is export {
                 $micronomy.login(username => $username, password => $password)
             }
         }
+        post -> 'logout', :$sessionToken is cookie = '' {
+            request-body -> (:$username = '') {
+                $micronomy.logout(username => $username, token => $sessionToken)
+            }
+        }
     }
 }
