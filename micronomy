@@ -95,19 +95,12 @@ multi MAIN(
     Str :r(:$row)! is copy,
     Str :d(:$day)! is copy,
     Str :h(:$hours)!,
-    Str :f(:$file),
     Bool :j(:$json) = False,
 ) {
     my $token = session;
     my $date = week($week);
 
-    my %content;
-    if $file {
-        %content = from-json(slurp $file);
-    } else {
-        %content = get($server, $token, $date);
-    }
-
+    my %content = get($server, $token, $date);
     if $row ~~ /\D/ {
         $row = parseRows($row, %content);
     }
@@ -146,7 +139,6 @@ multi MAIN(
     my %content = get($server, $token, $date);
     my $concurrency = %content<panes><card><records>[0]<meta><concurrencyControl>;
 
-    #&card.employeenumbervar=$employee
     my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
     $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
     my $resp = await Cro::HTTP::Client.post(
@@ -224,15 +216,16 @@ sub week(Str $spec --> Str) {
 
 sub get(Str $server, Str $token, Str $date) {
     my $uri = "$server/$registration?card.datevar=$date";
+
     my $resp = await Cro::HTTP::Client.get(
         $uri,
         headers => {
             Authorization => "X-Reconnect $token",
         },
     );
-    my %content = await $resp.body;
+
     error "failed to read data from $server [$resp.status]" unless $resp.status == 200;
-    return %content;
+    return await $resp.body;
 }
 
 sub output(%content, Bool $json = False) {
