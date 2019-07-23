@@ -98,7 +98,8 @@ iAccess server but that has not been tested.
     do
       for day in M Ti O To F
       do
-        micronomy set --week=+$week --day=$day -r=Semester -h=8
+        micronomy set --week=+$week --day=$day -r=Semester -h=8 ||
+        micronomy set --week=+${week}B --day=$day -r=Semester -h=8
       done
       micronomy --week=+$week submit
     done
