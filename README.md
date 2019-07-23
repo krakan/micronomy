@@ -10,7 +10,7 @@ in. In the latter case a working docker installation is required.
 
 ### Build and use the docker image
 
-    docker build -t micronomy .
+    docker build --pull -t micronomy .
     alias micronomy="docker run -u $(id -u) -it --rm -v $HOME:/work -e HOME=/work micronomy micronomy"
 
 ## Example workflow
