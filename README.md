@@ -22,7 +22,7 @@ in. In the latter case a working docker installation is required.
     micronomy set --row 0 --day 3 --hours 7
     micronomy set --row 0 --day 4 --hours 9
     micronomy set --row Semester --day fredag --hours 8
-    micronomy approve
+    micronomy submit
 
 ## Usage message
 
@@ -32,7 +32,7 @@ in. In the latter case a working docker installation is required.
       micronomy logout [-s|--server=<Str>]
       micronomy get [-s|--server=<Str>] [-w|--week=<Str>] [-f|--file=<Str>] [-j|--json]
       micronomy set -r|--row=<Str> -d|--day=<Str> -h|--hours=<Str> [-s|--server=<Str>] [-w|--week=<Str>] [-j|--json]
-      micronomy approve [-s|--server=<Str>] [-w|--week=<Str>] [-r|--reason=<Str>] [-j|--json]
+      micronomy submit [-s|--server=<Str>] [-w|--week=<Str>] [-r|--reason=<Str>] [-j|--json]
 
 ### Input formats
 
@@ -100,7 +100,7 @@ iAccess server but that has not been tested.
       do
         micronomy set --week=+$week --day=$day -r=Semester -h=8
       done
-      micronomy --week=+$week approve
+      micronomy --week=+$week submit
     done
 
 ## Sessions

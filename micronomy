@@ -128,7 +128,7 @@ multi MAIN(
 }
 
 multi MAIN(
-    'approve',
+    'submit',
     Str :s(:$server) = $defaultServer,
     Str :w(:$week),
     Str :r(:$reason),
