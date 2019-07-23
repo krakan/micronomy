@@ -1,7 +1,7 @@
 use Cro::HTTP::Router;
 use Micronomy;
 
-sub routes(Micronomy $micronomy) is export {
+sub routes() is export {
     route {
         get -> :$sessionToken is cookie {
             if $sessionToken {
@@ -11,16 +11,16 @@ sub routes(Micronomy $micronomy) is export {
             }
         }
         get -> 'login', :$username = '', :$reason = '' {
-            $micronomy.get-login(username => $username, reason => $reason)
+            Micronomy.get-login(username => $username, reason => $reason)
         }
         post -> 'login' {
             request-body -> (:$username = '', :$password = '') {
-                $micronomy.login(username => $username, password => $password)
+                Micronomy.login(username => $username, password => $password)
             }
         }
         post -> 'logout', :$sessionToken is cookie = '' {
             request-body -> (:$username = '') {
-                $micronomy.logout(username => $username, token => $sessionToken)
+                Micronomy.logout(username => $username, token => $sessionToken)
             }
         }
     }
