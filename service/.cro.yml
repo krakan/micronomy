@@ -1,0 +1,15 @@
+---
+id: micronomy
+endpoints: 
+  - 
+    host-env: MICRONOMY_HOST
+    name: HTTPS
+    port-env: MICRONOMY_PORT
+    id: https
+    protocol: https
+name: micronomy
+entrypoint: service.p6
+cro: 1
+env:  []
+links:  []
+...

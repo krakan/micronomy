@@ -1,0 +1,36 @@
+{
+  "provides": {
+    "Routes.pm6": "lib/Routes.pm6"
+  },
+  "tags": [
+    ""
+  ],
+  "authors": [
+    ""
+  ],
+  "license": "Write me!",
+  "build-depends": [
+    
+  ],
+  "version": "0.0.1",
+  "test-depends": [
+    
+  ],
+  "resources": [
+    "fake-tls/ca-crt.pem",
+    "fake-tls/server-crt.pem",
+    "fake-tls/server-key.pem"
+  ],
+  "auth": "Write me!",
+  "description": "Write me!",
+  "perl": "6.*",
+  "source-url": "Write me!",
+  "support": {
+    "source": "Write me!"
+  },
+  "meta-version": "0",
+  "depends": [
+    "Cro::HTTP"
+  ],
+  "name": "micronomy"
+}
