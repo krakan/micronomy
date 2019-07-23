@@ -47,7 +47,9 @@ class Micronomy {
 
             CATCH {
                 when X::Cro::HTTP::Error {
-                    $status = uri_encode_component(.message())
+                    my $error = (await .response.body)<errorMessage>;
+                    $error = $error ?? '[' ~ .response.status ~ '] ' ~ $error !! .message();
+                    $status = uri_encode_component($error);
                 }
             }
         }
