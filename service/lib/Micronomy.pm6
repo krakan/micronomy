@@ -1,6 +1,7 @@
 use Cro::HTTP::Router;
 use Cro::HTTP::Client;
 use URI::Encode;
+use JSON::Fast;
 
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
@@ -49,7 +50,7 @@ class Micronomy {
             </div>
             <form action='/set' method='POST'>
               <input type='hidden' name='concurrency' value='%meta<concurrencyControl>' />
-              <input type='hidden' name='week' value='%card<datevar>' />
+              <input type='hidden' name='date' value='%card<datevar>' />
         HTML
 
         for ^%table<meta><rowCount> -> $row {
@@ -120,7 +121,38 @@ class Micronomy {
         show($token, %content);
     }
 
-    method set(:$token, :%parameters) {...}
+    method set(:$token, :%parameters) {
+        my @responses;
+        for 0..* -> $row {
+            last unless %parameters{"concurrency-$row"};
+            my @changes;
+            for 1..7 -> $day  {
+                if %parameters{"hours-$row-$day"} ne %parameters{"hidden-$row-$day"} {
+                    @changes.push("\"numberday$day\": " ~ %parameters{"hours-$row-$day"});
+                }
+            }
+            if @changes {
+                my $uri = "$server/$registration/table/$row?card.datevar=%parameters<date>";
+                my $response = await Cro::HTTP::Client.post(
+                    $uri,
+                    headers => {
+                        Authorization => "X-Reconnect $token",
+                        Content-Type => "application/json",
+                        Accept => "application/json",
+                        Maconomy-Concurrency-Control => %parameters{"concurrency-$row"},
+                    },
+                    body => '{"data":{' ~ @changes.join(", ") ~ '}}',
+                );
+                @responses.push($response);
+            }
+        }
+
+        my %content;
+        for @responses -> $response {
+            %content = await $response.body;
+        }
+        show($token, %content);
+    }
 
     method submit(:$token, :$date, :$reason) {...}
 

@@ -22,7 +22,7 @@ sub routes() is export {
         }
 
         post -> 'set', :$sessionToken is cookie = '' {
-            request-body -> (:%parameters) {
+            request-body -> (*%parameters) {
                 Micronomy.set(parameters => %parameters, token => $sessionToken)
             }
         }
