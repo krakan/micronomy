@@ -48,7 +48,7 @@ class Micronomy {
 
         $response ~= qq:to/HTML/;
             </div>
-            <form action='/set' method='POST'>
+            <form action='/' method='POST'>
               <input type='hidden' name='concurrency' value='%meta<concurrencyControl>' />
               <input type='hidden' name='date' value='%card<datevar>' />
         HTML
