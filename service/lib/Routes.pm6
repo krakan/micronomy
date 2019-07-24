@@ -3,21 +3,36 @@ use Micronomy;
 
 sub routes() is export {
     route {
-        get -> :$sessionToken is cookie {
-            if $sessionToken {
-                content 'text/html', "<h1> micronomy $sessionToken </h1>";
-            } else {
-                redirect "/login?reason=Please%20log%20in", :see-other;
-            }
-        }
         get -> 'login', :$username = '', :$reason = '' {
             Micronomy.get-login(username => $username, reason => $reason)
         }
+
         post -> 'login' {
             request-body -> (:$username = '', :$password = '') {
                 Micronomy.login(username => $username, password => $password)
             }
         }
+
+        get -> :$sessionToken is cookie, :$date = '' {
+            if $sessionToken {
+                Micronomy.get(token => $sessionToken, date => $date)
+            } else {
+                redirect "/login?reason=Please%20log%20in", :see-other;
+            }
+        }
+
+        post -> 'set', :$sessionToken is cookie = '' {
+            request-body -> (:%parameters) {
+                Micronomy.set(parameters => %parameters, token => $sessionToken)
+            }
+        }
+
+        post -> 'submit', :$sessionToken is cookie = '' {
+            request-body -> (:$date = '', :$reason = '') {
+                Micronomy.submit(date => $date, reason => $reason, token => $sessionToken)
+            }
+        }
+
         post -> 'logout', :$sessionToken is cookie = '' {
             request-body -> (:$username = '') {
                 Micronomy.logout(username => $username, token => $sessionToken)
