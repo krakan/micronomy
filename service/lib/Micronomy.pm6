@@ -1,14 +1,131 @@
 use Cro::HTTP::Router;
 use Cro::HTTP::Client;
-use Cro::HTTP::Cookie;
 use URI::Encode;
 
 class Micronomy {
-
     my $server = "https://b3iaccess.deltekenterprise.com";
+    my $registration = "containers/v1/b3/timeregistration/data;any";
+    my @days = <Mån Tis Ons Tor Fre Lör Sön>;
+
+    sub show($token, %content) {
+        my %card = %content<panes><card><records>[0]<data>;
+        my %meta = %content<panes><card><records>[0]<meta>;
+        my %table = %content<panes><table>;
+        my $state = 'Öppen';
+        $state = 'Avlämnad' if %table<records>[0]<data><submitted>;
+        $state = 'Godkänd' if %card<approvedvar>;
+
+        my $response = qq:to/HTML/;
+        <html>
+          <body>
+            <h1>micronomy @ B3</h1>
+            <h2>
+              %card<employeenamevar>,
+              vecka %card<weeknumbervar>,
+              $state
+            </h2>
+            <div class="days">
+        HTML
+
+        for @days -> $day {
+            $response ~= qq:to/HTML/;
+                  <div>{$day}</div>
+            HTML
+        }
+
+        $response ~= qq:to/HTML/;
+            </div>
+            <div class="dates">
+        HTML
+
+        for 1..7 -> $day {
+            my $shortDate = substr(%card{"dateday{$day}var"}, 5);
+            $response ~= qq:to/HTML/;
+                    <div>{$shortDate}</div>
+            HTML
+        }
+
+        $response ~= qq:to/HTML/;
+            </div>
+            <form action='/set' method='POST'>
+              <input type='hidden' name='concurrency' value='%meta<concurrencyControl>' />
+              <input type='hidden' name='week' value='%card<datevar>' />
+        HTML
+
+        for ^%table<meta><rowCount> -> $row {
+            my $title = title($row, %table);
+            $response ~= qq:to/HTML/;
+                  <div class='row'>
+                    <div class='title'>{$title}</div>
+                    <input type='hidden' name='concurrency-{$row}' value='%table<records>[$row]<meta><concurrencyControl>' />
+            HTML
+            for 1..7 -> $day {
+                $response ~= qq:to/HTML/;
+                        <input type='hidden' name='hidden-{$row}-{$day}' value='%table<records>[$row]<data>{"numberday{$day}"}' />
+                        <input class='hours' type='text' size='2' name='hours-{$row}-{$day}' value='%table<records>[$row]<data>{"numberday{$day}"}' />
+                HTML
+            }
+            $response ~= qq:to/HTML/;
+                  </div>
+            HTML
+        }
+
+        $response ~= qq:to/HTML/;
+              <input class='submit' type='submit' value='Spara' />
+            </form>
+          </body>
+        </html>
+        HTML
+
+        content 'text/html', $response;
+    }
+
+    sub title(Int $row, %table --> Str) {
+        my %row = %table<records>[$row]<data>;
+        my $title = %row<entrytext>;
+        my $len = chars $title;
+        $title ~= ' / ' ~ %row<jobnamevar>;
+    }
+
+    sub get($token, $date is copy) {
+        $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
+        my $uri = "$server/$registration?card.datevar=$date";
+
+        if $date ~~ / '.json' $/ {
+            # offline
+            $date = %*ENV<HOME> ~ "/micronomy/micronomy-$date" unless $date.IO.e;
+            return from-json slurp $date;
+        }
+
+        my $resp = await Cro::HTTP::Client.get(
+            $uri,
+            headers => {
+                Authorization => "X-Reconnect $token",
+            },
+        );
+
+        return await $resp.body;
+
+        #CATCH {
+        #    when X::Cro::HTTP::Error {
+        #        my $error = (await .response.body)<errorMessage>;
+        #        $error = $error ?? '[' ~ .response.status ~ '] ' ~ $error !! .message();
+        #        my $status = uri_encode_component($error);
+        #    }
+        #}
+    }
+
+    method get(:$token, :$date) {
+        my %content = get($token, $date);
+        show($token, %content);
+    }
+
+    method set(:$token, :%parameters) {...}
+
+    method submit(:$token, :$date, :$reason) {...}
 
     method get-login(:$username, :$reason) {
-        my $message = $reason ?? "<div class='error'>{$reason}</div>\n" !! "";
+        my $message = $reason ?? "<div class='message'>{$reason}</div>\n" !! "";
 
         content 'text/html', $message ~ qq:to/HTML/;
           <form method="POST" action="/login">
