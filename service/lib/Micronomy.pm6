@@ -15,6 +15,8 @@ class Micronomy {
         my $state = 'Öppen';
         $state = 'Avlämnad' if %table<records>[0]<data><submitted>;
         $state = 'Godkänd' if %card<approvedvar>;
+        my $prev = '';
+        my $next = '';
 
         my $response = qq:to/HTML/;
         <html>
@@ -25,6 +27,10 @@ class Micronomy {
               vecka %card<weeknumbervar>,
               $state
             </h2>
+            <form action="/" method="POST">
+              <input type="submit" name="date" value="$prev">
+              <input type="submit" name="date" value="$next">
+            </form>
             <div class="days">
         HTML
 
