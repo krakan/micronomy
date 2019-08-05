@@ -121,4 +121,10 @@ was timed out.
 
 * complete Dockerfile - Done
 * write usage instructions - Done
-* start writing Cro service
+* start writing Cro service - Done
+* add widgets for next, previous and any week
+* fix multi row submit
+* add sums
+* add CSS
+* add documentation about Cro service
+* deploy Cro service
