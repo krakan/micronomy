@@ -30,7 +30,7 @@ class Micronomy {
               vecka %card<weeknumbervar>,
               $state
             </h2>
-            <form action="/" method="GET">
+            <form action="/" method="POST">
               <input type="submit" name="date" value="$prev">
               <input type="submit" name="date" value="$next">
             </form>
@@ -160,7 +160,9 @@ class Micronomy {
         for @responses -> $response {
             %content = await $response.body;
         }
-        show($token, %content);
+         %content ||= get($token, %parameters<date>);
+
+         show($token, %content);
     }
 
     method submit(:$token, :$date, :$reason) {...}
