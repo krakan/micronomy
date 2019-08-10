@@ -168,19 +168,11 @@ class Micronomy {
     method submit(:$token, :$date, :$reason) {...}
 
     method get-login(:$username, :$reason) {
-        my $message = $reason ?? "<div class='message'>{$reason}</div>\n" !! "";
-
-        content 'text/html', $message ~ qq:to/HTML/;
-          <form method="POST" action="/login">
-            <div>
-              Username: <input type="text" name="username" value="$username" />
-            </div>
-            <div>
-              Password: <input type="password" name="password" />
-            </div>
-            <input type="submit" value="Log In" />
-          </form>
-          HTML
+        my %data = (
+            username => $username,
+            reason => $reason,
+        );
+        template 'resources/templates/login.html.tmpl', %data;
     }
 
     method login(:$username, :$password) {
