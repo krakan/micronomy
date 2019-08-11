@@ -1,0 +1,43 @@
+<html>
+  <body>
+    <h1>micronomy @ B3</h1>
+    <h2>
+      <.card.employeenamevar>,
+        vecka <.card.weeknumbervar>,
+          <.state>
+    </h2>
+    <form action="/" method="POST">
+      <input type="submit" name="date" value="<.previous>">
+      <input type="submit" name="date" value="<.next>">
+    </form>
+
+    <div class="days">
+      <@days: $day>
+        <div><$day></div>
+      </@>
+    </div>
+
+    <div class="dates">
+      <@dates: $date>
+        <div><$date></div>
+      </@>
+    </div>
+
+    <form action='/' method='POST'>
+      <input type='hidden' name='concurrency' value='<.meta.concurrencyControl>' />
+      <input type='hidden' name='date' value='<.card.datevar>' />
+      <@rows>
+        <div class='row'>
+          <div class='title'><.title></div>
+          <input type='hidden' name='concurrency-<.number>' value='<.concurrency>' />
+          <@days: $day>
+            <input type='hidden' name='hidden-<.number>-<$day.number>' value='<$day.hours>' />
+            <input class='hours' type='text' size='2' name='hours-<.number>-<$day.number>' value='<$day.hours>' />
+          </@>
+        </div>
+      </@>
+      <input class='submit' type='submit' value='Spara' />
+    </form>
+
+  </body>
+</html>

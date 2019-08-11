@@ -13,81 +13,52 @@ class Micronomy {
         my %card = %content<panes><card><records>[0]<data>;
         my %meta = %content<panes><card><records>[0]<meta>;
         my %table = %content<panes><table>;
+
         my $state = 'Öppen';
         $state = 'Avlämnad' if %table<records>[0]<data><submitted>;
         $state = 'Godkänd' if %card<approvedvar>;
         my $periodStart = Date.new(%table<records>[0]<data><periodstart>);
-        my $prev = $periodStart.earlier(days => 1);
+        my $previous = $periodStart.earlier(days => 1);
         my $next = $periodStart.later(days => 7);
         $next = $next.truncated-to('month') if $periodStart.month != $next.month;
 
-        my $response = qq:to/HTML/;
-        <html>
-          <body>
-            <h1>micronomy @ B3</h1>
-            <h2>
-              %card<employeenamevar>,
-              vecka %card<weeknumbervar>,
-              $state
-            </h2>
-            <form action="/" method="POST">
-              <input type="submit" name="date" value="$prev">
-              <input type="submit" name="date" value="$next">
-            </form>
-            <div class="days">
-        HTML
-
-        for @days -> $day {
-            $response ~= qq:to/HTML/;
-                  <div>{$day}</div>
-            HTML
-        }
-
-        $response ~= qq:to/HTML/;
-            </div>
-            <div class="dates">
-        HTML
+        my %data = (
+            state => $state,
+            next => $next,
+            previous => $previous,
+            card => %card,
+            meta => %meta,
+            table => %table,
+            days => @days,
+        );
 
         for 1..7 -> $day {
             my $shortDate = substr(%card{"dateday{$day}var"}, 5);
-            $response ~= qq:to/HTML/;
-                    <div>{$shortDate}</div>
-            HTML
+            %data<dates>.push($shortDate);
         }
 
-        $response ~= qq:to/HTML/;
-            </div>
-            <form action='/' method='POST'>
-              <input type='hidden' name='concurrency' value='%meta<concurrencyControl>' />
-              <input type='hidden' name='date' value='%card<datevar>' />
-        HTML
-
+        my @rows;
         for ^%table<meta><rowCount> -> $row {
-            my $title = title($row, %table);
-            $response ~= qq:to/HTML/;
-                  <div class='row'>
-                    <div class='title'>{$title}</div>
-                    <input type='hidden' name='concurrency-{$row}' value='%table<records>[$row]<meta><concurrencyControl>' />
-            HTML
+            my %row = (
+                number => $row,
+                title => title($row, %table),
+                concurrency => %table<records>[$row]<meta><concurrencyControl>,
+            );
+            my @days;
             for 1..7 -> $day {
-                $response ~= qq:to/HTML/;
-                        <input type='hidden' name='hidden-{$row}-{$day}' value='%table<records>[$row]<data>{"numberday{$day}"}' />
-                        <input class='hours' type='text' size='2' name='hours-{$row}-{$day}' value='%table<records>[$row]<data>{"numberday{$day}"}' />
-                HTML
+                @days.push(
+                    {
+                        number => $day,
+                        hours => %table<records>[$row]<data>{"numberday{$day}"},
+                    }
+                );
             }
-            $response ~= qq:to/HTML/;
-                  </div>
-            HTML
+            %row<days> = @days;
+            @rows.push(%row);
         }
+        %data<rows> = @rows;
 
-        $response ~= qq:to/HTML/;
-              <input class='submit' type='submit' value='Spara' />
-            </form>
-          </body>
-        </html>
-        HTML
-
-        content 'text/html', $response;
+        template 'resources/templates/timesheet.html.tmpl', %data;
     }
 
     sub title(Int $row, %table --> Str) {
