@@ -123,7 +123,8 @@ was timed out.
 * write usage instructions - Done
 * start writing Cro service - Done
 * use Cro::WebApp::Template - Done
-* add widgets for next, previous and any week
+* add widgets for next and previous week - Done
+* add widget for any week
 * fix multi row submit
 * add sums
 * add CSS
