@@ -22,7 +22,15 @@ class Micronomy {
         my $next = $periodStart.later(days => 7);
         $next = $next.truncated-to('month') if $periodStart.month != $next.month;
 
+        my $week = %card<weeknumbervar>;
+        if $periodStart.day-of-week != 1 {
+            $week ~= 'B';
+        } elsif $periodStart.month != $periodStart.later(days => 6).month {
+            $week ~= 'A';
+        }
+
         my %data = (
+            week => $week,
             state => $state,
             next => $next,
             previous => $previous,
@@ -102,7 +110,7 @@ class Micronomy {
     }
 
     method set(:$token, :%parameters) {
-        my @responses;
+        my %content;
         for 0..* -> $row {
             last unless %parameters{"concurrency-$row"};
             my @changes;
@@ -112,6 +120,7 @@ class Micronomy {
                 }
             }
             if @changes {
+                my $concurrency = %parameters{"concurrency-$row"};
                 my $uri = "$server/$registration/table/$row?card.datevar=%parameters<date>";
                 my $response = await Cro::HTTP::Client.post(
                     $uri,
@@ -119,21 +128,16 @@ class Micronomy {
                         Authorization => "X-Reconnect $token",
                         Content-Type => "application/json",
                         Accept => "application/json",
-                        Maconomy-Concurrency-Control => %parameters{"concurrency-$row"},
+                        Maconomy-Concurrency-Control => $concurrency,
                     },
                     body => '{"data":{' ~ @changes.join(", ") ~ '}}',
                 );
-                @responses.push($response);
+                %content = await $response.body;
             }
         }
 
-        my %content;
-        for @responses -> $response {
-            %content = await $response.body;
-        }
-         %content ||= get($token, %parameters<date>);
-
-         show($token, %content);
+        %content ||= get($token, %parameters<date>);
+        show($token, %content);
     }
 
     method submit(:$token, :$date, :$reason) {...}
