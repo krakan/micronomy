@@ -7,8 +7,12 @@
           <.state>
     </h2>
     <form action="/" method="POST">
-      <input type="submit" name="date" value="<.previous>">
-      <input type="submit" name="date" value="<.next>">
+      <input type="hidden" name="date" value="<.previous>">
+      <input type="submit" name="submit" value="&lt;">
+    </form>
+    <form action="/" method="POST">
+      <input type="hidden" name="date" value="<.next>">
+      <input type="submit" name="submit" value="&gt;">
     </form>
 
     <div class="days">
@@ -34,10 +38,46 @@
             <input type='hidden' name='hidden-<.number>-<$day.number>' value='<$day.hours>' />
             <input class='hours' type='text' size='2' name='hours-<.number>-<$day.number>' value='<$day.hours>' />
           </@>
+          <.weektotal>
+          <.status>
         </div>
       </@>
       <input class='submit' type='submit' value='Spara' />
     </form>
+
+    <div class="total">
+      <div class='title'>Totalt</div>
+      <@total: $hours>
+        <!-- TODO: replace <input> with <div> + css -->
+        <input class='hours' disabled type='text' size='2' value='<$hours>' />
+      </@>
+      <.card.totalnumberofweekvar>
+    </div>
+
+    <div class="fixed">
+      <div class='title'>Förväntat</div>
+      <@fixed: $hours>
+        <input class='hours' disabled type='text' size='2' value='<$hours>' />
+      </@>
+      <.card.fixednumberweekvar>
+    </div>
+
+    <div class="overtime">
+      <div class='title'>Saldo</div>
+      <@overtime: $hours>
+        <input class='hours' disabled type='text' size='2' value='<$hours>' />
+      </@>
+      <.card.overtimenumberweekvar>
+    </div>
+
+    <div class="invoiceable">
+      <div class='title'>Fakturerbart</div>
+      <@invoiceable: $hours>
+        <input class='hours' disabled type='text' size='2' value='<$hours>' />
+      </@>
+      <.card.invoiceabletimedayweekvar>
+    </div>
+
 
   </body>
 </html>

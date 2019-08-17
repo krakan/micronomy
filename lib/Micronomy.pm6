@@ -43,14 +43,22 @@ class Micronomy {
         for 1..7 -> $day {
             my $shortDate = substr(%card{"dateday{$day}var"}, 5);
             %data<dates>.push($shortDate);
+            %data<total>.push(%card{"totalnumberday{$day}var"});
+            %data<fixed>.push(%card{"fixednumberday{$day}var"});
+            %data<overtime>.push(%card{"overtimenumberday{$day}var"});
+            %data<invoiceable>.push(%card{"invoiceabletimeday{$day}var"});
         }
 
         my @rows;
         for ^%table<meta><rowCount> -> $row {
+            my $status = %table<records>[$row]<data><approvalstatus>;
+            $status = "" if $status eq "nil";
             my %row = (
                 number => $row,
                 title => title($row, %table),
                 concurrency => %table<records>[$row]<meta><concurrencyControl>,
+                weektotal => %table<records>[$row]<data><weektotal>,
+                status => $status,
             );
             my @days;
             for 1..7 -> $day {

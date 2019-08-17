@@ -20,11 +20,11 @@ either ...
 * add A and B suffixes to semi weeks - Done
 * fix multi row save - Donish
 * interpret empty hours as zero - Done
+* add sums - Done
 * write Dockerfile
 * write documentation
 * add button for any week
 * implement submit button
-* add sums
 * add CSS
 * add documentation about Cro service
 * add error handling
