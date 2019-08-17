@@ -19,9 +19,9 @@ either ...
 * add buttons for next and previous week - Done
 * add A and B suffixes to semi weeks - Done
 * fix multi row save - Donish
+* interpret empty hours as zero - Done
 * write Dockerfile
 * write documentation
-* interpret empty hours as zero
 * add button for any week
 * implement submit button
 * add sums

@@ -116,7 +116,7 @@ class Micronomy {
             my @changes;
             for 1..7 -> $day  {
                 if %parameters{"hours-$row-$day"} ne %parameters{"hidden-$row-$day"} {
-                    @changes.push("\"numberday$day\": " ~ %parameters{"hours-$row-$day"});
+                    @changes.push("\"numberday$day\": " ~ (%parameters{"hours-$row-$day"} || 0));
                 }
             }
             if @changes {
