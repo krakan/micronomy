@@ -28,8 +28,8 @@ sub routes() is export {
         }
 
         post -> 'submit', :$sessionToken is cookie = '' {
-            request-body -> (:$date = '', :$reason = '') {
-                Micronomy.submit(date => $date, reason => $reason, token => $sessionToken)
+            request-body -> (:$date = '', :$reason = '', :$concurrency = '') {
+                Micronomy.submit(date => $date, reason => $reason, token => $sessionToken, concurrency => $concurrency)
             }
         }
 

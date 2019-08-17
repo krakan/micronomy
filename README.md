@@ -21,10 +21,10 @@ either ...
 * fix multi row save - Donish
 * interpret empty hours as zero - Done
 * add sums - Done
+* implement submit button - Done
 * write Dockerfile
 * write documentation
 * add button for any week
-* implement submit button
 * add CSS
 * add documentation about Cro service
 * add error handling

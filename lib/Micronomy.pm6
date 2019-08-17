@@ -148,7 +148,22 @@ class Micronomy {
         show($token, %content);
     }
 
-    method submit(:$token, :$date, :$reason) {...}
+    method submit(:$token, :$date, :$reason, :$concurrency) {
+        my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
+        $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
+        my $resp = await Cro::HTTP::Client.post(
+            $uri,
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Content-Type => "application/json",
+                Accept => "application/json",
+                Maconomy-Concurrency-Control => $concurrency,
+            },
+        );
+
+        my %content = await $resp.body;
+        show($token, %content);
+    }
 
     method get-login(:$username, :$reason) {
         my %data = (

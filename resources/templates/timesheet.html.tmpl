@@ -27,57 +27,62 @@
       </@>
     </div>
 
-    <form action='/' method='POST'>
-      <input type='hidden' name='concurrency' value='<.meta.concurrencyControl>' />
-      <input type='hidden' name='date' value='<.card.datevar>' />
+    <form action="/" method="POST">
+      <input type="hidden" name="concurrency" value="<.meta.concurrencyControl>" />
+      <input type="hidden" name="date" value="<.card.datevar>" />
       <@rows>
-        <div class='row'>
-          <div class='title'><.title></div>
-          <input type='hidden' name='concurrency-<.number>' value='<.concurrency>' />
+        <div class="row">
+          <div class="title"><.title></div>
+          <input type="hidden" name="concurrency-<.number>" value="<.concurrency>" />
           <@days: $day>
-            <input type='hidden' name='hidden-<.number>-<$day.number>' value='<$day.hours>' />
-            <input class='hours' type='text' size='2' name='hours-<.number>-<$day.number>' value='<$day.hours>' />
+            <input type="hidden" name="hidden-<.number>-<$day.number>" value="<$day.hours>" />
+            <input class="hours" type="text" size="2" name="hours-<.number>-<$day.number>" value="<$day.hours>" />
           </@>
           <.weektotal>
           <.status>
         </div>
       </@>
-      <input class='submit' type='submit' value='Spara' />
+      <input class="submit" type="submit" value="Spara" />
     </form>
 
     <div class="total">
-      <div class='title'>Totalt</div>
+      <div class="title">Totalt</div>
       <@total: $hours>
-        <!-- TODO: replace <input> with <div> + css -->
-        <input class='hours' disabled type='text' size='2' value='<$hours>' />
+        <!-- TODO: replace input with div + css -->
+        <input class="hours" disabled type="text" size="2" value="<$hours>" />
       </@>
       <.card.totalnumberofweekvar>
     </div>
 
     <div class="fixed">
-      <div class='title'>Förväntat</div>
+      <div class="title">Förväntat</div>
       <@fixed: $hours>
-        <input class='hours' disabled type='text' size='2' value='<$hours>' />
+        <input class="hours" disabled type="text" size="2" value="<$hours>" />
       </@>
       <.card.fixednumberweekvar>
     </div>
 
     <div class="overtime">
-      <div class='title'>Saldo</div>
+      <div class="title">Saldo</div>
       <@overtime: $hours>
-        <input class='hours' disabled type='text' size='2' value='<$hours>' />
+        <input class="hours" disabled type="text" size="2" value="<$hours>" />
       </@>
       <.card.overtimenumberweekvar>
     </div>
 
     <div class="invoiceable">
-      <div class='title'>Fakturerbart</div>
+      <div class="title">Fakturerbart</div>
       <@invoiceable: $hours>
-        <input class='hours' disabled type='text' size='2' value='<$hours>' />
+        <input class="hours" disabled type="text" size="2" value="<$hours>" />
       </@>
       <.card.invoiceabletimedayweekvar>
     </div>
 
-
+    <form action="/submit" method="POST">
+      <input type="hidden" name="concurrency" value="<.meta.concurrencyControl>" />
+      <input type="hidden" name="date" value="<.card.datevar>" />
+      Ändringsorsak: <input class="reason" type="text" name="reason" />
+      <input class="submit" type="submit" value="Avlämna" />
+    </form>
   </body>
 </html>
