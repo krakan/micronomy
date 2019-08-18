@@ -26,7 +26,6 @@ either ...
 * write documentation
 * add button for any week
 * add CSS
-* add documentation about Cro service
 * add error handling
 * deploy Cro service
 * add logout button

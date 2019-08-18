@@ -59,7 +59,20 @@ class Micronomy {
         my @rows;
         for ^%table<meta><rowCount> -> $row {
             my $status = %table<records>[$row]<data><approvalstatus>;
-            $status = "" if $status eq "nil";
+            given $status {
+                when "nil" {
+                    $status = "";
+                }
+                when "approved" {
+                    $status = "<span style='color:green;'>✔</span>";
+                }
+                when "denied" {
+                    $status = "<span style='color:red;'>✘</span>";
+                }
+                default {
+                    $status = "<span style='color:red;'>$status</span>";
+                }
+            }
             my %row = (
                 number => $row,
                 title => title($row, %table),
@@ -72,7 +85,7 @@ class Micronomy {
                 @days.push(
                     {
                         number => $day,
-                        hours => %table<records>[$row]<data>{"numberday{$day}"},
+                        hours => %table<records>[$row]<data>{"numberday{$day}"} || "",
                         disabled => @disabled[$day-1] // "",
                     }
                 );
