@@ -45,7 +45,7 @@ multi MAIN(
     my @headers = $resp.headers;
     my $token;
     for @headers -> $header {
-        next if $header.name ne 'Maconomy-Reconnect';
+        next if $header.name.lc ne 'maconomy-reconnect';
         $token = $header.value;
         last;
     }
