@@ -23,10 +23,17 @@ class Micronomy {
         $next = $next.truncated-to('month') if $periodStart.month != $next.month;
 
         my $week = %card<weeknumbervar>;
-        if $periodStart.day-of-week != 1 {
-            $week ~= 'B';
-        } elsif $periodStart.month != $periodStart.later(days => 6).month {
-            $week ~= 'A';
+        my @disabled;
+        my $sundayDate = $periodStart.truncated-to('week').later(days => 6).day;
+        if $sundayDate < 7 {
+            my $split = 7 - $sundayDate;
+            if $periodStart.day-of-week != 1 {
+                $week ~= 'B';
+                @disabled = "disabled" xx $split;
+            } else {
+                $week ~= 'A';
+                @disabled = flat("" xx $split, "disabled" xx 6);
+            }
         }
 
         my %data = (
@@ -66,6 +73,7 @@ class Micronomy {
                     {
                         number => $day,
                         hours => %table<records>[$row]<data>{"numberday{$day}"},
+                        disabled => @disabled[$day-1] // "",
                     }
                 );
             }
