@@ -187,10 +187,9 @@ class Micronomy {
                     Maconomy-Authentication => 'X-Reconnect',
                 },
             );
-
             my @headers = $resp.headers;
             for @headers -> $header {
-                next if $header.name ne 'Maconomy-Reconnect';
+                next if $header.name.lc ne 'maconomy-reconnect';
                 $token = $header.value;
                 last;
             }
