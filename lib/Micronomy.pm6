@@ -232,7 +232,7 @@ class Micronomy {
         }
     }
 
-    method logout(:$username, :$token) {
+    method logout(:$token) {
         my $status;
         if $token {
             my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
@@ -251,6 +251,6 @@ class Micronomy {
             }
         }
         set-cookie "sessionToken", "";
-        redirect "/login?username=$username&reason=Logged%20out", :see-other;
+        redirect "/login?reason=Logged%20out", :see-other;
     }
 }

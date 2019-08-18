@@ -22,12 +22,12 @@ either ...
 * interpret empty hours as zero - Done
 * add sums - Done
 * implement submit button - Done
+* add logout button - Done
 * write Dockerfile
 * write documentation
 * add button for any week
 * add CSS
 * add error handling
 * deploy Cro service
-* add logout button
 * add editing favorites
 * add adding lines
