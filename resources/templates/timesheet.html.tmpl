@@ -1,4 +1,8 @@
 <html>
+  <head>
+    <link rel="stylesheet" href="/styles/micronomy.css">
+    <title>micronomy @ B3</title>
+  </head>
   <body>
     <h1>micronomy @ B3</h1>
     <h2>
@@ -6,24 +10,20 @@
         vecka <.week>,
           <.state>
     </h2>
-    <form action="/" method="POST">
+    <div class="navigate">
+    <form class="arrows" action="/" method="POST">
       <input type="hidden" name="date" value="<.previous>">
       <input type="submit" name="submit" value="&lt;">
     </form>
-    <form action="/" method="POST">
+    <form class="arrows" action="/" method="POST">
       <input type="hidden" name="date" value="<.next>">
       <input type="submit" name="submit" value="&gt;">
     </form>
-
-    <div class="days">
-      <@days: $day>
-        <span><$day></span>
-      </@>
     </div>
 
     <div class="dates">
-      <@dates: $date>
-        <span><$date></span>
+      <@dates: $day>
+        <span class="box"><$day></span>
       </@>
     </div>
 
@@ -36,9 +36,9 @@
           <input type="hidden" name="concurrency-<.number>" value="<.concurrency>" />
           <@days: $day>
             <input type="hidden" name="hidden-<.number>-<$day.number>" value="<$day.hours>" />
-            <input class="hours" type="text" size="2" name="hours-<.number>-<$day.number>" value="<$day.hours>" <$day.disabled>/>
+            <span class="box"><input class="hours" type="text" name="hours-<.number>-<$day.number>" value="<$day.hours>" <$day.disabled>/></span>
           </@>
-          <.weektotal>
+          <span class="box"><.weektotal></span>
           <&HTML(.status)>
         </div>
       </@>
@@ -48,34 +48,33 @@
     <div class="total">
       <div class="title">Totalt</div>
       <@total: $hours>
-        <!-- TODO: replace input with div + css -->
-        <input class="hours" disabled type="text" size="2" value="<$hours>" />
+        <span class="box"><$hours></span>
       </@>
-      <.card.totalnumberofweekvar>
+      <span class="box"><.card.totalnumberofweekvar></span>
     </div>
 
     <div class="fixed">
       <div class="title">Förväntat</div>
       <@fixed: $hours>
-        <input class="hours" disabled type="text" size="2" value="<$hours>" />
+        <span class="box"><$hours></span>
       </@>
-      <.card.fixednumberweekvar>
+      <span class="box"><.card.fixednumberweekvar></span>
     </div>
 
     <div class="overtime">
       <div class="title">Saldo</div>
       <@overtime: $hours>
-        <input class="hours" disabled type="text" size="2" value="<$hours>" />
+        <span class="box"><$hours></span>
       </@>
-      <.card.overtimenumberweekvar>
+      <span class="box"><.card.overtimenumberweekvar></span>
     </div>
 
     <div class="invoiceable">
       <div class="title">Fakturerbart</div>
       <@invoiceable: $hours>
-        <input class="hours" disabled type="text" size="2" value="<$hours>" />
+        <span class="box"><$hours></span>
       </@>
-      <.card.invoiceabletimedayweekvar>
+      <span class="box"><.card.invoiceabletimedayweekvar></span>
     </div>
 
     <form action="/submit" method="POST">

@@ -38,5 +38,12 @@ sub routes() is export {
                 Micronomy.logout(username => $username, token => $sessionToken)
             }
         }
+
+        get -> 'styles', *@path {
+            static "resources/styles", @path;
+        }
+        get -> 'script', *@path {
+            static "resources/script", @path;
+        }
     }
 }

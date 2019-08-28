@@ -23,7 +23,7 @@ either ...
 * add sums - Done
 * implement submit button - Done
 * add logout button - Done
-* add CSS
+* add CSS - Done
 * write Dockerfile
 * write documentation
 * add button for any week

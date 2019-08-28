@@ -7,7 +7,7 @@ use JSON::Fast;
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
     my $registration = "containers/v1/b3/timeregistration/data;any";
-    my @days = <Mån Tis Ons Tor Fre Lör Sön>;
+    my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
 
     sub show($token, %content) {
         my %card = %content<panes><card><records>[0]<data>;
@@ -49,7 +49,7 @@ class Micronomy {
 
         for 1..7 -> $day {
             my $shortDate = substr(%card{"dateday{$day}var"}, 5);
-            %data<dates>.push($shortDate);
+            %data<dates>.push("@days[$day] $shortDate");
             %data<total>.push(%card{"totalnumberday{$day}var"});
             %data<fixed>.push(%card{"fixednumberday{$day}var"});
             %data<overtime>.push(%card{"overtimenumberday{$day}var"});
@@ -180,6 +180,7 @@ class Micronomy {
                 Accept => "application/json",
                 Maconomy-Concurrency-Control => $concurrency,
             },
+            body => "",
         );
 
         my %content = await $resp.body;
