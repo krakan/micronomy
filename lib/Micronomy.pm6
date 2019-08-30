@@ -104,6 +104,34 @@ class Micronomy {
         $title ~= ' / ' ~ %row<jobnamevar>;
     }
 
+    method get-month(:$token, :$date) {
+        my $current = Date.new($date).truncated-to('month');
+        my $number-of-days = $current.later(days => 31).truncated-to('month').earlier(days => 1).day;
+
+        my $firstDay = $current.day-of-week;
+        my $day-of-month = 0;
+        my (%month, %monthtable);
+
+        for ^6 -> $week {
+            my %content = get($token, $current.gist);
+            my %table = %content<panes><table>;
+            unless %month {
+                %month = %content;
+                %monthtable = %month<panes><table>;
+            }
+
+            for $firstDay .. 7 -> $day {
+                $day-of-month++;
+                for ^%table<meta><rowCount> -> $row {
+                    %monthtable<records>[$row]<data>{"numberday{$day-of-month}"} = %table<records>[$row]<data>{"numberday{$day}"},
+                }
+            }
+            $firstDay = 1;
+        }
+
+        show($token, %month, number-of-days => $number-of-days);
+    }
+
     sub get($token, $date is copy) {
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         my $uri = "$server/$registration?card.datevar=$date";
