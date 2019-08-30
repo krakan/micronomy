@@ -44,12 +44,11 @@ class Micronomy {
             card => %card,
             meta => %meta,
             table => %table,
-            days => @days,
         );
 
+        my $fmt = {sprintf "%s %02d-%02d", @days[.day-of-week], .month, .day};
         for 1..7 -> $day {
-            my $shortDate = substr(%card{"dateday{$day}var"}, 5);
-            %data<dates>.push("@days[$day] $shortDate");
+            %data<dates>.push(Date.new(%card{"dateday{$day}var"}, formatter => $fmt).Str);
             %data<total>.push(%card{"totalnumberday{$day}var"});
             %data<fixed>.push(%card{"fixednumberday{$day}var"});
             %data<overtime>.push(%card{"overtimenumberday{$day}var"});
@@ -80,9 +79,9 @@ class Micronomy {
                 weektotal => %table<records>[$row]<data><weektotal>,
                 status => $status,
             );
-            my @days;
+            my @rowdays;
             for 1..7 -> $day {
-                @days.push(
+                @rowdays.push(
                     {
                         number => $day,
                         hours => %table<records>[$row]<data>{"numberday{$day}"} || "",
@@ -90,7 +89,7 @@ class Micronomy {
                     }
                 );
             }
-            %row<days> = @days;
+            %row<days> = @rowdays;
             @rows.push(%row);
         }
         %data<rows> = @rows;
@@ -124,13 +123,11 @@ class Micronomy {
 
         return await $resp.body;
 
-        #CATCH {
-        #    when X::Cro::HTTP::Error {
-        #        my $error = (await .response.body)<errorMessage>;
-        #        $error = $error ?? '[' ~ .response.status ~ '] ' ~ $error !! .message();
-        #        my $status = uri_encode_component($error);
-        #    }
-        #}
+        CATCH {
+            when X::Cro::HTTP::Error {
+                Micronomy.get-login(reason => "Var vänlig och logga in!") if .response.status == 401;
+            }
+        }
     }
 
     method get(:$token, :$date) {
