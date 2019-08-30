@@ -169,8 +169,10 @@ class Micronomy {
             last unless %parameters{"concurrency-$row"};
             my @changes;
             for 1..7 -> $day  {
-                if %parameters{"hours-$row-$day"} ne %parameters{"hidden-$row-$day"} {
-                    @changes.push("\"numberday$day\": " ~ (%parameters{"hours-$row-$day"} || 0));
+                my $hours = %parameters{"hours-$row-$day"} || 0;
+                my $previous = %parameters{"hidden-$row-$day"} || 0;
+                if $hours ne $previous {
+                    @changes.push("\"numberday$day\": " ~ $hours);
                 }
             }
             if @changes {
