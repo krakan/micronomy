@@ -24,9 +24,10 @@ either ...
 * implement submit button - Done
 * add logout button - Done
 * add CSS - Done
-* write Dockerfile
+* write Dockerfile - Done
 * write documentation
 * add button for any week
+* add monthly report
 * add error handling
 * deploy Cro service
 * add editing favorites

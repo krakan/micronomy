@@ -10,10 +10,8 @@ RUN apt-get -y install \
             libssl1.0.2 \
             make
 
-RUN curl -LJO https://rakudostar.com/latest/star/source && \
-    tar zxf rakudo-star-????.??.tar.gz && \
-    mv rakudo-star-????.?? rakudo && \
-    cd rakudo && \
+RUN curl https://rakudostar.com/latest/star/source/ | tar zx && \
+    cd rakudo-star-????.?? && \
     perl Configure.pl --backend=moar --gen-moar && \
     make && \
     make install

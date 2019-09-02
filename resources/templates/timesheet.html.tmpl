@@ -10,7 +10,7 @@
         vecka <.week>,
           <.state>
     </h2>
-    <div class="navigate">
+
     <form class="arrows" action="/" method="POST">
       <input type="hidden" name="date" value="<.previous>">
       <input type="submit" name="submit" value="&lt;">
@@ -19,7 +19,6 @@
       <input type="hidden" name="date" value="<.next>">
       <input type="submit" name="submit" value="&gt;">
     </form>
-    </div>
 
     <div class="dates">
       <@dates: $day>
@@ -77,14 +76,14 @@
       <span class="box"><.card.invoiceabletimedayweekvar></span>
     </div>
 
-    <form action="/submit" method="POST">
+    <form class="submit" action="/submit" method="POST">
       <input type="hidden" name="concurrency" value="<.meta.concurrencyControl>" />
       <input type="hidden" name="date" value="<.card.datevar>" />
       Ändringsorsak: <input class="reason" type="text" name="reason" />
       <input class="submit" type="submit" value="Avlämna" />
     </form>
 
-    <form action="/logout" method="POST">
+    <form class="logout" action="/logout" method="POST">
       <input type="hidden" name="username" value="" />
       <input class="submit" type="submit" value="Logga ut" />
     </form>

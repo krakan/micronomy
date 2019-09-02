@@ -32,3 +32,7 @@ span.box {
     font-family: arial;
     padding: 0.1em;
 }
+
+form.submit, form.logout {
+    margin-top: 2em;
+}
