@@ -206,8 +206,8 @@ class Micronomy {
                 Content-Type => "application/json",
                 Accept => "application/json",
                 Maconomy-Concurrency-Control => $concurrency,
+                Content-Length => 0,
             },
-            body => "",
         );
 
         my %content = await $resp.body;
