@@ -6,14 +6,21 @@
   <body>
     <h1>micronomy @ B3</h1>
      <?.reason><div class='message'><.reason></div>
-     </?><form method="POST" action="/login">
+     </?><form name="login" method="POST" action="/login">
        <div>
-         Användarnamn: <input type="text" name="username" value="<.username>" />
+         Användarnamn: <input type="text" name="username" value="<.username>" autofocus="autofocus" />
        </div>
        <div>
          Lösenord: <input type="password" name="password" />
        </div>
        <input type="submit" value="Logga in" />
      </form>
+     <script>
+       <!--
+         if (document.login.username.value) {
+           document.login.password.focus();
+         }
+       -->
+     </script>
   </body>
 </html>
