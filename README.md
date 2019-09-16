@@ -25,10 +25,11 @@ either ...
 * add logout button - Done
 * add CSS - Done
 * write Dockerfile - Done
-* write documentation
+* add javascript - Done
 * add button for any week
-* add monthly report
 * add error handling
 * deploy Cro service
+* write documentation
 * add editing favorites
 * add adding lines
+* add monthly report

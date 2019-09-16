@@ -154,13 +154,14 @@ class Micronomy {
         CATCH {
             when X::Cro::HTTP::Error {
                 Micronomy.get-login(reason => "Var vänlig och logga in!") if .response.status == 401;
+                return {};
             }
         }
     }
 
     method get(:$token, :$date) {
-        my %content = get($token, $date);
-        show($token, %content);
+        my %content = get($token, $date) and
+            show($token, %content);
     }
 
     method set(:$token, :%parameters) {

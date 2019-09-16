@@ -2,6 +2,8 @@
   <head>
     <link rel="stylesheet" href="/styles/micronomy.css">
     <title>micronomy @ B3</title>
+    <script src='/script/jquery-3.4.1.slim.min.js'></script>
+    <script src='/script/nav.js'></script>
   </head>
   <body>
     <h1>micronomy @ B3</h1>
@@ -13,11 +15,11 @@
 
     <form class="arrows" action="/" method="POST">
       <input type="hidden" name="date" value="<.previous>">
-      <input type="submit" name="submit" value="&lt;">
+      <input id="prevWk" type="submit" name="submit" value="&lt;">
     </form>
     <form class="arrows" action="/" method="POST">
       <input type="hidden" name="date" value="<.next>">
-      <input type="submit" name="submit" value="&gt;">
+      <input id="nextWk" type="submit" name="submit" value="&gt;">
     </form>
 
     <div class="dates">
