@@ -1,10 +1,9 @@
-var bgcolor;
 function flash(target) {
-  bgcolor = target.style.background;
+  var bgcolor = target.style.background;
   target.style.background = 'green';
-  var t = setTimeout(function(){unflash(target)}, 100);
+  var t = setTimeout(function(){unflash(target, bgcolor)}, 100);
 }
-function unflash(target) {
+function unflash(target, bgcolor) {
   target.style.background = bgcolor;
 }
 
