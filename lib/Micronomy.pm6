@@ -142,17 +142,18 @@ class Micronomy {
             return from-json slurp $date;
         }
 
-        my $resp = await Cro::HTTP::Client.get(
+        my $request = Cro::HTTP::Client.get(
             $uri,
             headers => {
                 Authorization => "X-Reconnect $token",
             },
         );
-
-        return await $resp.body;
+        my $response = await $request;
+        return await $response.body;
 
         CATCH {
             when X::Cro::HTTP::Error {
+                warn "error: " ~ .response.status;
                 Micronomy.get-login(reason => "Var vänlig och logga in!") if .response.status == 401;
                 return {};
             }
