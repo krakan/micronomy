@@ -3,7 +3,7 @@
 # First shot at a CLI for Maconomy
 #
 
-use JSON::Tiny;
+use JSON::Fast;
 use Cro::HTTP::Client;
 use Terminal::Readsecret;
 
