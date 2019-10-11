@@ -236,6 +236,7 @@ class Micronomy {
                 },
                 headers => {
                     Maconomy-Authentication => 'X-Reconnect',
+                    Set-Cookie => 'sessionToken=',
                 },
             );
             my @headers = $resp.headers;
