@@ -207,18 +207,19 @@ class Micronomy {
     method submit(:$token, :$date, :$reason, :$concurrency) {
         my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
         $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
-        my $response = await Cro::HTTP::Client.post(
+        my $response = LWP::Simple.post(
             $uri,
-            headers => {
+            {
                 Authorization => "X-Reconnect $token",
                 Content-Type => "application/json",
                 Accept => "application/json",
                 Maconomy-Concurrency-Control => $concurrency,
                 Content-Length => 0,
             },
+            "",
         );
 
-        my %content = await $response.body;
+        my %content = $response ?? from-json($response) !! get($token, $date);
         show($token, %content);
     }
 
