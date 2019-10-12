@@ -3,6 +3,7 @@ use Cro::HTTP::Client;
 use Cro::WebApp::Template;
 use URI::Encode;
 use JSON::Fast;
+use LWP::Simple;
 
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
@@ -142,14 +143,18 @@ class Micronomy {
             return from-json slurp $date;
         }
 
-        my $request = Cro::HTTP::Client.get(
+        my $response = LWP::Simple.get(
             $uri,
-            headers => {
+            {
                 Authorization => "X-Reconnect $token",
             },
         );
-        my $response = await $request;
-        return await $response.body;
+        unless $response {
+            warn "error: failed to read data from $server";
+            Micronomy.get-login(reason => "Var vänlig och logga in!") if .response.status == 401;
+            return {};
+        }
+        return from-json($response);
 
         CATCH {
             when X::Cro::HTTP::Error {
@@ -180,17 +185,18 @@ class Micronomy {
             if @changes {
                 my $concurrency = %parameters{"concurrency-$row"};
                 my $uri = "$server/$registration/table/$row?card.datevar=%parameters<date>";
-                my $response = await Cro::HTTP::Client.post(
+
+                my $response = LWP::Simple.post(
                     $uri,
-                    headers => {
+                    {
                         Authorization => "X-Reconnect $token",
                         Content-Type => "application/json",
                         Accept => "application/json",
                         Maconomy-Concurrency-Control => $concurrency,
                     },
-                    body => '{"data":{' ~ @changes.join(", ") ~ '}}',
+                    '{"data":{' ~ @changes.join(", ") ~ '}}',
                 );
-                %content = await $response.body;
+                %content = from-json($response);
             }
         }
 
@@ -201,7 +207,7 @@ class Micronomy {
     method submit(:$token, :$date, :$reason, :$concurrency) {
         my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
         $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
-        my $resp = await Cro::HTTP::Client.post(
+        my $response = await Cro::HTTP::Client.post(
             $uri,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -212,7 +218,7 @@ class Micronomy {
             },
         );
 
-        my %content = await $resp.body;
+        my %content = await $response.body;
         show($token, %content);
     }
 
@@ -221,6 +227,7 @@ class Micronomy {
             username => $username,
             reason => $reason,
         );
+        set-cookie "sessionToken", "";
         template 'resources/templates/login.html.tmpl', %data;
     }
 
@@ -228,7 +235,7 @@ class Micronomy {
         my ($token, $status);
         if $username and $password {
             my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
-            my $resp = await Cro::HTTP::Client.get(
+            my $response = await Cro::HTTP::Client.get(
                 $uri,
                 auth => {
                     username => $username,
@@ -239,7 +246,7 @@ class Micronomy {
                     Set-Cookie => 'sessionToken=',
                 },
             );
-            my @headers = $resp.headers;
+            my @headers = $response.headers;
             for @headers -> $header {
                 next if $header.name.lc ne 'maconomy-reconnect';
                 $token = $header.value;
@@ -267,7 +274,7 @@ class Micronomy {
         my $status;
         if $token {
             my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
-            my $resp = await Cro::HTTP::Client.get(
+            my $response = await Cro::HTTP::Client.get(
                 $uri,
                 headers => {
                     Authorization => "X-Reconnect $token",
