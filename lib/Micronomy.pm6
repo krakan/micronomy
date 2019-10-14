@@ -3,7 +3,6 @@ use Cro::HTTP::Client;
 use Cro::WebApp::Template;
 use URI::Encode;
 use JSON::Fast;
-use LWP::Simple;
 
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
@@ -143,18 +142,14 @@ class Micronomy {
             return from-json slurp $date;
         }
 
-        my $response = LWP::Simple.get(
+        my $request = Cro::HTTP::Client.get(
             $uri,
-            {
+            headers => {
                 Authorization => "X-Reconnect $token",
             },
         );
-        unless $response {
-            warn "error: failed to read data from $server";
-            Micronomy.get-login(reason => "Var vänlig och logga in!") if .response.status == 401;
-            return {};
-        }
-        return from-json($response);
+        my $response = await $request;
+        return await $response.body;
 
         CATCH {
             when X::Cro::HTTP::Error {
@@ -185,18 +180,17 @@ class Micronomy {
             if @changes {
                 my $concurrency = %parameters{"concurrency-$row"};
                 my $uri = "$server/$registration/table/$row?card.datevar=%parameters<date>";
-
-                my $response = LWP::Simple.post(
+                my $response = await Cro::HTTP::Client.post(
                     $uri,
-                    {
+                    headers => {
                         Authorization => "X-Reconnect $token",
                         Content-Type => "application/json",
                         Accept => "application/json",
                         Maconomy-Concurrency-Control => $concurrency,
                     },
-                    '{"data":{' ~ @changes.join(", ") ~ '}}',
+                    body => '{"data":{' ~ @changes.join(", ") ~ '}}',
                 );
-                %content = from-json($response);
+                %content = await $response.body;
             }
         }
 
@@ -207,19 +201,18 @@ class Micronomy {
     method submit(:$token, :$date, :$reason, :$concurrency) {
         my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
         $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
-        my $response = LWP::Simple.post(
+        my $response = await Cro::HTTP::Client.post(
             $uri,
-            {
+            headers => {
                 Authorization => "X-Reconnect $token",
                 Content-Type => "application/json",
                 Accept => "application/json",
                 Maconomy-Concurrency-Control => $concurrency,
                 Content-Length => 0,
             },
-            "",
         );
 
-        my %content = $response ?? from-json($response) !! get($token, $date);
+        my %content = await $response.body;
         show($token, %content);
     }
 
