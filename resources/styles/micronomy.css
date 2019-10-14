@@ -36,3 +36,8 @@ span.box {
 form.submit, form.logout {
     margin-top: 2em;
 }
+
+div.error {
+    font-size: 24pt;
+    color: #a00;
+}

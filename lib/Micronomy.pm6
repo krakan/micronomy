@@ -9,7 +9,7 @@ class Micronomy {
     my $registration = "containers/v1/b3/timeregistration/data;any";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
 
-    sub show($token, %content) {
+    sub show($token, %content, :$error) {
         my %card = %content<panes><card><records>[0]<data>;
         my %meta = %content<panes><card><records>[0]<meta>;
         my %table = %content<panes><table>;
@@ -44,6 +44,7 @@ class Micronomy {
             card => %card,
             meta => %meta,
             table => %table,
+            error => $error,
         );
 
         my $fmt = {sprintf "%s %02d-%02d", @days[.day-of-week], .month, .day};
@@ -214,6 +215,15 @@ class Micronomy {
 
         my %content = await $response.body;
         show($token, %content);
+
+        CATCH {
+            when X::Cro::HTTP::Error {
+                warn "error: " ~ .response.status;
+                %content = get($token, $date);
+                show($token, %content, error => 'failed to submit week');
+                return {};
+            }
+        }
     }
 
     method get-login(:$username, :$reason) {
