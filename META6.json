@@ -1,21 +1,16 @@
 {
   "provides": {
-    "Routes.pm6": "lib/Routes.pm6"
+    "Routes.pm6": "lib/Routes.pm6",
+    "Micronomy.pm6": "lib/Micronomy.pm6"
   },
-  "tags": [
-    ""
-  ],
+  "tags": [],
   "authors": [
-    ""
+    "jonas.linde3b3.se"
   ],
-  "license": "Write me!",
-  "build-depends": [
-    
-  ],
+  "license": "GPLv3",
+  "build-depends": [],
   "version": "0.0.1",
-  "test-depends": [
-    
-  ],
+  "test-depends": [],
   "resources": [
     "fake-tls/ca-crt.pem",
     "fake-tls/server-crt.pem",
@@ -30,7 +25,9 @@
   },
   "meta-version": "0",
   "depends": [
-    "Cro::HTTP"
+    "Cro::HTTP",
+    "Cro::WebApp",
+    "URI::Encode"
   ],
   "name": "micronomy"
 }

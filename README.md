@@ -26,9 +26,10 @@ either ...
 * add CSS - Done
 * write Dockerfile - Done
 * add javascript - Done
+* deploy Cro service - Done
+* fix logging
 * add button for any week
 * add error handling
-* deploy Cro service
 * write documentation
 * add editing favorites
 * add adding lines
