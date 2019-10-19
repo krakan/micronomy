@@ -27,10 +27,4 @@ either ...
 * write Dockerfile - Done
 * add javascript - Done
 * deploy Cro service - Done
-* fix logging
-* add button for any week
-* add error handling
-* write documentation
-* add editing favorites
-* add adding lines
-* add monthly report
+* move todo items to issues in Github - Done
