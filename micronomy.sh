@@ -1,18 +1,15 @@
 #!/bin/bash
 
 # run as root to allow port 443
-id -u | grep -qx 0 || exec sudo $0
+id -u | grep -qx 0 || exec sudo -E $0
 
 # stop old processes
-pgrep 'micronomy|moar' | grep -v $$ | xargs kill
+pgrep 'micronomy|moar' | grep -v $$ | xargs -r kill
 
 cd /home/debian/micronomy
 # keep going
 while true
 do
-    # redirect logs
-    exec > /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
-
     # setup nginx redirect
     cp resources/index.html /var/www/html/index.html
     sed -Ei 's:^([ \t]*try_files) .*:\1 $uri /index.html =405;:' /etc/nginx/sites-enabled/default
@@ -27,5 +24,5 @@ do
     export MICRONOMY_TLS_KEY=/etc/letsencrypt/live/micronomy.jonaseel.se/privkey.pem
 
     # start service
-    perl6 -I lib service.p6
+    script -c "perl6 -I lib service.p6" /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
 done
