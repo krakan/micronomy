@@ -17,7 +17,7 @@ class Micronomy {
         my $state = 'Öppen';
         $state = 'Avlämnad' if %table<records>[0]<data><submitted>;
         $state = 'Godkänd' if %card<approvedvar>;
-        my $periodStart = Date.new(%table<records>[0]<data><periodstart>);
+        my $periodStart = Date.new(%card<periodstartvar>);
         my $previous = $periodStart.earlier(days => 1);
         my $next = $periodStart.later(days => 7);
         $next = $next.truncated-to('month') if $periodStart.month != $next.month;
@@ -96,6 +96,13 @@ class Micronomy {
         %data<rows> = @rows;
 
         template 'resources/templates/timesheet.html.tmpl', %data;
+
+        CATCH {
+            warn "error: invalid data";
+            %content = get($token, Date.today);
+            show($token, %content, error => 'invalid data');
+            return {};
+        }
     }
 
     sub title(Int $row, %table --> Str) {
