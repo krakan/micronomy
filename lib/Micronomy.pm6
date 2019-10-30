@@ -47,7 +47,7 @@ class Micronomy {
             error => $error,
         );
 
-        my $fmt = {sprintf "%s %02d-%02d", @days[.day-of-week], .month, .day};
+        my $fmt = {sprintf "%s %02d/%02d", @days[.day-of-week], .day, .month};
         for 1..7 -> $day {
             %data<dates>.push(Date.new(%card{"dateday{$day}var"}, formatter => $fmt).Str);
             %data<total>.push(%card{"totalnumberday{$day}var"});
