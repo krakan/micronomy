@@ -165,6 +165,7 @@ class Micronomy {
                 Micronomy.get-login(reason => "Var vänlig och logga in!") if .response.status == 401;
                 return {};
             }
+            Micronomy.get-login(reason => "Ogiltig session! ")
         }
     }
 
@@ -204,6 +205,18 @@ class Micronomy {
 
         %content ||= get($token, %parameters<date>);
         show($token, %content);
+        return;
+
+        CATCH {
+            when X::Cro::HTTP::Error {
+                warn "error: " ~ .response.status;
+                if .response.status == 401 {
+                    Micronomy.get-login(reason => "Var vänlig och logga in!")
+                    return;
+                }
+            }
+            Micronomy.get-login(reason => "Ogiltig session! ")
+        }
     }
 
     method submit(:$token, :$date, :$reason, :$concurrency) {
@@ -226,8 +239,12 @@ class Micronomy {
         CATCH {
             when X::Cro::HTTP::Error {
                 warn "error: " ~ .response.status;
-                %content = get($token, $date);
-                show($token, %content, error => 'failed to submit week');
+                if .response.status == 401 {
+                    Micronomy.get-login(reason => "Var vänlig och logga in!")
+                } else {
+                    %content = get($token, $date);
+                    show($token, %content, error => 'failed to submit week');
+                }
                 return {};
             }
         }
