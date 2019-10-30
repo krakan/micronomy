@@ -211,7 +211,7 @@ class Micronomy {
             when X::Cro::HTTP::Error {
                 warn "error: " ~ .response.status;
                 if .response.status == 401 {
-                    Micronomy.get-login(reason => "Var vänlig och logga in!")
+                    Micronomy.get-login(reason => "Var vänlig och logga in!");
                     return;
                 }
             }
@@ -240,7 +240,7 @@ class Micronomy {
             when X::Cro::HTTP::Error {
                 warn "error: " ~ .response.status;
                 if .response.status == 401 {
-                    Micronomy.get-login(reason => "Var vänlig och logga in!")
+                    Micronomy.get-login(reason => "Var vänlig och logga in!");
                 } else {
                     %content = get($token, $date);
                     show($token, %content, error => 'failed to submit week');
