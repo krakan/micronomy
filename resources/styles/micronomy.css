@@ -40,4 +40,5 @@ form.submit, form.logout {
 div.error {
     font-size: 24pt;
     color: #a00;
+    padding-bottom: 1em;
 }

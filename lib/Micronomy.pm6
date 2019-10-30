@@ -317,6 +317,6 @@ class Micronomy {
             }
         }
         set-cookie "sessionToken", "";
-        redirect "/login?reason=Loggade%20ut", :see-other;
+        redirect "/login?reason=Utloggad!", :see-other;
     }
 }
