@@ -17,7 +17,7 @@ sub routes() is export {
             if $sessionToken {
                 Micronomy.get(token => $sessionToken, date => $date)
             } else {
-                redirect "/login?reason=Please%20log%20in", :see-other;
+                redirect "/login", :see-other;
             }
         }
 

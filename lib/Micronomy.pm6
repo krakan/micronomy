@@ -162,7 +162,7 @@ class Micronomy {
         CATCH {
             when X::Cro::HTTP::Error {
                 warn "error: " ~ .response.status;
-                Micronomy.get-login(reason => "Var vänlig och logga in!") if .response.status == 401;
+                Micronomy.get-login() if .response.status == 401;
                 return {};
             }
             Micronomy.get-login(reason => "Ogiltig session! ")
