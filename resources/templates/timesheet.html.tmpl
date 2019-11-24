@@ -9,7 +9,7 @@
     <h1>micronomy @ B3</h1>
     <?.error><div class='error'>Error: <.error></div>
     </?><h2>
-      <.card.employeenamevar>,
+      <.employee>,
         vecka <.week>,
           <.state>
     </h2>
@@ -19,7 +19,7 @@
       <input id="prevWk" type="submit" name="submit" value="&lt;">
     </form>
     <form class="arrows" action="/" method="POST">
-      <input type="text" size="8" name="date" value="<.card.datevar>">
+      <input type="text" size="8" name="date" value="<.date>">
       <input id="selectedWk" type="submit" name="submit" value="välj">
     </form>
     <form class="arrows" action="/" method="POST">
@@ -37,8 +37,8 @@
     </div>
 
     <form action="/" method="POST">
-      <input type="hidden" name="concurrency" value="<.meta.concurrencyControl>" />
-      <input type="hidden" name="date" value="<.card.datevar>" />
+      <input type="hidden" name="concurrency" value="<.concurrency>" />
+      <input type="hidden" name="date" value="<.date>" />
       <@rows>
         <div class="row">
           <div class="title"><.title></div>
@@ -59,7 +59,7 @@
       <@total: $hours>
         <span class="box"><$hours></span>
       </@>
-      <span class="box"><.card.totalnumberofweekvar></span>
+      <span class="box"><.totalSum></span>
     </div>
 
     <div class="fixed">
@@ -67,7 +67,7 @@
       <@fixed: $hours>
         <span class="box"><$hours></span>
       </@>
-      <span class="box"><.card.fixednumberweekvar></span>
+      <span class="box"><.fixedSum></span>
     </div>
 
     <div class="overtime">
@@ -75,7 +75,7 @@
       <@overtime: $hours>
         <span class="box"><$hours></span>
       </@>
-      <span class="box"><.card.overtimenumberweekvar></span>
+      <span class="box"><.overtimeSum></span>
     </div>
 
     <div class="invoiceable">
@@ -83,12 +83,12 @@
       <@invoiceable: $hours>
         <span class="box"><$hours></span>
       </@>
-      <span class="box"><.card.invoiceabletimedayweekvar></span>
+      <span class="box"><.invoiceableSum></span>
     </div>
 
     <form class="submit" action="/submit" method="POST">
-      <input type="hidden" name="concurrency" value="<.meta.concurrencyControl>" />
-      <input type="hidden" name="date" value="<.card.datevar>" />
+      <input type="hidden" name="concurrency" value="<.concurrency>" />
+      <input type="hidden" name="date" value="<.date>" />
       Ändringsorsak: <input class="reason" type="text" name="reason" />
       <input class="submit" type="submit" value="Avlämna" />
     </form>

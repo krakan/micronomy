@@ -41,10 +41,14 @@ class Micronomy {
             state => $state,
             next => $next,
             previous => $previous,
-            card => %card,
-            meta => %meta,
-            table => %table,
             error => $error,
+            concurrency => %meta<concurrencyControl>,
+            employee => %card<employeenamevar>,
+            date => %card<datevar>,
+            totalSum => %card<totalnumberofweekvar>,
+            fixedSum => %card<fixednumberweekvar>,
+            overtimeSum => %card<overtimenumberweekvar>,
+            invoiceableSum => %card<invoiceabletimedayweekvar>,
         );
 
         my $fmt = {sprintf "%s %02d/%02d", @days[.day-of-week], .day, .month};
