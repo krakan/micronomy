@@ -9,17 +9,20 @@
 usage() {
     exec >&2
     test "$*" && echo -e "ERROR: $*\n"
-    echo "usage: $0 [-x] [docker|local|debug|deploy|tmux|run]"
+    echo "usage: $0 [--debug] docker|local|deploy|tmux"
+    echo "or:    $0 [--debug] [--port <int>] [--certdir <path>] [run]"
     exit 1
 }
 
 target=run
-port=443
+port=
 xtrace=
+cert=/etc/letsencrypt/live/micronomy.jonaseel.se
 while test $# -gt 0
 do
     case $1 in
         -p|--port) port=$2; shift;;
+        -c|--cert*) cert=$2; shift;;
         -x|--debug) xtrace=on; set -x;;
         -*) usage "unknown option '$1'";;
         *) target=$1;;
@@ -28,7 +31,7 @@ do
 done
 
 # set home dir
-cd $(dirname $0)
+test $target = run || cd $(dirname $0)
 
 # do your thing
 case $target in
@@ -47,11 +50,6 @@ case $target in
 
     local) MICRONOMY_PORT=4443 MICRONOMY_HOST=0.0.0.0 perl6 -I lib service.p6;;
 
-    debug)
-	rsync -zva --exclude .precomp --exclude .git . micronomy:micronomy2/
-	ssh -t micronomy.jonaseel.se "cd micronomy2 && MICRONOMY_PORT=4443 MICRONOMY_HOST=0.0.0.0 perl6 -I lib service.p6"
-        ;;
-
     deploy)
 	if rsync -zva --exclude .precomp . micronomy:micronomy/ | tee /dev/tty |
                 egrep -q '^(lib|resources)/|^service.p6'
@@ -66,8 +64,14 @@ case $target in
     tmux) ssh -t micronomy.jonaseel.se tmux attach;;
 
     run)
-        # run as root to allow port 443
-        id -u | grep -qx 0 || exec sudo -E $0 --port $port ${xtrace:+--debug}
+        # run as root to allow low port
+        if test ${port:-0} -lt 1024
+        then
+            id -u | grep -qx 0 || exec sudo -E PATH=$PATH $0 --cert $cert ${port:+--port $port} ${xtrace:+--debug}
+        fi
+        cd $(dirname $0)
+
+        type perl6 >/dev/null 2>&1 || usage "perl6 command not found"
 
         # stop old processes
         pgrep 'micronomy|moar' | grep -v $$ | xargs -r kill
@@ -76,20 +80,28 @@ case $target in
         while true
         do
             # setup nginx redirect
-            cp resources/index.html /var/www/html/index.html
-            sed -Ei 's:^([ \t]*try_files) .*:\1 $uri /index.html =405;:' /etc/nginx/sites-enabled/default
+            if test -d /var/www/html
+            then
+                cp resources/index.html /var/www/html/index.html
+                sed -Ei 's:^([ \t]*try_files) .*:\1 $uri /index.html =405;:' /etc/nginx/sites-enabled/default
+            fi
 
             # update certificate if needed
-            certbot renew
-
-            # set parameters
-            export MICRONOMY_PORT=$port
-            export MICRONOMY_HOST=0.0.0.0
-            export MICRONOMY_TLS_CERT=/etc/letsencrypt/live/micronomy.jonaseel.se/fullchain.pem
-            export MICRONOMY_TLS_KEY=/etc/letsencrypt/live/micronomy.jonaseel.se/privkey.pem
+            if test -d $cert
+            then
+                certbot renew
+                export MICRONOMY_TLS_CERT=$cert/fullchain.pem
+                export MICRONOMY_TLS_KEY=$cert/privkey.pem
+            fi
 
             # start service
-            script -c "perl6 -I lib service.p6" /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
+            test $port && export MICRONOMY_PORT=$port
+            if id -u | grep -qx 0
+            then
+                script -c "perl6 -I lib service.p6" /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
+            else
+                perl6 -I lib service.p6
+            fi
         done
         ;;
     *)

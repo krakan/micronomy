@@ -2,25 +2,30 @@ use Cro::HTTP::Log::File;
 use Cro::HTTP::Server;
 use Routes;
 
+my $host = %*ENV<MICRONOMY_HOST> || 'localhost';
+my $port = %*ENV<MICRONOMY_PORT> || 80;
+my %tls = ();
+if %*ENV<MICRONOMY_TLS_KEY> {
+    %tls = %(
+        private-key-file => %*ENV<MICRONOMY_TLS_KEY>,
+        certificate-file => %*ENV<MICRONOMY_TLS_CERT>
+    );
+    $host = %*ENV<MICRONOMY_HOST> || '0.0.0.0';
+    $port = %*ENV<MICRONOMY_PORT> ||  443;
+}
+
 my Cro::Service $http = Cro::HTTP::Server.new(
-    http => <1.1 2>,
-    host => %*ENV<MICRONOMY_HOST> ||
-        die("Missing MICRONOMY_HOST in environment"),
-    port => %*ENV<MICRONOMY_PORT> ||
-        die("Missing MICRONOMY_PORT in environment"),
-    tls => %(
-        private-key-file => %*ENV<MICRONOMY_TLS_KEY> ||
-            %?RESOURCES<fake-tls/server-key.pem> || "resources/fake-tls/server-key.pem",
-        certificate-file => %*ENV<MICRONOMY_TLS_CERT> ||
-            %?RESOURCES<fake-tls/server-crt.pem> || "resources/fake-tls/server-crt.pem",
-    ),
+    http => <1.1>,
+    host => $host,
+    port => $port,
+    tls => %tls,
     application => routes(),
     after => [
         Cro::HTTP::Log::File.new(logs => $*OUT, errors => $*ERR)
     ]
 );
 $http.start;
-say "Listening at https://%*ENV<MICRONOMY_HOST>:%*ENV<MICRONOMY_PORT>";
+say "Listening at https://$host:$port";
 react {
     whenever signal(SIGINT) {
         say "Shutting down...";
