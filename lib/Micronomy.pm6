@@ -10,6 +10,7 @@ class Micronomy {
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
 
     sub show($token, %content, :$error) {
+        say "TRACE: entering sub show";
         my %card = %content<panes><card><records>[0]<data>;
         my %meta = %content<panes><card><records>[0]<meta>;
         my %table = %content<panes><table>;
@@ -117,6 +118,7 @@ class Micronomy {
     }
 
     method get-month(:$token, :$date) {
+        say "TRACE: entering get-month $date";
         my $current = Date.new($date).truncated-to('month');
         my $number-of-days = $current.later(days => 31).truncated-to('month').earlier(days => 1).day;
 
@@ -145,6 +147,7 @@ class Micronomy {
     }
 
     sub get($token, $date is copy) {
+        say "TRACE: entering sub get $date";
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         my $uri = "$server/$registration?card.datevar=$date";
 
@@ -174,11 +177,13 @@ class Micronomy {
     }
 
     method get(:$token, :$date) {
+        say "TRACE: entering get $date";
         my %content = get($token, $date) and
             show($token, %content);
     }
 
     method set(:$token, :%parameters) {
+        say "TRACE: entering set %parameters";
         my %content;
         for 0..* -> $row {
             last unless %parameters{"concurrency-$row"};
@@ -224,6 +229,7 @@ class Micronomy {
     }
 
     method submit(:$token, :$date, :$reason, :$concurrency) {
+        say "TRACE: entering submit $date";
         my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
         $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
         my $response = await Cro::HTTP::Client.post(
@@ -255,6 +261,7 @@ class Micronomy {
     }
 
     method get-login(:$username, :$reason) {
+        say "TRACE: entering get-login $username $reason";
         my %data = (
             username => $username,
             reason => $reason,
@@ -264,6 +271,7 @@ class Micronomy {
     }
 
     method login(:$username, :$password) {
+        say "TRACE: entering login $username ***";
         my ($token, $status);
         if $username and $password {
             my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
@@ -284,6 +292,7 @@ class Micronomy {
                 $token = $header.value;
                 last;
             }
+            say "TRACE: $username logged in";
 
             CATCH {
                 when X::Cro::HTTP::Error {
@@ -303,6 +312,7 @@ class Micronomy {
     }
 
     method logout(:$token) {
+        say "TRACE: entering logout";
         my $status;
         if $token {
             my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
