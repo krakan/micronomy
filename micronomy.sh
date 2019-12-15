@@ -102,6 +102,8 @@ case $target in
             else
                 perl6 -I lib service.p6
             fi
+            # wait for optional extra CTRL-C
+            sleep 1
         done
         ;;
     *)
