@@ -117,7 +117,7 @@ class Micronomy {
         $title ~= ' / ' ~ %row<jobnamevar>;
     }
 
-    method get-month(:$token, :$date) {
+    method get-month(:$token, :$date = '') {
         say "TRACE: entering get-month $date";
         my $current = Date.new($date).truncated-to('month');
         my $number-of-days = $current.later(days => 31).truncated-to('month').earlier(days => 1).day;
@@ -146,7 +146,7 @@ class Micronomy {
         show($token, %month, number-of-days => $number-of-days);
     }
 
-    sub get($token, $date is copy) {
+    sub get($token, $date is copy = '') {
         say "TRACE: entering sub get $date";
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         my $uri = "$server/$registration?card.datevar=$date";
@@ -176,14 +176,20 @@ class Micronomy {
         }
     }
 
-    method get(:$token, :$date) {
+    method get(:$token, :$date = '') {
         say "TRACE: entering get $date";
         my %content = get($token, $date) and
             show($token, %content);
     }
 
     method set(:$token, :%parameters) {
-        say "TRACE: entering set %parameters";
+        say "TRACE: entering set";
+        for %parameters.keys.sort({.split('-', 2)[1]//''}) -> $key {
+            next if $key ~~ /concurrency/;
+            my $value =  %parameters{$key};
+            say "TRACE:   $key: $value" if $value;
+        }
+
         my %content;
         for 0..* -> $row {
             last unless %parameters{"concurrency-$row"};
@@ -196,6 +202,7 @@ class Micronomy {
                 }
             }
             if @changes {
+                say "TRACE: setting row $row";
                 my $concurrency = %parameters{"concurrency-$row"};
                 my $uri = "$server/$registration/table/$row?card.datevar=%parameters<date>";
                 my $response = await Cro::HTTP::Client.post(
@@ -228,7 +235,7 @@ class Micronomy {
         }
     }
 
-    method submit(:$token, :$date, :$reason, :$concurrency) {
+    method submit(:$token, :$date = '', :$reason, :$concurrency) {
         say "TRACE: entering submit $date";
         my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
         $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
@@ -260,7 +267,7 @@ class Micronomy {
         }
     }
 
-    method get-login(:$username, :$reason) {
+    method get-login(:$username = '', :$reason = '') {
         say "TRACE: entering get-login $username $reason";
         my %data = (
             username => $username,
@@ -270,7 +277,7 @@ class Micronomy {
         template 'resources/templates/login.html.tmpl', %data;
     }
 
-    method login(:$username, :$password) {
+    method login(:$username = '', :$password) {
         say "TRACE: entering login $username ***";
         my ($token, $status);
         if $username and $password {
