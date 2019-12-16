@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash
 #
 # Helper script for micronomy
 # targets 'debug', 'deploy' and 'tmux' require access to the server
@@ -10,19 +10,21 @@ usage() {
     exec >&2
     test "$*" && echo -e "ERROR: $*\n"
     echo "usage: $0 [--debug] docker|local|deploy|tmux"
-    echo "or:    $0 [--debug] [--port <int>] [--certdir <path>] [run]"
+    echo "or:    $0 [--debug] [--port <int>] [--certdir <path>|--fake] [run]"
     exit 1
 }
 
 target=run
 port=
 xtrace=
+fake=
 cert=/etc/letsencrypt/live/micronomy.jonaseel.se
 while test $# -gt 0
 do
     case $1 in
         -p|--port) port=$2; shift;;
         -c|--cert*) cert=$2; shift;;
+        -f|--fake*) fake=1;;
         -x|--debug) xtrace=on; set -x;;
         -*) usage "unknown option '$1'";;
         *) target=$1;;
@@ -80,14 +82,18 @@ case $target in
         while true
         do
             # setup nginx redirect
-            if test -d /var/www/html
+            if id -u | grep -qx 0 && test -d /etc/nginx
             then
                 cp resources/index.html /var/www/html/index.html
                 sed -Ei 's:^([ \t]*try_files) .*:\1 $uri /index.html =405;:' /etc/nginx/sites-enabled/default
             fi
 
             # update certificate if needed
-            if test -d $cert
+            if test $fake
+            then
+                export MICRONOMY_TLS_CERT=$PWD/resources/fake-tls/server-crt.pem
+                export MICRONOMY_TLS_KEY=$PWD/resources/fake-tls/server-key.pem
+            elif test -d $cert
             then
                 certbot renew
                 export MICRONOMY_TLS_CERT=$cert/fullchain.pem
@@ -95,6 +101,7 @@ case $target in
             fi
 
             # start service
+            echo Starting ...
             test $port && export MICRONOMY_PORT=$port
             if id -u | grep -qx 0
             then
