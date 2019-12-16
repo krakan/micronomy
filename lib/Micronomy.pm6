@@ -3,14 +3,23 @@ use Cro::HTTP::Client;
 use Cro::WebApp::Template;
 use URI::Encode;
 use JSON::Fast;
+use Digest::MD5;
 
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
     my $registration = "containers/v1/b3/timeregistration/data;any";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
 
+    sub trace($message, $token = '') {
+        my $now = DateTime.now(
+            formatter => { sprintf "%4d-%02d-%02d %02d:%02d:%06.3f",
+                           .year, .month, .day, .hour, .minute, .second });
+        my $session = $token ?? Digest::MD5.md5_hex($token).substr(24) !! '-';
+        say "$now  $session  $message";
+    }
+
     sub show($token, %content, :$error) {
-        say "TRACE: entering sub show";
+        trace "show", $token;
         my %card = %content<panes><card><records>[0]<data>;
         my %meta = %content<panes><card><records>[0]<meta>;
         my %table = %content<panes><table>;
@@ -118,7 +127,7 @@ class Micronomy {
     }
 
     method get-month(:$token, :$date = '') {
-        say "TRACE: entering get-month $date";
+        trace "get-month $date", $token;
         my $current = Date.new($date).truncated-to('month');
         my $number-of-days = $current.later(days => 31).truncated-to('month').earlier(days => 1).day;
 
@@ -147,7 +156,7 @@ class Micronomy {
     }
 
     sub get($token, $date is copy = '') {
-        say "TRACE: entering sub get $date";
+        trace "sub get $date", $token;
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         my $uri = "$server/$registration?card.datevar=$date";
 
@@ -177,17 +186,17 @@ class Micronomy {
     }
 
     method get(:$token, :$date = '') {
-        say "TRACE: entering get $date";
+        trace "get $date", $token;
         my %content = get($token, $date) and
             show($token, %content);
     }
 
     method set(:$token, :%parameters) {
-        say "TRACE: entering set";
+        trace "set", $token;
         for %parameters.keys.sort({.split('-', 2)[1]//''}) -> $key {
             next if $key ~~ /concurrency/;
             my $value =  %parameters{$key};
-            say "TRACE:   $key: $value" if $value;
+            trace "  $key: $value", $token if $value;
         }
 
         my %content;
@@ -202,7 +211,7 @@ class Micronomy {
                 }
             }
             if @changes {
-                say "TRACE: setting row $row";
+                trace "setting row $row", $token;
                 my $concurrency = %parameters{"concurrency-$row"};
                 my $uri = "$server/$registration/table/$row?card.datevar=%parameters<date>";
                 my $response = await Cro::HTTP::Client.post(
@@ -236,7 +245,7 @@ class Micronomy {
     }
 
     method submit(:$token, :$date = '', :$reason, :$concurrency) {
-        say "TRACE: entering submit $date";
+        trace "submit $date", $token;
         my $uri = "$server/$registration/card/0/action;name=submittimesheet?card.datevar=$date";
         $uri ~= "&card.resubmissionexplanationvar=$reason" if $reason;
         my $response = await Cro::HTTP::Client.post(
@@ -268,7 +277,7 @@ class Micronomy {
     }
 
     method get-login(:$username = '', :$reason = '') {
-        say "TRACE: entering get-login $username $reason";
+        trace "get-login $username $reason";
         my %data = (
             username => $username,
             reason => $reason,
@@ -278,7 +287,7 @@ class Micronomy {
     }
 
     method login(:$username = '', :$password) {
-        say "TRACE: entering login $username ***";
+        trace "login $username ***";
         my ($token, $status);
         if $username and $password {
             my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
@@ -299,7 +308,6 @@ class Micronomy {
                 $token = $header.value;
                 last;
             }
-            say "TRACE: $username logged in";
 
             CATCH {
                 when X::Cro::HTTP::Error {
@@ -310,16 +318,18 @@ class Micronomy {
             }
         }
         if $token {
+            trace "$username logged in", $token;
             set-cookie "sessionToken", $token;
             redirect "/", :see-other;
         } else {
+            trace "$username login failed";
             $status //= '';
             redirect "/login?username=$username&reason=$status", :see-other;
         }
     }
 
     method logout(:$token) {
-        say "TRACE: entering logout";
+        trace "logout", $token;
         my $status;
         if $token {
             my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
