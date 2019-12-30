@@ -95,7 +95,9 @@ case $target in
                 export MICRONOMY_TLS_KEY=$PWD/resources/fake-tls/server-key.pem
             elif test -d $cert
             then
+                systemctl stop nginx
                 certbot renew
+                systemctl start nginx
                 export MICRONOMY_TLS_CERT=$cert/fullchain.pem
                 export MICRONOMY_TLS_KEY=$cert/privkey.pem
             fi
