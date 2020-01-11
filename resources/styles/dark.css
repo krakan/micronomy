@@ -1,0 +1,18 @@
+body {
+    background: #0f0f0f;
+    color: #aa0;
+}
+h1 {
+    color: green;
+}
+input {
+    background: black;
+    color: #aa0;
+}
+input[type=submit]:hover {
+    background: #2f2f2f;
+}
+input:disabled {
+    background: #333;
+    color: #aa0;
+}

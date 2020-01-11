@@ -1,18 +1,5 @@
 body {
-    background: #0f0f0f;
-    color: #aa0;
     font-family: arial;
-}
-h1 {
-    color: green;
-}
-input {
-    background: black;
-    color: #aa0;
-}
-input:disabled {
-    background: #333;
-    color: #aa0;
 }
 form.arrows {
     display: inline-block;
@@ -41,4 +28,21 @@ div.error {
     font-size: 24pt;
     color: #a00;
     padding-bottom: 1em;
+}
+
+div.style {
+    display: inline-block;
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+}
+div.style #light {
+    color: #000000;
+    background: #ffffff;
+    text-decoration: none;
+}
+div.style #dark {
+    color: #aa0;
+    background: #0f0f0f;
+    text-decoration: none;
 }

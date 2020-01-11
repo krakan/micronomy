@@ -1,7 +1,10 @@
 <html>
   <head>
     <title>micronomy @ B3 - login</title>
-    <link rel="stylesheet" href="/styles/micronomy.css">
+    <link rel="stylesheet" href="/styles/common.css" type="text/css">
+    <link rel="stylesheet" title="light" href="/styles/light.css" type="text/css">
+    <link rel="alternate stylesheet" title="dark" href="/styles/dark.css" type="text/css">
+    <script src='/script/styleswitcher.js'></script>
   </head>
   <body>
     <h1>micronomy @ B3</h1>
@@ -14,6 +17,10 @@
          Lösenord: <input type="password" name="password" />
        </div>
        <input type="submit" value="Logga in" />
+       <div class="style">
+         <a href="#" id="light" onclick="setActiveStyleSheet('light');return false;">ljus</a> /
+         <a href="#" id="dark" onclick="setActiveStyleSheet('dark');return false;">mörk</a>
+       </div>
      </form>
      <script>
        <!--
