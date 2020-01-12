@@ -32,7 +32,7 @@ div.error {
 
 div.style {
     display: inline-block;
-    position: absolute;
+    position: fixed;
     bottom: 10px;
     right: 10px;
 }
