@@ -9,26 +9,27 @@
   </head>
   <body>
     <h1>micronomy @ B3</h1>
-     <?.reason><div class='error'><.reason></div>
-     </?><form name="login" method="POST" action="/login">
-       <div>
-         Användarnamn: <input type="text" name="username" value="<.username>" autofocus="autofocus" />
-       </div>
-       <div>
-         Lösenord: <input type="password" name="password" />
-       </div>
-       <input type="submit" value="Logga in" />
-       <div class="style">
-         <a href="#" id="light" onclick="setActiveStyleSheet('light');return false;">ljus</a> /
-         <a href="#" id="dark" onclick="setActiveStyleSheet('dark');return false;">mörk</a>
-       </div>
-     </form>
-     <script>
-       <!--
-         if (document.login.username.value) {
-           document.login.password.focus();
-         }
-       -->
-     </script>
+    <?.reason><div class='error'><.reason></div>
+    </?><form name="login" method="POST" action="/login">
+      <div>
+        Användarnamn: <input type="text" name="username" value="<.username>" autofocus="autofocus" />
+      </div>
+      <div>
+        Lösenord: <input type="password" name="password" />
+      </div>
+      <input type="submit" value="Logga in" />
+      <div class="style">
+        <a href="#" id="light" onclick="setActiveStyleSheet('light');return false;">ljus</a> /
+        <a href="#" id="dark" onclick="setActiveStyleSheet('dark');return false;">mörk</a>
+      </div>
+    </form>
+    <p>Please <a href="https://github.com/krakan/micronomy/issues">report bugs</a>!</p>
+    <script>
+      <!--
+        if (document.login.username.value) {
+          document.login.password.focus();
+        }
+      -->
+    </script>
   </body>
 </html>
