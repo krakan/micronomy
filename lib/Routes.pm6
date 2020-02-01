@@ -28,14 +28,22 @@ sub routes() is export {
         }
 
         post -> 'submit', :$sessionToken is cookie = '' {
-            request-body -> (:$date = '', :$reason = '', :$concurrency = '') {
-                Micronomy.submit(date => $date, reason => $reason, token => $sessionToken, concurrency => $concurrency)
+            if $sessionToken {
+                request-body -> (:$date = '', :$reason = '', :$concurrency = '') {
+                    Micronomy.submit(date => $date, reason => $reason, token => $sessionToken, concurrency => $concurrency)
+                }
+            } else {
+                redirect "/login", :see-other;
             }
         }
 
         post -> 'logout', :$sessionToken is cookie = '' {
-            request-body -> (:$username = '') {
-                Micronomy.logout(username => $username, token => $sessionToken)
+            if $sessionToken {
+                request-body -> (:$username = '') {
+                    Micronomy.logout(username => $username, token => $sessionToken)
+                }
+            } else {
+                redirect "/login", :see-other;
             }
         }
 
