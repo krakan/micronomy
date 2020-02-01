@@ -264,12 +264,13 @@ class Micronomy {
 
         CATCH {
             when X::Cro::HTTP::Error {
-                warn "error: " ~ .response.status;
+                my $body = await .response.body;
+                warn "error: [" ~ .response.status ~ "]:\n    " ~ $body.join("\n    ");
                 if .response.status == 401 {
                     Micronomy.get-login(reason => "Var vänlig och logga in!");
                 } else {
                     %content = get($token, $date);
-                    show($token, %content, error => 'failed to submit week');
+                    show($token, %content, error => $body<errorMessage>);
                 }
                 return {};
             }
