@@ -27,6 +27,16 @@ sub routes() is export {
             }
         }
 
+        post -> 'edit', :$sessionToken is cookie = '' {
+            if $sessionToken {
+                request-body -> (*%parameters) {
+                    Micronomy.edit(parameters => %parameters, token => $sessionToken)
+                }
+            } else {
+                redirect "/login", :see-other;
+            }
+        }
+
         post -> 'submit', :$sessionToken is cookie = '' {
             if $sessionToken {
                 request-body -> (:$date = '', :$reason = '', :$concurrency = '') {

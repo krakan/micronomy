@@ -96,6 +96,11 @@
       <input class="submit" type="submit" value="Avlämna" />
     </form>
 
+    <form class="submit" action="/edit" method="POST">
+      <input type="hidden" name="date" value="<.date>" />
+      <input class="submit" type="submit" value="Redigera rader" />
+    </form>
+
     <form class="logout" action="/logout" method="POST">
       <input type="hidden" name="username" value="" />
       <input class="submit" type="submit" value="Logga ut" />

@@ -110,6 +110,7 @@ class Micronomy {
         %data<rows> = @rows;
 
         template 'resources/templates/timesheet.html.tmpl', %data;
+        trace "sent timesheet", $token;
 
         CATCH {
             warn "error: invalid data";
@@ -159,7 +160,6 @@ class Micronomy {
         trace "sub get $date", $token;
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         my $uri = "$server/$registration?card.datevar=$date";
-
         if $date ~~ / '.json' $/ {
             # offline
             $date = %*ENV<HOME> ~ "/micronomy/micronomy-$date" unless $date.IO.e;
@@ -173,7 +173,8 @@ class Micronomy {
             },
         );
         my $response = await $request;
-        return await $response.body;
+        my $body = await $response.body;
+        return $body;
 
         CATCH {
             when X::Cro::HTTP::Error {
@@ -189,6 +190,159 @@ class Micronomy {
         trace "get $date", $token;
         my %content = get($token, $date) and
             show($token, %content);
+        trace "get method done", $token;
+    }
+
+    sub get-favorites($token) {
+        trace "sub get-favorites", $token;
+        my $uri = "$server/containers/v1/b3/jobfavorites/data;any";
+        my $request = Cro::HTTP::Client.get(
+            $uri,
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Content-Type => "application/json",
+                Content-Length => 0,
+            },
+        );
+        my $response = await $request;
+        my $body = await $response.body;
+        return $body;
+
+        CATCH {
+            when X::Cro::HTTP::Error {
+                warn "error: [" ~ .response.status ~ "]:\n    " ~ $body.join("\n    ");
+                Micronomy.get-login() if .response.status == 401;
+                return {};
+            }
+            Micronomy.get-login(reason => "Ogiltig session! ")
+        }
+    }
+
+    sub get-tasks($token, $jobnumber) {
+        trace "sub get-tasks for $jobnumber", $token;
+
+        my $uri = "$server/maconomy-api/containers/b3/jobfavorites/search/table;foreignkey=taskname_tasklistline?fields=taskname,description&limit=100";
+        my $request = Cro::HTTP::Client.post(
+            $uri,
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Content-Type => "application/json",
+            },
+            body => '{"data": {"jobnumber":"' ~ $jobnumber ~ '"}}',
+        );
+        my $response = await $request;
+        my $body = await $response.body;
+
+        my @tasks;
+        for @($body<panes><filter><records>) -> $record {
+            @tasks.push(
+                {
+                    number => $record<data><taskname>,
+                    name => $record<data><description>,
+                }
+            );
+        }
+        return @tasks;
+    }
+
+    sub edit($token, %parameters) {
+        if %parameters<new> {
+            trace "add new row %parameters<position-new>", $token;
+        }
+
+        for ^%parameters<rows> -> $row {
+            if %parameters{"position-$row"} != $row {
+                trace "move row $row", $token;
+            }
+
+            my $was-kept = %parameters{"was-kept-$row"} eq "True" ?? 2 !! 1;
+            if %parameters{"keep-$row"} == 0 {
+                trace "delete row $row", $token;
+            } elsif %parameters{"keep-$row"} != $was-kept {
+                trace "change keep state $row", $token;
+            }
+
+            if %parameters{"task-$row"}:exists {
+                trace "set task $row", $token;
+            }
+        }
+    }
+
+    method edit(:$token, :%parameters) {
+        trace "edit", $token;
+        my $date = %parameters<date>;
+        $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
+
+        trace "parameters:", $token;
+        for %parameters.keys.sort -> $key {
+            trace "$key: %parameters{$key}";
+        }
+        edit($token, %parameters) if %parameters<concurrency>;
+
+        my %favorites = get-favorites($token) || return;
+        my %content = get($token, $date);
+
+        my %card = %content<panes><card><records>[0]<data>;
+        my %meta = %content<panes><card><records>[0]<meta>;
+        my %table = %content<panes><table>;
+        my $week = %card<weeknumbervar>;
+
+        my %data = (
+            week => $week,
+            error => '',
+            concurrency => %meta<concurrencyControl>,
+            employee => %card<employeenamevar>,
+            date => $date,
+        );
+        my (@rows, %rows);
+        for ^%table<meta><rowCount> -> $row {
+            my $jobnumber  = %table<records>[$row]<data><jobnumber>;
+            my $tasknumber = %table<records>[$row]<data><taskname>;
+            %rows{$jobnumber}{$tasknumber} = 1;
+            my %row = (
+                number => $row,
+                description => %table<records>[$row]<data><description>,
+                jobnumber   => $jobnumber,
+                jobname     => %table<records>[$row]<data><jobnamevar>,
+                tasknumber  => $tasknumber,
+                taskname    => %table<records>[$row]<data><tasktextvar>,
+                concurrency => %table<records>[$row]<meta><concurrencyControl>,
+                keep        => %table<records>[$row]<data><permanentline>,
+            );
+            if not $tasknumber {
+                %row<tasks> = get-tasks($token, $jobnumber);
+            }
+            @rows.push(%row);
+        }
+        %data<rows> = @rows;
+        %data<next> = @rows.elems;
+
+        my @favorites;
+        for ^%favorites<panes><table><meta><rowCount> -> $row {
+            my $jobnumber = %favorites<panes><table><records>[$row]<data><jobnumber>;
+            my $tasknumber = %favorites<panes><table><records>[$row]<data><taskname>;
+            next if %rows{$jobnumber}{$tasknumber};
+            my %favorite = (
+                favorite   => %favorites<panes><table><records>[$row]<data><favorite>,
+                jobnumber  => $jobnumber,
+                jobname    => %favorites<panes><table><records>[$row]<data><jobnamevar>,
+                tasknumber => $tasknumber,
+                taskname   => %favorites<panes><table><records>[$row]<data><tasktextvar>,
+            );
+            @favorites.push(%favorite);
+        }
+        %data<favorites> = @favorites;
+
+        template 'resources/templates/edit.html.tmpl', %data;
+
+        CATCH {
+            when X::Cro::HTTP::Error {
+                warn "error: " ~ .response.status;
+                Micronomy.get-login() if .response.status == 401;
+                return {};
+            }
+            Micronomy.get-login(reason => "Ogiltig session! ")
+        }
     }
 
     method set(:$token, :%parameters) {
@@ -285,6 +439,7 @@ class Micronomy {
         );
         set-cookie "sessionToken", "";
         template 'resources/templates/login.html.tmpl', %data;
+        trace "sent login page";
     }
 
     method login(:$username = '', :$password) {
@@ -322,10 +477,12 @@ class Micronomy {
             trace "$username logged in", $token;
             set-cookie "sessionToken", $token;
             redirect "/", :see-other;
+            trace "redirected from login to get", $token;
         } else {
             trace "$username login failed";
             $status //= '';
             redirect "/login?username=$username&reason=$status", :see-other;
+            trace "redirected from login to login", $token;
         }
     }
 

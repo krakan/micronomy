@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="sv">
+  <head>
+    <title>micronomy @ B3</title>
+    <link rel="stylesheet" href="/styles/common.css" type="text/css">
+    <link rel="stylesheet" title="light" href="/styles/light.css" type="text/css">
+    <link rel="alternate stylesheet" title="dark" href="/styles/dark.css" type="text/css">
+    <script src='/script/styleswitcher.js'></script>
+    <script src='/script/nav.js'></script>
+  </head>
+  <body onload="setupNavigation();">
+    <h1>micronomy @ B3</h1>
+    <?.error><div class='error'>Error: <.error></div>
+    </?><h2>
+      <.employee>,
+        vecka <.week>, rader
+    </h2>
+
+    <form action="/edit" method="POST">
+      <input type="hidden" name="concurrency" value="<.concurrency>" />
+      <input type="hidden" name="rows" value="<.next>" />
+      <input type="hidden" name="date" value="<.date>" />
+      <@rows>
+        <div class="row">
+          <div class="job">
+            <input size="1" type="text" name="position-<.number>" value="<.number>" />.
+              <.jobname> /
+              <?.tasknumber><.taskname></?><!.tasknumber><select name="task-<.number>">
+                <@tasks>
+                  <option value="<.number>"><.name></option>
+                </@>
+              </select></!>
+              <input type="hidden" name="was-kept-<.number>" value="<.keep>" />
+              <select name="keep-<.number>">
+                <option value="0">tag bort</option>
+                <option value="1"<!.keep> selected</!>>denna vecka</option>
+                <option value="2"<?.keep> selected</?>>tills vidare</option>
+              </select>
+          </div>
+        </div>
+      </@>
+      <div class="row">
+        <input size="1" type="text" name="position-new" value="<.next>" />.
+        <select name="new">
+          <option value="">Lägg till favorit ...</option>
+          <@favorites>
+            <option value="<.jobnumber>"><.favorite></option>
+          </@>
+        </select>
+      </div>
+      <input class="submit" type="submit" value="Uppdatera är inte implementerat än ..." />
+    </form>
+
+    <form class="submit" action="/" method="POST">
+      <input type="hidden" name="date" value="<.date>" />
+      <input class="submit" type="submit" value="Till tidrapport" />
+    </form>
+
+    <div class="style">
+      <a href="#" id="light" onclick="setActiveStyleSheet('light');return false;">ljus</a> /
+      <a href="#" id="dark" onclick="setActiveStyleSheet('dark');return false;">mörk</a>
+    </div>
+    <p>Please <a href="https://github.com/krakan/micronomy/issues">report bugs</a>!</p>
+  </body>
+</html>
