@@ -25,9 +25,9 @@ class Micronomy {
         my %meta = %content<panes><card><records>[0]<meta>;
         my %table = %content<panes><table>;
 
-        my $state = 'Öppen';
-        $state = 'Avlämnad' if %table<records>[0]<data><submitted>;
-        $state = 'Godkänd' if %card<approvedvar>;
+        my $weekstatus = 'Öppen';
+        $weekstatus = 'Avlämnad' if %table<records>[0]<data><submitted>;
+        $weekstatus = 'Godkänd' if %card<approvedvar>;
         my $periodStart = Date.new(%card<periodstartvar>);
         my $previous = $periodStart.earlier(days => 1);
         my $next = $periodStart.later(days => 7);
@@ -49,7 +49,7 @@ class Micronomy {
 
         my %data = (
             week => $week,
-            state => $state,
+            state => $weekstatus,
             next => $next,
             previous => $previous,
             error => $error,
@@ -74,18 +74,19 @@ class Micronomy {
         my @rows;
         for ^%table<meta><rowCount> -> $row {
             my $status = %table<records>[$row]<data><approvalstatus>;
+            $status = "approved" if $status eq "nil" and %card<approvedvar>;
             given $status {
                 when "nil" {
                     $status = "";
                 }
                 when "approved" {
-                    $status = "<span style='color:green;'>✔</span>";
+                    $status = '<span style="color:green;">✔</span>';
                 }
                 when "denied" {
-                    $status = "<span style='color:red;'>✘</span>";
+                    $status = '<span style="color:red;">✘</span>';
                 }
                 default {
-                    $status = "<span style='color:red;'>$status</span>";
+                    $status = '<span style="color:red;">' ~ $status ~ '</span>';
                 }
             }
             my %row = (
