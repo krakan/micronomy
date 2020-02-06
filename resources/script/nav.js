@@ -7,7 +7,7 @@ function unflash(target, bgcolor) {
   target.style.background = bgcolor;
 }
 
-var lastTarget
+var lastTarget;
 document.addEventListener("keydown", documentKeyDown);
 function documentKeyDown(evt) {
   if (evt.which >= 37 && evt.which <= 41) {
@@ -41,7 +41,9 @@ function setupNavigation() {
   var rows = document.getElementsByClassName('row').length;
   var cols = boxes.length / rows;
   lastTarget = boxes[0];
-  lastTarget.focus();
+  if (lastTarget) {
+    lastTarget.focus();
+  }
 
   for (var i = 0; i < boxes.length; i++) {
     boxes[i].addEventListener('keydown', hoursKeyDown.bind(i));

@@ -9,6 +9,7 @@ class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
     my $registration = "containers/v1/b3/timeregistration/data;any";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
+    template-location 'resources/templates/';
 
     sub trace($message, $token = '') {
         my $now = DateTime.now(
@@ -109,7 +110,7 @@ class Micronomy {
         }
         %data<rows> = @rows;
 
-        template 'resources/templates/timesheet.html.tmpl', %data;
+        template 'timesheet.html.tmpl', %data;
         trace "sent timesheet", $token;
 
         CATCH {
@@ -333,7 +334,7 @@ class Micronomy {
         }
         %data<favorites> = @favorites;
 
-        template 'resources/templates/edit.html.tmpl', %data;
+        template 'edit.html.tmpl', %data;
 
         CATCH {
             when X::Cro::HTTP::Error {
@@ -438,7 +439,7 @@ class Micronomy {
             reason => $reason,
         );
         set-cookie "sessionToken", "";
-        template 'resources/templates/login.html.tmpl', %data;
+        template 'login.html.tmpl', %data;
         trace "sent login page";
     }
 

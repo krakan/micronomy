@@ -1,14 +1,6 @@
 <!DOCTYPE html>
-<html lang="sv">
-  <head>
-    <title>micronomy @ B3 - login</title>
-    <link rel="stylesheet" href="/styles/common.css" type="text/css">
-    <link rel="stylesheet" title="light" href="/styles/light.css" type="text/css">
-    <link rel="alternate stylesheet" title="dark" href="/styles/dark.css" type="text/css">
-    <script src='/script/styleswitcher.js'></script>
-  </head>
-  <body>
-    <h1>micronomy @ B3</h1>
+<:use 'common.html.tmpl'>
+<&head('login')>
     <?.reason><div class='error'><.reason></div>
     </?><form name="login" method="POST" action="/login">
       <div>
@@ -19,11 +11,6 @@
       </div>
       <input type="submit" value="Logga in" />
     </form>
-    <div class="style">
-      <a href="#" id="light" onclick="setActiveStyleSheet('light');return false;">ljus</a> /
-      <a href="#" id="dark" onclick="setActiveStyleSheet('dark');return false;">mörk</a>
-    </div>
-    <p>Please <a href="https://github.com/krakan/micronomy/issues">report bugs</a>!</p>
     <script>
       <!--
         if (document.login.username.value) {
@@ -31,5 +18,4 @@
         }
       -->
     </script>
-  </body>
-</html>
+<&foot>
