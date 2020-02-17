@@ -8,7 +8,6 @@
     </h2>
 
     <form action="/edit" method="POST">
-      <input type="hidden" name="concurrency" value="<.concurrency>" />
       <input type="hidden" name="rows" value="<.next>" />
       <input type="hidden" name="date" value="<.date>" />
       <@rows>
@@ -16,7 +15,8 @@
           <div class="job">
             <input size="1" type="text" name="position-<.number>" value="<.number>" />.
               <.jobname> /
-              <?.tasknumber><.taskname></?><!.tasknumber><select name="task-<.number>">
+              <?.tasknumber><.taskname></?><!.tasknumber><select name="set-task-<.number>">
+                <option value="">Välj uppgift ...</option>
                 <@tasks>
                   <option value="<.number>"><.name></option>
                 </@>
@@ -27,19 +27,21 @@
                 <option value="1"<!.keep> selected</!>>denna vecka</option>
                 <option value="2"<?.keep> selected</?>>tills vidare</option>
               </select>
+              <input type="hidden" name="job-<.number>" value="<.jobnumber>" />
+              <input type="hidden" name="task-<.number>" value="<.tasknumber>" />
           </div>
         </div>
       </@>
       <div class="row">
         <input size="1" type="text" name="position-new" value="<.next>" />.
-        <select name="new">
+        <select name="job-new">
           <option value="">Lägg till favorit ...</option>
           <@favorites>
             <option value="<.jobnumber>"><.favorite></option>
           </@>
         </select>
       </div>
-      <input class="submit" type="submit" value="Uppdatera är inte implementerat än ..." />
+      <input class="submit" type="submit" value="Uppdatera" />
     </form>
 
     <form class="submit" action="/" method="POST">

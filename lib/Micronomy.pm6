@@ -261,7 +261,8 @@ class Micronomy {
         trace "get concurrency", $token;
         for ^10 -> $wait {
             sleep $wait/10;
-            {
+            my $state = 'card';
+            try {
                 # get card id
                 my $url = "$server/$instances-path";
                 my $response = await Cro::HTTP::Client.post(
@@ -276,7 +277,8 @@ class Micronomy {
                 my $containerInstanceId = %content<meta><containerInstanceId>;
                 my $concurrency = get-header($response, 'maconomy-concurrency-control');
 
-                # refresh session? (seems to be required)
+                # refresh instance? (seems to be required)
+                $state = 'instance';
                 $response = await Cro::HTTP::Client.post(
                     "$url/$containerInstanceId/data/refresh",
                     headers => {
@@ -290,6 +292,7 @@ class Micronomy {
                 %content = await $response.body;
 
                 # refresh data? (seems to be required)
+                $state = "data";
                 $response = await Cro::HTTP::Client.post(
                     "$url/$containerInstanceId/data;any",
                     headers => {
@@ -303,65 +306,70 @@ class Micronomy {
                 %content = await $response.body;
 
                 return $containerInstanceId, $concurrency;
+            }
 
-                CATCH {
-                    when X::Cro::HTTP::Error and .response.status == 404 and $wait < 9 {
-                        trace "get-concurrency received 404 - retrying [{$wait+1}/9]", $token;
-                    }
-                }
+            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < 9 {
+                trace "get-concurrency ($state) received 404 - retrying [{$wait+1}/9]", $token;
+            } else {
+                die $!;
             }
         }
     }
 
-    sub add-row($token, $index, %parameters) {
-        trace "add row " ~ %parameters{"position-$index"}, $token;
+    sub add-data($token, $index, %parameters) {
+        trace "add data [$index] " ~ %parameters{"position-$index"}, $token;
 
         my ($containerInstanceId, $concurrency) = get-concurrency($token);
 
-        # create new row
         my $url = "$server/$instances-path/$containerInstanceId/data/panes/table";
         my $row-parameter = '';
         if (%parameters{"position-$index"} < %parameters{"rows"}) {
-            $row-parameter = "?row=%parameters<position-new>"
+            $row-parameter = "?row=" ~ %parameters{"position-$index"};
         }
         for ^10 -> $wait {
             sleep $wait/10;
-            {
-                my $response = await Cro::HTTP::Client.post(
-                    "$url/inits$row-parameter",
-                    headers => {
-                        Authorization => "X-Reconnect $token",
-                        Maconomy-Concurrency-Control => $concurrency,
-                        Content-Type => "application/json",
-                        Content-Length => 0,
-                    },
-                );
+            try {
+                if $index eq "new" {
+                    # create new row
+                    trace "create new row " ~ %parameters{"position-$index"}, $token;
+                    my $response = await Cro::HTTP::Client.post(
+                        "$url/inits$row-parameter",
+                        headers => {
+                            Authorization => "X-Reconnect $token",
+                            Maconomy-Concurrency-Control => $concurrency,
+                            Content-Type => "application/json",
+                            Content-Length => 0,
+                        },
+                    );
+                    my %content = await $response.body;
+                }
 
-                # populate new row
-                $response = await Cro::HTTP::Client.post(
+                # populate row
+                my @data = ();
+                @data.push('"jobnumber": "' ~ %parameters{"job-$index"} ~ '"') if %parameters{"job-$index"};
+                @data.push('"taskname": "' ~ %parameters{"set-task-$index"} ~ '"') if %parameters{"set-task-$index"};
+                my $data = '{"data": {' ~ @data.join(",") ~ '}}';
+                trace "$data";
+
+                my $response = await Cro::HTTP::Client.post(
                     "$url$row-parameter",
                     headers => {
                         Authorization => "X-Reconnect $token",
                         Maconomy-Concurrency-Control => $concurrency,
                         Content-Type => "application/json",
                     },
-                    body => '{"data": {"jobnumber": "' ~ %parameters{$index} ~ '"}}',
+                    body => $data,
                 );
 
                 return get-header($response, 'maconomy-concurrency-control');
+            }
 
-                CATCH {
-                    when X::Cro::HTTP::Error and .response.status == 404 and $wait < 9 {
-                        trace "add-row received 404 - retrying [{$wait+1}/9]", $token;
-                    }
-                }
+            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < 9 {
+                trace "add-data received 404 - retrying [{$wait+1}/9]", $token;
+            } else {
+                die $!;
             }
         }
-
-    }
-
-    sub set-task($token, $index, %parameters) {
-        trace "set task $index", $token;
     }
 
     sub delete-row($token, $index, %parameters) {
@@ -373,7 +381,7 @@ class Micronomy {
         my $url = "$server/$instances-path";
         for ^10 -> $wait {
             sleep $wait/10;
-            {
+            try {
                 my $response = await Cro::HTTP::Client.delete(
                     "$url/$containerInstanceId/data/panes/table/$index",
                     headers => {
@@ -382,19 +390,19 @@ class Micronomy {
                     },
                 );
                 return get-header($response, 'maconomy-concurrency-control');
+            }
 
-                CATCH {
-                    when X::Cro::HTTP::Error and .response.status == 404 and $wait < 9 {
-                        trace "delete-row received 404 - retrying [{$wait+1}/9]", $token;
-                    }
-                }
+            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < 9 {
+                trace "delete-row received 404 - retrying [{$wait+1}/9]", $token;
+            } else {
+                die $!;
             }
         }
     }
 
     sub edit($token, %parameters) {
-        if %parameters<new> {
-            add-row($token, "new", %parameters);
+        if %parameters<job-new> {
+            add-data($token, "new", %parameters);
         }
 
         for ^%parameters<rows> -> $row {
@@ -409,8 +417,8 @@ class Micronomy {
                 trace "change keep state $row", $token;
             }
 
-            if %parameters{"set-task-$row"}:exists {
-                set-task($token, $row, %parameters);
+            if %parameters{"set-task-$row"} {
+                add-data($token, $row, %parameters);
             }
         }
     }
@@ -424,7 +432,7 @@ class Micronomy {
         for %parameters.keys.sort -> $key {
             trace "$key: %parameters{$key}";
         }
-        edit($token, %parameters) if %parameters<concurrency>;
+        edit($token, %parameters) if %parameters<rows>:exists;
 
         my %favorites = get-favorites($token) || return;
         my %content = get($token, $date);
@@ -590,9 +598,9 @@ class Micronomy {
     }
 
     method login(:$username = '', :$password) {
-        trace "login $username ***";
         my ($token, $status);
         if $username and $password {
+            trace "login $username ***";
             my $url = "$server/$employee-path/data;any";
             my $response = await Cro::HTTP::Client.get(
                 $url,
@@ -606,6 +614,7 @@ class Micronomy {
                 },
             );
             $token = get-header($response, 'maconomy-reconnect');
+            trace "logged in $username", $token;
 
             CATCH {
                 when X::Cro::HTTP::Error {
@@ -624,7 +633,7 @@ class Micronomy {
             trace "$username login failed";
             $status //= '';
             redirect "/login?username=$username&reason=$status", :see-other;
-            trace "redirected from login to login", $token;
+            trace "redirected from login to login";
         }
     }
 
