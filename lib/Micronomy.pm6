@@ -320,7 +320,8 @@ class Micronomy {
                 # populate row
                 my @data = ();
                 @data.push('"jobnumber": "' ~ %parameters{"job-$index"} ~ '"') if %parameters{"job-$index"};
-                @data.push('"taskname": "' ~ %parameters{"set-task-$index"} ~ '"') if %parameters{"set-task-$index"};
+                @data.push('"taskname": "' ~  %parameters{"task-$index"} ~ '"') if %parameters{"task-$index"};
+                @data.push('"permanentline": ' ~ (%parameters{"keep-$index"} == 1 ?? "false" !! "true"));
                 my $data = '{"data": {' ~ @data.join(",") ~ '}}';
                 trace "$url$row-parameter";
                 trace "$data";
@@ -376,6 +377,7 @@ class Micronomy {
 
     sub edit($token, %parameters) {
         if %parameters<job-new> {
+            %parameters<keep-new> = 2;
             add-data($token, "new", %parameters);
         }
 
@@ -383,15 +385,15 @@ class Micronomy {
             if %parameters{"position-$row"} != $row {
                 trace "move row $row", $token;
             }
-
             my $was-kept = %parameters{"was-kept-$row"} eq "True" ?? 2 !! 1;
+
             if %parameters{"keep-$row"} == 0 {
                 delete-row($token, $row, %parameters);
+            } elsif %parameters{"set-task-$row"} {
+                %parameters{"task-$row"} = %parameters{"set-task-$row"};
+                add-data($token, $row, %parameters);
             } elsif %parameters{"keep-$row"} != $was-kept {
                 trace "change keep state $row", $token;
-            }
-
-            if %parameters{"set-task-$row"} {
                 add-data($token, $row, %parameters);
             }
         }
