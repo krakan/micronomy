@@ -303,31 +303,41 @@ class Micronomy {
         }
     }
 
-    sub add-data($token, $index, %parameters) {
-        trace "add data [$index] " ~ %parameters{"position-$index"}, $token;
+    sub add-data($action, $token, $source, $target, %parameters) {
+        trace "add data [$source -> $target] " ~ %parameters{"position-$source"}, $token;
+        my $numberOfLines = %parameters<rows>;
         my ($containerInstanceId, $concurrency) = get-concurrency($token);
 
         my $url = "$server/$instances-path/$containerInstanceId/data/panes/table";
-        my $row-parameter = '';
-        if (%parameters{"position-$index"} < %parameters{"rows"}) {
-            $row-parameter = $index eq "new" ?? "?row=" !! "/";
-            $row-parameter ~= %parameters{"position-$index"};
+        if (%parameters{"position-$source"} < $numberOfLines) {
+            if $action eq "add" {
+                $url ~= "?row=" ~ %parameters{"position-$source"};
+            } else {
+                $url ~= "/$target";
+            }
         }
+
         my $retries = 9;
         for 0 .. $retries -> $wait {
             sleep $wait/10;
             try {
                 # populate row
                 my @data = ();
-                @data.push('"jobnumber": "' ~ %parameters{"job-$index"} ~ '"') if %parameters{"job-$index"};
-                @data.push('"taskname": "' ~  %parameters{"task-$index"} ~ '"') if %parameters{"task-$index"};
-                @data.push('"permanentline": ' ~ (%parameters{"keep-$index"} == 1 ?? "false" !! "true"));
+                @data.push('"jobnumber": "' ~ %parameters{"job-$source"} ~ '"') if %parameters{"job-$source"};
+                @data.push('"taskname": "' ~  %parameters{"task-$source"} ~ '"') if %parameters{"task-$source"};
+                @data.push('"permanentline": ' ~ (%parameters{"keep-$source"} == 1 ?? "false" !! "true"));
+                if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
+                    my $day = 0;
+                    for %parameters{"hours-$source"}.split(";") -> $hours {
+                        $day++;
+                        @data.push("\"numberday{$day}\": $hours") if $hours ne "0";
+                    }
+                }
                 my $data = '{"data": {' ~ @data.join(",") ~ '}}';
-                trace "$url$row-parameter";
-                trace "$data";
+                trace "$url $data";
 
                 my $response = await Cro::HTTP::Client.post(
-                    "$url$row-parameter",
+                    "$url",
                     headers => {
                         Authorization => "X-Reconnect $token",
                         Maconomy-Concurrency-Control => $concurrency,
@@ -347,9 +357,8 @@ class Micronomy {
         }
     }
 
-    sub delete-row($token, $index, %parameters) {
-        trace "delete row $index", $token;
-
+    sub delete-row($token, $target, %parameters) {
+        trace "delete row $target", $token;
         my ($containerInstanceId, $concurrency) = get-concurrency($token);
 
         # delete row
@@ -358,7 +367,7 @@ class Micronomy {
             sleep $wait/10;
             try {
                 my $response = await Cro::HTTP::Client.delete(
-                    "$url/$containerInstanceId/data/panes/table/$index",
+                    "$url/$containerInstanceId/data/panes/table/$target",
                     headers => {
                         Authorization => "X-Reconnect $token",
                         Maconomy-Concurrency-Control => $concurrency,
@@ -376,26 +385,56 @@ class Micronomy {
     }
 
     sub edit($token, %parameters) {
-        if %parameters<job-new> {
-            %parameters<keep-new> = 2;
-            add-data($token, "new", %parameters);
-        }
+        my $numberOfLines = %parameters<rows>;
+        my @currentPosition = ^$numberOfLines;
 
-        for (^%parameters<rows>).reverse -> $row {
-            if %parameters{"position-$row"} != $row {
-                trace "move row $row", $token;
-            }
+        # delete, update or move lines
+        for (^$numberOfLines).sort({@currentPosition[$_]}) -> $row {
+            trace "positions "~@currentPosition;
+            my $target = @currentPosition[$row];
             my $was-kept = %parameters{"was-kept-$row"} eq "True" ?? 2 !! 1;
-
             if %parameters{"keep-$row"} == 0 {
-                delete-row($token, $row, %parameters);
-            } elsif %parameters{"set-task-$row"} {
+                delete-row($token, $target, %parameters);
+
+                # mark index as deleted in position array
+                @currentPosition[$row] = -1;
+                for ^@currentPosition -> $position {
+                    @currentPosition[$position]-- if @currentPosition[$position] > $target;
+                }
+                next;
+
+            } elsif %parameters{"set-task-$row"} or %parameters{"keep-$row"} != $was-kept {
                 %parameters{"task-$row"} = %parameters{"set-task-$row"};
-                add-data($token, $row, %parameters);
-            } elsif %parameters{"keep-$row"} != $was-kept {
-                trace "change keep state $row", $token;
-                add-data($token, $row, %parameters);
+                add-data('update', $token, $row, $target, %parameters);
             }
+
+            # move lines
+            my $newTarget = %parameters{"position-$row"};
+            if $newTarget != $row and $newTarget != $target {
+                trace "move row $row from $target to $newTarget", $token;
+                if $newTarget < $target {
+                    add-data('add', $token, $row, $newTarget, %parameters);
+                    delete-row($token, $target+1, %parameters);
+                } else {
+                    add-data('add', $token, $row, $newTarget+1, %parameters);
+                    delete-row($token, $target, %parameters);
+                }
+                # move indexes in position array
+                @currentPosition[$row] = $newTarget;
+                for ^@currentPosition -> $position {
+                    my $other = @currentPosition[$position];
+                    @currentPosition[$position]-- if $newTarget > $other > $target;
+                    @currentPosition[$position]++ if $newTarget < $other < $target;
+                }
+            }
+        }
+        trace "positions "~@currentPosition;
+
+        # add new line
+        my $row = $numberOfLines;
+        if %parameters{"job-$row"} ne "" {
+            %parameters{"keep-$row"} = 2;
+            add-data('add', $token, $row, %parameters{"position-$row"}, %parameters);
         }
     }
 
@@ -430,6 +469,10 @@ class Micronomy {
             my $jobnumber  = %table<records>[$row]<data><jobnumber>;
             my $tasknumber = %table<records>[$row]<data><taskname>;
             %rows{$jobnumber}{$tasknumber} = 1;
+            my @hours;
+            for ^7 -> $day {
+                @hours.push(%table<records>[$row]<data>{"numberday{$day}"} || 0);
+            }
             my %row = (
                 number => $row,
                 description => %table<records>[$row]<data><description>,
@@ -439,6 +482,7 @@ class Micronomy {
                 taskname    => %table<records>[$row]<data><tasktextvar>,
                 concurrency => %table<records>[$row]<meta><concurrencyControl>,
                 keep        => %table<records>[$row]<data><permanentline>,
+                hours       => @hours.join(";"),
             );
             if not $tasknumber {
                 %row<tasks> = get-tasks($token, $jobnumber);

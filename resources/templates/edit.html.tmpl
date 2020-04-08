@@ -29,12 +29,13 @@
               </select>
               <input type="hidden" name="job-<.number>" value="<.jobnumber>" />
               <input type="hidden" name="task-<.number>" value="<.tasknumber>" />
+              <input type="hidden" name="hours-<.number>" value="<.hours>" />
           </div>
         </div>
       </@>
       <div class="row">
-        <input size="1" type="text" name="position-new" value="<.next>" />.
-        <select name="job-new">
+        <input size="1" type="text" name="position-<.next>" value="<.next>" />.
+        <select name="job-<.next>">
           <option value="">Lägg till favorit ...</option>
           <@favorites>
             <option value="<.jobnumber>"><.favorite></option>
