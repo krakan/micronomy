@@ -257,9 +257,8 @@ class Micronomy {
         return @tasks;
     }
 
-    sub get-concurrency($token) {
+    sub get-concurrency($token, $date) {
         trace "get concurrency", $token;
-        my $state = 'card';
         # get card id
         my $url = "$server/$instances-path";
         my $response = await Cro::HTTP::Client.post(
@@ -274,12 +273,11 @@ class Micronomy {
         my $containerInstanceId = %content<meta><containerInstanceId>;
         my $concurrency = get-header($response, 'maconomy-concurrency-control');
 
-        my $retries = 30;
+        my $retries = 10;
         for 0 .. $retries -> $wait {
             try {
                 sleep $wait/10;
                 # refresh data? (seems to be required)
-                $state = "data";
                 $response = await Cro::HTTP::Client.post(
                     "$url/$containerInstanceId/data;any",
                     headers => {
@@ -292,11 +290,36 @@ class Micronomy {
                 $concurrency = get-header($response, 'maconomy-concurrency-control');
                 %content = await $response.body;
 
+                last;
+            }
+
+            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
+                trace "get-concurrency (data;any) received 404 - retrying [{$wait+1}/$retries]", $token;
+            } else {
+                die $!;
+            }
+        }
+
+        for 0 .. $retries -> $wait {
+            try {
+                sleep $wait/10;
+                $response = await Cro::HTTP::Client.post(
+                    "$url/$containerInstanceId/data/panes/card/0",
+                    headers => {
+                        Authorization => "X-Reconnect $token",
+                        Maconomy-Concurrency-Control => $concurrency,
+                        Content-Type => "application/json",
+                    },
+                    body => '{"data":{"datevar":"' ~ $date ~ '","employeenumbervar":"10368"}}',
+                );
+                $concurrency = get-header($response, 'maconomy-concurrency-control');
+                %content = await $response.body;
+
                 return $containerInstanceId, $concurrency;
             }
 
             if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
-                trace "get-concurrency ($state) received 404 - retrying [{$wait+1}/$retries]", $token;
+                trace "get-concurrency (datevar) received 404 - retrying [{$wait+1}/$retries]", $token;
             } else {
                 die $!;
             }
@@ -306,7 +329,7 @@ class Micronomy {
     sub add-data($action, $token, $source, $target, %parameters) {
         trace "add data [$source -> $target] " ~ %parameters{"position-$source"}, $token;
         my $numberOfLines = %parameters<rows>;
-        my ($containerInstanceId, $concurrency) = get-concurrency($token);
+        my ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
 
         my $url = "$server/$instances-path/$containerInstanceId/data/panes/table";
         if (%parameters{"position-$source"} < $numberOfLines) {
@@ -359,7 +382,7 @@ class Micronomy {
 
     sub delete-row($token, $target, %parameters) {
         trace "delete row $target", $token;
-        my ($containerInstanceId, $concurrency) = get-concurrency($token);
+        my ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
 
         # delete row
         my $url = "$server/$instances-path";
