@@ -20,6 +20,10 @@ span.box {
     padding: 0.1em;
 }
 
+span#timestamp {
+    color: #777;
+}
+
 form.submit, form.logout {
     margin-top: 2em;
 }
