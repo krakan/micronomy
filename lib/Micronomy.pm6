@@ -457,6 +457,9 @@ class Micronomy {
         my $row = $numberOfLines;
         if %parameters{"job-$row"} ne "" {
             %parameters{"keep-$row"} = 2;
+            my $task = %parameters{"job-$row"}.split("/")[1];
+            %parameters{"task-$row"} = %parameters{"job-$row"}.split("/")[1] if $task;
+            %parameters{"job-$row"} = %parameters{"job-$row"}.split("/")[0];
             add-data('add', $token, $row, %parameters{"position-$row"}, %parameters);
         }
     }
