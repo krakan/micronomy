@@ -66,19 +66,25 @@ class Micronomy {
             concurrency => %meta<concurrencyControl>,
             employee => %card<employeenamevar>,
             date => %card<datevar>,
-            totalSum => %card<totalnumberofweekvar>,
-            fixedSum => %card<fixednumberweekvar>,
-            overtimeSum => %card<overtimenumberweekvar>,
-            invoiceableSum => %card<invoiceabletimedayweekvar>,
+            total => %card<totalnumberofweekvar>,
+            fixed => %card<fixednumberweekvar>,
+            overtime => %card<overtimenumberweekvar>,
+            invoiceable => %card<invoiceabletimedayweekvar>,
+            filler => -1,
         );
+        for ^%table<meta><rowCount> -> $row {
+            %data<filler> = $row if %table<records>[$row]<data><entrytext> eq "Tjänstledig mot RAM";
+        }
 
         my $fmt = {sprintf "%s %02d/%02d", @days[.day-of-week], .day, .month};
         for 1..7 -> $day {
-            %data<dates>.push(Date.new(%card{"dateday{$day}var"}, formatter => $fmt).Str);
-            %data<total>.push(%card{"totalnumberday{$day}var"});
-            %data<fixed>.push(%card{"fixednumberday{$day}var"});
-            %data<overtime>.push(%card{"overtimenumberday{$day}var"});
-            %data<invoiceable>.push(%card{"invoiceabletimeday{$day}var"});
+            my %day = (number => $day);
+            %day<date> = Date.new(%card{"dateday{$day}var"}, formatter => $fmt).Str;
+            %day<total> = %card{"totalnumberday{$day}var"};
+            %day<fixed> = %card{"fixednumberday{$day}var"};
+            %day<overtime> = %card{"overtimenumberday{$day}var"};
+            %day<invoiceable> = %card{"invoiceabletimeday{$day}var"};
+            %data<days>.push(%day);
         }
 
         my @rows;
@@ -106,13 +112,16 @@ class Micronomy {
                 weektotal => %table<records>[$row]<data><weektotal>,
                 status => $status,
             );
+
             my @rowdays;
             for 1..7 -> $day {
+                my $disabled = @disabled[$day-1] // "";
+                $disabled = "disabled" if $row == %data<filler>;
                 @rowdays.push(
                     {
                         number => $day,
+                        disabled => $disabled,
                         hours => %table<records>[$row]<data>{"numberday{$day}"} || "",
-                        disabled => @disabled[$day-1] // "",
                     }
                 );
             }
@@ -121,8 +130,8 @@ class Micronomy {
         }
         %data<rows> = @rows;
 
+        trace "sending timesheet", $token;
         template 'timesheet.html.tmpl', %data;
-        trace "sent timesheet", $token;
 
         CATCH {
             warn "error: invalid data";
@@ -546,6 +555,36 @@ class Micronomy {
         #}
     }
 
+    sub set-filler(%parameters) {
+        my $filler = %parameters<filler> or return;
+        my @totals;
+        @totals[0] = 0;
+        for 1..7 -> $day  {
+            @totals[$day] = 0;
+            for 0..* -> $row {
+                next if $row == $filler;
+                last unless %parameters{"concurrency-$row"};
+                my $hours = %parameters{"hours-$row-$day"} || "0";
+                $hours = +$hours.subst(",", ".");
+                @totals[$day] += $hours;
+            }
+            @totals[0] += @totals[$day];
+        }
+        my $totalDiff = %parameters<expectSum> - @totals[0];
+        $totalDiff = 0 if $totalDiff < 0;
+        for (1..7).sort({@totals[$_] - %parameters{"expect-$_"}}) -> $day  {
+            if %parameters{"expect-$day"} > @totals[$day] {
+                my $diff = %parameters{"expect-$day"} - @totals[$day];
+                $diff = $totalDiff if $totalDiff < $diff;
+                trace("setting $day to $diff");
+                %parameters{"hours-$filler-$day"} = $diff;
+                $totalDiff -= $diff;
+            } else {
+                %parameters{"hours-$filler-$day"} = 0;
+            }
+        }
+    }
+
     method set(:$token, :%parameters) {
         trace "set", $token;
         for %parameters.keys.sort({.split('-', 2)[1]//''}) -> $key {
@@ -554,12 +593,15 @@ class Micronomy {
             trace "  $key: $value", $token if $value;
         }
 
+        set-filler(%parameters);
+
         my %content;
         for 0..* -> $row {
             last unless %parameters{"concurrency-$row"};
             my @changes;
             for 1..7 -> $day  {
-                my $hours = +%parameters{"hours-$row-$day"}.subst(",", ".") || 0;
+                my $hours = %parameters{"hours-$row-$day"} || "0";
+                $hours = +$hours.subst(",", ".");
                 my $previous = %parameters{"hidden-$row-$day"} || 0;
                 if $hours ne $previous {
                     @changes.push("\"numberday$day\": " ~ $hours);

@@ -25,14 +25,15 @@
     </form>
 
     <div class="dates">
-      <@dates: $day>
-        <span class="box"><$day></span>
+      <@days>
+        <span class="box"><.date></span>
       </@>
     </div>
 
     <form action="/" method="POST">
       <input type="hidden" name="concurrency" value="<.concurrency>" />
       <input type="hidden" name="date" value="<.date>" />
+      <input type="hidden" name="filler" value="<.filler>" />
       <@rows>
         <div class="row">
           <div class="title"><.title></div>
@@ -46,39 +47,41 @@
         </div>
       </@>
       <input class="submit" type="submit" value="Spara" />
+
+      <div class="total">
+        <div class="title">Totalt</div>
+        <@days>
+          <span class="box"><.total></span>
+        </@>
+        <span class="box"><.total></span>
+      </div>
+
+      <div class="fixed">
+        <div class="title">Förväntat</div>
+        <@days>
+          <span class="box"><.fixed></span>
+          <input type="hidden" name="expect-<.number>" value="<.fixed>" />
+        </@>
+        <span class="box"><.fixed></span>
+        <input type="hidden" name="expectSum" value="<.fixed>" />
+      </div>
+
+      <div class="overtime">
+        <div class="title">Saldo</div>
+        <@days>
+          <span class="box"><.overtime></span>
+        </@>
+        <span class="box"><.overtime></span>
+      </div>
+
+      <div class="invoiceable">
+        <div class="title">Fakturerbart</div>
+        <@days>
+          <span class="box"><.invoiceable></span>
+        </@>
+        <span class="box"><.invoiceable></span>
+      </div>
     </form>
-
-    <div class="total">
-      <div class="title">Totalt</div>
-      <@total: $hours>
-        <span class="box"><$hours></span>
-      </@>
-      <span class="box"><.totalSum></span>
-    </div>
-
-    <div class="fixed">
-      <div class="title">Förväntat</div>
-      <@fixed: $hours>
-        <span class="box"><$hours></span>
-      </@>
-      <span class="box"><.fixedSum></span>
-    </div>
-
-    <div class="overtime">
-      <div class="title">Saldo</div>
-      <@overtime: $hours>
-        <span class="box"><$hours></span>
-      </@>
-      <span class="box"><.overtimeSum></span>
-    </div>
-
-    <div class="invoiceable">
-      <div class="title">Fakturerbart</div>
-      <@invoiceable: $hours>
-        <span class="box"><$hours></span>
-      </@>
-      <span class="box"><.invoiceableSum></span>
-    </div>
 
     <form class="submit" action="/submit" method="POST">
       <input type="hidden" name="concurrency" value="<.concurrency>" />
