@@ -23,6 +23,7 @@ while test $# -gt 0
 do
     case $1 in
         -p|--port) port=$2; shift;;
+        -h|--host) export MICRONOMY_HOST=$2; shift;;
         -c|--cert*) cert=$2; shift;;
         -f|--fake*) fake=1;;
         -x|--debug) xtrace=on; set -x;;
@@ -41,8 +42,8 @@ case $target in
         exist=$(docker images -q micronomy:latest)
         if test -z $exist || {
                 touch --date=$(docker inspect micronomy:latest | jq -r .[].Created) Dockerfile &&
-	            find . -newer Dockerfile -type f | \
-	                egrep '^./((lib|resources)/|^service.p6)' | grep -v ./lib/.precomp;
+                    find . -newer Dockerfile -type f | \
+                        egrep '^./((lib|resources)/|^service.p6)' | grep -v ./lib/.precomp;
             }
         then
             docker build -t micronomy .
@@ -53,12 +54,12 @@ case $target in
     local) MICRONOMY_PORT=4443 MICRONOMY_HOST=0.0.0.0 perl6 -I lib service.p6;;
 
     deploy)
-	if rsync -zva --exclude .precomp . micronomy:micronomy/ | tee /dev/tty |
+        if rsync -zva --exclude .precomp . micronomy:micronomy/ | tee /dev/tty |
                 egrep -q '^(lib|resources)/|^service.p6'
-	then
+        then
             echo "INFO: restarting micronomy"
             ssh -t micronomy.jonaseel.se sudo pkill moar
-	else
+        else
             echo "INFO: no changes uploaded"
         fi
         ;;
