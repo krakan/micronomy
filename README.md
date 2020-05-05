@@ -8,8 +8,8 @@ work with than the main Maconomy GUI.
 
 ## Connecting
 
-Point you browser at https://micronomy.jonaseel.se/ and log in with
-your B3 Maconomy credentials.
+Point you browser at https://micronomy.init.se/ and log in with your
+B3 Maconomy credentials.
 
 To run it locally you can either install Rakudo and the required
 modules or make sure you have a working Docker installation and build
