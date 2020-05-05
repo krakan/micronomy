@@ -13,10 +13,16 @@ your B3 Maconomy credentials.
 
 To run it locally you can either install Rakudo and the required
 modules or make sure you have a working Docker installation and build
-and run the Dockerfile. You might want to change the port number from
-443 to be able to run docker without sudo. The browser will complain
-about the fake certificate in use when running locally but that's
-expected.
+and run the Dockerfile. The browser will complain about the fake
+certificate in use when running locally but that's expected. Just
+running
+
+```
+./micronomy.sh docker
+```
+
+could be enough.
+
 
 Technically there's nothing stopping you from connecting the micronomy
 service to some other Maconomy backend but only the B3 Maconomy has
@@ -76,13 +82,13 @@ Start with eg. a basic Debian 10 (which is also known as Debian Buster
 and the current `stable`) and then run the following:
 
 ```
-echo deb http://ftp.debian.org/debian/ stretch main non-free contrib >
-  /etc/apt/sources.list.d/stretch.list
-apt install -y libssl1.0.2 git curl make gcc perl6-zef perl6-readline rsync certbot nginx tmux
-ln -fs libssl.so.1.0.2 /usr/lib/x86_64-linux-gnu/libssl.so
-ln -fs libcrypto.so.1.0.2 /usr/lib/x86_64-linux-gnu/libcrypto.so
-zef install --serial Cro::WebApp URI::Encode LWP::Simple
-zef install --force-test Terminal::Readsecret
+echo deb http://ftp.debian.org/debian/ stretch main non-free contrib |
+  sudo tee /etc/apt/sources.list.d/stretch.list >/dev/null
+sudo apt update
+sudo apt install -y libssl1.0.2 git curl make gcc perl6-zef perl6-readline rsync certbot nginx tmux
+sudo ln -fs libssl.so.1.0.2 /usr/lib/x86_64-linux-gnu/libssl.so
+sudo ln -fs libcrypto.so.1.0.2 /usr/lib/x86_64-linux-gnu/libcrypto.so
+zef install --serial Cro::WebApp URI::Encode Digest::MD5
 ```
 
 Some parts of the Cro libraries still requires OpenSSL 1.0 which is
@@ -101,6 +107,6 @@ perl6 -I lib service.p6
 ```
 
 You may want to change port and host IP. There is also a script
-`miccronomy.sh` that sets up a proper TLS certificate, HTTP to HTTPS
+`micronomy.sh` that sets up a proper TLS certificate, HTTP to HTTPS
 redirection and rudimentary logging. You'll most likely need to
 customize it before using it.
