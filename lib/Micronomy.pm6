@@ -178,8 +178,8 @@ class Micronomy {
     }
 
     sub get($token, $date is copy = '') {
-        trace "sub get $date", $token;
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
+        trace "sub get $date", $token;
         my $url = "$server/$registration-path?card.datevar=$date";
         if $date ~~ / '.json' $/ {
             # offline
