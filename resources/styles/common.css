@@ -4,9 +4,10 @@ body {
 form.arrows {
     display: inline-block;
 }
-form div input.hours {
-    width: 100%;
-    font-size: 12pt;
+input.hours {
+    width: 90%;
+    border: 0;
+    font-size: 11pt;
     font-family: arial;
     text-align: center;
 }
@@ -15,7 +16,7 @@ span.box {
     border: 1px solid grey;
     width: 3em;
     text-align: center;
-    font-size: 12pt;
+    font-size: 11pt;
     font-family: arial;
     padding: 0.1em;
 }
@@ -34,19 +35,23 @@ div.error {
     padding-bottom: 1em;
 }
 
-div.style {
+span.style {
     display: inline-block;
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
+    border: 1px solid grey;
 }
-div.style #light {
+span.style #light {
     color: #000000;
     background: #ffffff;
     text-decoration: none;
 }
-div.style #dark {
+span.style #dark {
     color: #aa0;
     background: #0f0f0f;
     text-decoration: none;
+}
+
+input[type=submit] {
+    height: 100%;
+    padding-left: .5em;
+    padding-right: .5em;
 }
