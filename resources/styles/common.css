@@ -22,7 +22,7 @@ span.box {
 }
 
 span#timestamp {
-    color: #777;
+    color: #888;
 }
 
 form.submit, form.logout {
@@ -38,16 +38,26 @@ div.error {
 span.style {
     display: inline-block;
     border: 1px solid grey;
+    white-space-collapse: discard;
+    font-size: 0;
+}
+span.style a {
+    text-decoration: none;
+    font-size: 11pt;
+    padding-left: .5em;
+    padding-right: .5em;
 }
 span.style #light {
     color: #000000;
     background: #ffffff;
-    text-decoration: none;
+}
+span.style #grey {
+    color: #f7df04;
+    background: #5c5c5c;
 }
 span.style #dark {
     color: #aa0;
     background: #0f0f0f;
-    text-decoration: none;
 }
 
 input[type=submit] {
