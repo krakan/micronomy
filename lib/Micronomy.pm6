@@ -555,33 +555,59 @@ class Micronomy {
         #}
     }
 
-    sub set-filler(%parameters) {
-        my $filler = %parameters<filler> or return;
-        my @totals;
-        @totals[0] = 0;
-        for 1..7 -> $day  {
-            @totals[$day] = 0;
-            for 0..* -> $row {
-                next if $row == $filler;
-                last unless %parameters{"concurrency-$row"};
-                my $hours = %parameters{"hours-$row-$day"} || "0";
-                $hours = +$hours.subst(",", ".");
-                @totals[$day] += $hours;
+    sub set-filler(%content, %parameters, $filler --> Bool) {
+        return False if $filler < 0;
+        return False unless %content;
+
+        my %card = %content<panes><card><records>[0]<data>;
+        my %table = %content<panes><table>;
+        my $previous = %table<records>[$filler]<data><weektotal>;
+        my $total = %card<fixednumberweekvar> - %card<totalnumberofweekvar> + $previous;
+
+        for (1..7).sort(
+            {
+                %card{"overtimenumberday{$_}var"}
+                -
+                %table<records>[$filler]<data>{"numberday{$_}"}
             }
-            @totals[0] += @totals[$day];
+        ) -> $day  {
+            my $previous = %table<records>[$filler]<data>{"numberday{$day}"},
+            my $overtime = $previous - %card{"overtimenumberday{$day}var"};
+            $overtime = $total if $overtime > $total;
+            $overtime = 0 if $overtime < 0;
+
+            trace("filling day $day with $overtime");
+            %parameters{"hours-$filler-$day"} = $overtime;
+            $total -= $overtime;
         }
-        my $totalDiff = %parameters<expectSum> - @totals[0];
-        $totalDiff = 0 if $totalDiff < 0;
-        for (1..7).sort({@totals[$_] - %parameters{"expect-$_"}}) -> $day  {
-            if %parameters{"expect-$day"} > @totals[$day] {
-                my $diff = %parameters{"expect-$day"} - @totals[$day];
-                $diff = $totalDiff if $totalDiff < $diff;
-                trace("setting $day to $diff");
-                %parameters{"hours-$filler-$day"} = $diff;
-                $totalDiff -= $diff;
-            } else {
-                %parameters{"hours-$filler-$day"} = 0;
+        return True;
+    }
+
+    sub set(%parameters, $row, $token) {
+        my @changes;
+        for 1..7 -> $day  {
+            my $hours = %parameters{"hours-$row-$day"} || "0";
+            $hours = +$hours.subst(",", ".");
+            my $previous = %parameters{"hidden-$row-$day"} || 0;
+            if $hours ne $previous {
+                @changes.push("\"numberday$day\": " ~ $hours);
             }
+        }
+        if @changes {
+            trace "setting row $row", $token;
+            my $concurrency = %parameters{"concurrency-$row"};
+            my $url = "$server/$registration-path/table/$row?card.datevar=%parameters<date>";
+            my $response = await Cro::HTTP::Client.post(
+                $url,
+                headers => {
+                    Authorization => "X-Reconnect $token",
+                    Content-Type => "application/json",
+                    Accept => "application/json",
+                    Maconomy-Concurrency-Control => $concurrency,
+                },
+                body => '{"data":{' ~ @changes.join(", ") ~ '}}',
+            );
+            return await $response.body;
         }
     }
 
@@ -593,36 +619,17 @@ class Micronomy {
             trace "  $key: $value", $token if $value;
         }
 
-        set-filler(%parameters);
-
+        my $filler = %parameters<filler>;
         my %content;
         for 0..* -> $row {
             last unless %parameters{"concurrency-$row"};
-            my @changes;
-            for 1..7 -> $day  {
-                my $hours = %parameters{"hours-$row-$day"} || "0";
-                $hours = +$hours.subst(",", ".");
-                my $previous = %parameters{"hidden-$row-$day"} || 0;
-                if $hours ne $previous {
-                    @changes.push("\"numberday$day\": " ~ $hours);
-                }
-            }
-            if @changes {
-                trace "setting row $row", $token;
-                my $concurrency = %parameters{"concurrency-$row"};
-                my $url = "$server/$registration-path/table/$row?card.datevar=%parameters<date>";
-                my $response = await Cro::HTTP::Client.post(
-                    $url,
-                    headers => {
-                        Authorization => "X-Reconnect $token",
-                        Content-Type => "application/json",
-                        Accept => "application/json",
-                        Maconomy-Concurrency-Control => $concurrency,
-                    },
-                    body => '{"data":{' ~ @changes.join(", ") ~ '}}',
-                );
-                %content = await $response.body;
-            }
+            next if $row == $filler;
+            my %result = set(%parameters, $row, $token);
+            %content = %result if %result;
+        }
+        if set-filler(%content, %parameters, $filler) {
+            my %result = set(%parameters, $filler, $token);
+            %content = %result if %result;
         }
 
         %content ||= get($token, %parameters<date>);
