@@ -1,101 +1,152 @@
 <:use 'common.html.tmpl'><&head('')>
-    <?.error><div class='error'>Error: <.error></div>
-    </?><h2>
-      <.employee>,
-        vecka <.week>,
-          <.state>
-    </h2>
+<?.error><div class='error'>Error: <.error></div></?>
+<div class="center-container">
+  <div class="content">
+    
+    <h2><.employee>, vecka <.week>, <.state></h2>
 
-    <form class="arrows" action="/" method="POST">
-      <input type="hidden" name="date" value="<.previous>">
-      <input id="prevWk" type="submit" name="submit" value="&lt;">
-    </form>
-    <form class="arrows" action="/" method="POST">
-      <input type="text" size="10" name="date" value="<.date>">
-      <input id="selectedWk" type="submit" name="submit" value="välj">
-    </form>
-    <form class="arrows" action="/" method="POST">
-      <input id="currentWk" type="submit" name="submit" value="idag">
-    </form>
-    <form class="arrows" action="/" method="POST">
-      <input type="hidden" name="date" value="<.next>">
-      <input id="nextWk" type="submit" name="submit" value="&gt;">
-    </form>
+    <nav class="nav--bar">
+      <form class="nav--panel" action="/" method="POST">
+	<input type="hidden" name="date" value="<.previous>">
+	<input id="prevWk" type="submit" class="fancy-button arrow"
+		   name="submit" value="&lt;">
+      </form>
 
-    <div class="dates">
+      <div class="date-picker">
+	<form class="nav--panel" action="/" method="POST">
+	  <input type="date" class="date-input" name="date" value="<.date>">
+	  <input id="selectedWk" type="submit" class="fancy-button" value="V&auml;lj">
+	</form>
+	
+	<form class="nav--panel" action="/" method="POST">
+	  <input id="currentWk" type="submit" name="submit" value="Idag">
+	</form>
+      </div>
+      
+      <form class="nav--panel" action="/" method="POST">
+	<input type="hidden" name="date" value="<.next>">
+	<input id="nextWk" type="submit" class="fancy-button arrow"
+		   name="submit" value="&gt;">
+      </form>
+    </nav>
+
+    <div class="date-boxes">
       <@days>
-        <span class="box"><.date></span>
+      <div class="date-boxes__box"><.date></div>
       </@>
     </div>
 
-    <form action="/" method="POST">
+    <form class="content__block" action="/" method="POST">
       <input type="hidden" name="concurrency" value="<.concurrency>" />
       <input type="hidden" name="date" value="<.date>" />
       <input type="hidden" name="filler" value="<.filler>" />
-      <@rows>
-        <div class="row">
+      
+
+      <div class="panel-shadow">
+	<div class="panel-title">Rader</div>
+	<div class="panel rows-panel">
+	  <@rows>
           <div class="title"><.title></div>
-          <input type="hidden" name="concurrency-<.number>" value="<.concurrency>" />
-          <@days: $day>
-            <input type="hidden" name="hidden-<.number>-<$day.number>" value="<$day.hours>" />
-            <span class="box"><input class="hours" type="text" name="hours-<.number>-<$day.number>" value="<$day.hours>" <$day.disabled>/></span>
-          </@>
-          <span class="box"><.weektotal></span>
-          <&HTML(.status)>
-        </div>
-      </@>
-      <input class="submit" type="submit" value="Spara" />
+	  <div class="hour-spacer">
+            <input type="hidden" name="concurrency-<.number>"
+	      value="<.concurrency>" />
+	    
+            <@days: $day>
+            <input type="hidden" name="hidden-<.number>-<$day.number>"
+	      value="<$day.hours>" />
+	    <input type="text"
+	      class="hour-box input__text<?{$day.disabled eq 'disabled'}> input__text--disabled</?>"
+	      name="hours-<.number>-<$day.number>"
+	      value="<$day.hours>" <$day.disabled> />
+            </@>
 
-      <div class="total">
-        <div class="title">Totalt</div>
-        <@days>
-          <span class="box"><.total></span>
-        </@>
-        <span class="box"><.total></span>
+            <div class="hour-box highlight"><.weektotal></div>
+	    
+            <&HTML(.status)>
+	  </div>
+	  </@>
+	  
+	</div>
+
+	<div class="save-button-container">
+	  <input type="submit" class="save-button" value="Spara" />
+	</div>	
       </div>
 
-      <div class="fixed">
-        <div class="title">Förväntat</div>
-        <@days>
-          <span class="box"><.fixed></span>
-          <input type="hidden" name="expect-<.number>" value="<.fixed>" />
-        </@>
-        <span class="box"><.fixed></span>
-        <input type="hidden" name="expectSum" value="<.fixed>" />
+      <div class="panel-shadow">
+        <div class="panel-title">Totalt</div>
+	<div class="panel">
+	  <div class="hour-spacer">
+            <@days>
+            <div class="hour-box"><.total></div>
+            </@>
+            <div class="hour-box highlight"><.total></div>
+	  </div>
+	</div>
       </div>
 
-      <div class="overtime">
-        <div class="title">Saldo</div>
-        <@days>
-          <span class="box"><.overtime></span>
-        </@>
-        <span class="box"><.overtime></span>
+      <div class="panel-shadow">
+        <div class="panel-title">F&ouml;rv&auml;ntat</div>
+	<div class="panel">
+	  <div class="hour-spacer">
+            <@days>
+            <div class="hour-box"><.fixed></div>
+            <input type="hidden" name="expect-<.number>" value="<.fixed>" />
+            </@>
+            <div class="hour-box highlight"><.fixed></div>
+            <input type="hidden" name="expectSum" value="<.fixed>" />
+	  </div>
+	</div>
       </div>
 
-      <div class="invoiceable">
-        <div class="title">Fakturerbart</div>
-        <@days>
-          <span class="box"><.invoiceable></span>
-        </@>
-        <span class="box"><.invoiceable></span>
+      <div class="panel-shadow">
+        <div class="panel-title">Saldo</div>
+	<div class="panel">
+	  <div class="hour-spacer">
+            <@days>
+            <div class="hour-box"><.overtime></div>
+            </@>
+            <div class="hour-box highlight"><.overtime></div>
+	  </div>
+	</div>
+      </div>
+
+      <div class="panel-shadow">
+        <div class="panel-title">Fakturerbart</div>
+	<div class="panel">
+	  <div class="hour-spacer">
+            <@days>
+            <div class="hour-box"><.invoiceable></div>
+            </@>
+            <div class="hour-box highlight"><.invoiceable></div>
+	  </div>
+	</div>
       </div>
     </form>
 
-    <form class="submit" action="/submit" method="POST">
+    <form class="reason-container" action="/submit" method="POST">
       <input type="hidden" name="concurrency" value="<.concurrency>" />
       <input type="hidden" name="date" value="<.date>" />
-      Ändringsorsak: <input class="reason" type="text" name="reason" />
-      <input class="submit" type="submit" value="Avlämna" />
+      <input type="text" class="big-text-input" name="reason"
+	placeholder="&Auml;ndringsorsak" />
+      <input type="submit" class="fancy-button" value="Avl&auml;mna" />
     </form>
 
-    <form class="submit" action="/edit" method="POST">
+    <form action="/edit" method="POST">
       <input type="hidden" name="date" value="<.date>" />
-      <input class="submit" type="submit" value="Redigera rader" />
+      <input type="submit" class="fancy-button edit-button"
+	value="Redigera rader" />
     </form>
 
-    <form class="logout" action="/logout" method="POST">
+    <form class="logout-button" action="/logout" method="POST">
       <input type="hidden" name="username" value="" />
-      <input class="submit" type="submit" value="Logga ut" />
+      <input type="submit" class="fancy-button" value="Logga ut" />
     </form>
 
-<&foot>
+  </div> <!-- content -->
+  <&foot>
+
+</div> <!-- center-container -->
+
+  </body>
+  </html>
