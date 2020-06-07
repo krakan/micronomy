@@ -147,8 +147,12 @@ html, body {
     margin-bottom: 0;
 }
 
+/* Acts as a container to display the status
+   of the submitted row */
 .title {
-    margin-bottom: 0.3em
+    margin-bottom: 0.3em;
+    display: flex;
+    justify-content: space-between;
 }
 
 footer {
@@ -244,6 +248,10 @@ input[type="text"] {
     margin-bottom: 3em;
 }
 
+.status {
+    font-weight: 600;
+}
+
 /* Login page */
 .coin-logo {
     width: 8em;
@@ -277,9 +285,6 @@ input[type="text"] {
     padding: 1em;
 }
 
-/* Username and password boxes. More contrast is needed
-   here to make them more recognizable than the inputs in
-   the time reporting form */
 .login-text-input {
     border: none;
     border-radius: 0;

@@ -46,7 +46,11 @@
 	<div class="panel-title">Rader</div>
 	<div class="panel rows-panel">
 	  <@rows>
-          <div class="title"><.title></div>
+          <div class="title">
+	    <div><.title></div>
+	    <!-- Backend generated status element. ✔ or ✘ or ~ [text]  -->
+	    <&HTML(.status)>
+	  </div>
 	  <div class="hour-spacer">
             <input type="hidden" name="concurrency-<.number>"
 	      value="<.concurrency>" />
@@ -62,7 +66,7 @@
 
             <div class="hour-box highlight"><.weektotal></div>
 	    
-            <&HTML(.status)>
+            
 	  </div>
 	  </@>
 	  

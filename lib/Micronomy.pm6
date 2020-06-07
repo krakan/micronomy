@@ -96,13 +96,16 @@ class Micronomy {
                     $status = "";
                 }
                 when "approved" {
-                    $status = '<span style="color:green;">✔</span>';
+		    # #31d23b = bright green
+                    $status = '<div class="status" style="color:#31d23b;">✔</div>';
                 }
                 when "denied" {
-                    $status = '<span style="color:red;">✘</span>';
+		    # #ff4646 = bright red
+                    $status = '<div class="status" style="color:#ff4646;">✘</div>';
                 }
                 default {
-                    $status = '<span style="color:red;">' ~ $status ~ '</span>';
+		    # #ff4646 = bright red same as the above
+                    $status = '<div class="status" style="color:#ff4646;">' ~ $status ~ '</div>';
                 }
             }
             my %row = (
