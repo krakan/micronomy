@@ -2,28 +2,29 @@
 <!DOCTYPE html>
 <html lang="sv">
   <head>
-    <title>micronomy @ B3<?$title> - <$title></?></title>
+    <title>Micronomy @ B3<?$title> - <$title></?></title>
+    <link rel="icon" type="image/png" href="micronomy_files/clockicon.svg">
     <link rel="stylesheet" href="/styles/common.css" type="text/css" />
     <link rel="stylesheet" title="light" href="/styles/light.css" type="text/css" />
-    <link rel="alternate stylesheet" title="grey" href="/styles/grey.css" type="text/css" />
-    <link rel="alternate stylesheet" title="dark" href="/styles/dark.css" type="text/css" />
-    <meta name="viewport" content="width=440px, initial-scale=1, maximum-scale=2.0, minimum-scale=0.5" />
+    <link rel="alternate stylesheet" title="dark" href="/styles/dark.css" type="text/css" />    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src='/script/styleswitcher.js'></script>
     <script src='/script/nav.js'></script>
   </head>
   <body onload="setupNavigation();">
-    <h1>micronomy @ B3<?$title> - <$title></?></h1>
 </:>
 
 <:sub foot>
-    <p>[<span id="timestamp">2020-05-26 18:30:33</span>]
-      ● Please <a href="https://github.com/krakan/micronomy/issues">report bugs</a>! ●
-      <span class="style">
-        <a href="#" id="light" onclick="setActiveStyleSheet('light');return false;">#</a>
-        <a href="#" id="grey" onclick="setActiveStyleSheet('grey');return false;">#</a>
-        <a href="#" id="dark" onclick="setActiveStyleSheet('dark');return false;">#</a>
-      </span>
-    </p>
-  </body>
-</html>
+  <footer>
+    <span id="timestamp">[2020-04-26 18:04:19] ● Please
+      <a href="https://github.com/krakan/micronomy/issues"
+	 target="_blank">report bugs</a>!</span>
+
+    <div class="theme-switcher">
+      <a href="#" id="light"
+	 onclick="setActiveStyleSheet('light');return false;">ljus</a> /
+      <a href="#" id="dark"
+	 onclick="setActiveStyleSheet('dark');return false;">mörk</a>
+    </div>
+  </footer>
 </:>
