@@ -1,75 +1,457 @@
-body {
+/* Remove the dotted outline in Firefox. This is OK
+   only because another focus indicator is already 
+   defined in the themes*/
+input::-moz-focus-inner { 
+  border: 0; 
+}
+
+html, body {
     font-family: arial;
+    height: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    font-size: 16px;
 }
-form.arrows {
+
+/* Time report page */
+
+.date-boxes__box {
     display: inline-block;
-}
-input.hours {
-    width: 90%;
-    border: 0;
-    font-size: 11pt;
-    font-family: arial;
-    text-align: center;
-}
-span.box {
-    display: inline-block;
-    border: 1px solid grey;
     width: 3em;
     text-align: center;
-    font-size: 11pt;
-    font-family: arial;
     padding: 0.1em;
 }
 
-span#timestamp {
-    color: #888;
+.error {
+    display: block;
+    width: 100%;
+    margin-top: 1em;
+    padding: 0.3em;
+    box-sizing: border-box;
+    border-radius: 0.1em;
+    text-align: center;
 }
 
-form.submit, form.logout {
-    margin-top: 2em;
-}
-
-div.error {
-    font-size: 24pt;
-    color: #a00;
-    padding-bottom: 1em;
-}
-
-span.style {
+.theme-switcher {
     display: inline-block;
-    border: 1px solid grey;
-    white-space-collapse: discard;
-    font-size: 0;
-}
-span.style a {
-    text-decoration: none;
-    font-size: 11pt;
-    padding-left: .5em;
-    padding-right: .5em;
-}
-span.style #light {
-    color: #000000;
-    background: #ffffff;
-}
-span.style #grey {
-    color: #f7df04;
-    background: #5c5c5c;
-}
-span.style #dark {
-    color: #aa0;
-    background: #0f0f0f;
+    position: fixed;
+    bottom: 1em;
+    right: 2em;
 }
 
-input[type=submit] {
-    height: 100%;
-    padding-left: .5em;
-    padding-right: .5em;
+.center-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100%;
 }
 
-a, a:visited {
-    color: #3600cc;
-    text-decoration: none;
+.content {
+    width: 31em;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    /* This makes the content box push up against the
+       top of the screen, centering it when the footer
+       pushes it upwards due to its auto margin top */
+    margin-top: auto;
 }
-a:hover {
-    text-decoration: underline;
+
+.content__block {
+    width: 100%;
+}
+
+.arrow {
+    width: 3em;
+}
+
+.nav--panel {
+    display: flex;
+    align-items: center;
+    margin-right: 0.4em;
+}
+
+.nav--bar {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    margin-bottom: 1.5em;
+}
+
+.input__text {
+  border-right: none;
+  border-top: none;
+  border-left: none;
+  border-radius: 0.1em 0.1em 0 0;
+  font-size: 1rem;
+  text-align: center;
+}
+
+.input__text--disabled {
+    cursor: not-allowed;
+}
+
+.hour-spacer > .hour-box {
+  margin: 0 0.15em 0 0.15em;
+}
+
+.save-button-container {
+    display: flex;
+    width: 100%;
+    justify-content: flex-end;
+    position: relative;
+}
+
+/* same radius as fancyButton */
+.save-button {
+    border-top: none;
+    border-radius: 0 0 3px 3px;
+    box-shadow: none;
+    padding: 0 0.5em;
+
+    /* Same as fancy-button. Copied to avoid conflict */
+    height: 2em;
+    cursor: pointer;
+}
+
+.hour-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4em;
+    text-align: center;
+    padding: 0.2em;
+    min-width: 0;
+    border: none;
+}
+
+.hour-box::placeholder {
+    font-style: italic;
+}
+
+/* Hide the placeholder when the input has focus */
+.hour-box:focus::placeholder {
+    color: transparent;
+}
+
+
+.hour-spacer {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1em;
+}
+
+.panel > .hour-spacer:last-child {
+    margin-bottom: 0;
+}
+
+.title {
+    margin-bottom: 0.3em
+}
+
+footer {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    background: inherit;
+    padding-top: 1em;
+
+    /* Sink to the bottom of the page if there
+       isn't enough content to push it there */
+    margin-top: auto;
+    margin-bottom: 1em;
+}
+
+.edit-button {
+    margin: 1em 0;
+}
+
+.big-text-input {
+    width: 100%;
+    margin-right: 0.5em;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 2px;
+    padding-left: 0.5em;
+}
+
+.reason-container {
+    display: flex;
+    width: 100%;
+    margin-top: 1.5em;
+}
+
+.panel {
+    padding: 1.2em 0.5em 0.5em 0.5em;
+    margin: 0.7em 0 0 0;
+    box-sizing: border-box;
+}
+
+.panel-title {
+    display: block;
+    width: max-content;
+    position: relative;
+    bottom: -1.4em;
+    margin-left: 0.5em;
+    z-index: 10;
+    padding: 0.2em 0.5em;
+    border-radius: 3px;
+    white-space: nowrap;
+}
+
+.date-input {
+    text-align: center;
+    box-sizing: border-box;
+    height: 2em;
+    border: none;
+    border-radius: 2px;
+    margin-right: 0.3em;
+    padding: 0.5em;
+}
+
+.date-boxes {
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: nowrap;   
+}
+
+.date-picker {
+    display: inline-flex;
+    align-content: center;
+    justify-content: center;
+    align-items: center;
+}
+
+.fancy-button {
+    border-radius: 3px;
+    height: 2em;
+    cursor: pointer;
+}
+
+/* Without this the browsers defaults will, sometimes, wreak havoc
+   on the styling for no apparent reason */
+input[type="text"] {
+    min-width: 0;
+}
+
+/* give enough space towards the bottom so it's not covered
+   by the footer in desktop mode */
+.logout-button {
+    margin-bottom: 3em;
+}
+
+/* Login page */
+.coin-logo {
+    width: 8em;
+    height: 8em;
+    border-radius: 50%;
+    position: relative;
+    top: -5.75em;
+    margin-bottom: -5em;
+    padding: 0.5em;
+
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.center-text {
+    text-align: center;
+}
+
+.login-banner {
+    font-size: 2rem;
+    margin-bottom: 0.7em;
+
+    /* Make the text fatter */
+    font-weight: 600;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    width: 23em;
+    padding: 1em;
+}
+
+/* Username and password boxes. More contrast is needed
+   here to make them more recognizable than the inputs in
+   the time reporting form */
+.login-text-input {
+    border: none;
+    border-radius: 0;
+    height: 2.5em;
+    margin-bottom: 0.5em;
+    font-size: 1.4rem;
+}
+
+.login-text-input::placeholder {
+    font-style: italic;
+}
+
+/* Hide the placeholder text whenever the user gives 
+   it focus */
+.login-form > input:focus::placeholder {
+    color: transparent;
+}
+
+.login-button {
+    margin-top: 1em;
+    border: none;
+    height: 2em;
+    font-size: 1.4rem;
+}
+
+/* End login page */
+
+
+/* Edit rows page */
+
+.job {
+    white-space: nowrap;
+    margin: 0.5em 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.center-row-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+/* End edit rows page */
+
+select {
+    padding: 0.3em;
+    border: none;
+    border-radius: 3px;
+    text-align: center;
+    margin-left: 0.5em;
+    font-size: 0.8rem;
+}
+
+.job-title {
+    margin: 0 0.5em;
+}
+
+.back-button {
+    margin-top: 4em;
+}
+
+/* End edit rows page */
+
+
+/* Mobile mode */
+@media (max-width: 1000px) {
+    html, body {
+	font-size: 32px;
+	margin: 0.2em;
+    }
+
+    .content {
+	width: 100%;
+	margin: 0 2vw 0 2vw;
+	padding: 0.2em;
+    }
+
+    .fancy-button {
+	padding: 0 1em 0 1em;
+    }
+
+    .date-boxes__box {
+	width: 6em;
+	font-size: 1.2rem;
+    }
+
+    .hour-box {
+	width: 100%;
+	height: 2rem;
+	font-size: 1.6rem;
+    }
+
+    .hour-box::placeholder {
+	font-size: 1.2rem;
+    }
+
+    .arrow {
+	width: 13vw;
+    }
+
+    .panel-title {
+	font-size: 1.3rem;
+	bottom: -1.2em;
+    }
+
+    footer {
+	position: initial;
+    }
+
+    .theme-switcher {
+	position: initial;
+	display: inline;
+    }
+
+    .theme-switcher::before {
+	content: '●';
+	margin-left: 0.3em;
+	margin-right: 0.3em;
+    }
+
+    .rows-panel {
+	padding-bottom: 1em;
+    }
+
+    .save-button {
+	font-size: 1.5rem;
+    }
+
+    .date-input {
+	font-size: 1.3rem;
+	height: 2.4em;
+	width: min-content;
+	padding: 0.3em;
+    }
+
+    .fancy-button {
+	font-size: 1.6rem;
+	border-radius: 0.1em;
+    }
+
+    .nav--panel {
+	margin-right: 0.3em;
+    }
+
+    .big-text-input {
+	font-size: 1.3rem;
+    }
+
+    /* Login page */
+    .login-form {
+	margin-top: 10em;
+    }
+
+
+    /* Edit rows page */
+    .job {
+	white-space: initial;
+    }
+
+    select {
+	font-size: 1.3rem;
+    }
+
+    .row {
+	font-size: 1.2rem;
+    }
+
+    .input__text {
+	font-size: 1.2rem;
+    }
+
 }
