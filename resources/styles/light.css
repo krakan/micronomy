@@ -146,3 +146,13 @@ select option {
 .login-button:hover {
     background: #7a8c9f;
 }
+
+
+/* debug */
+.content {
+    background: pink !important;
+}
+
+html, body {
+    background: green !important;
+}
