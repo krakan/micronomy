@@ -7,10 +7,11 @@ input::-moz-focus-inner {
 
 html, body {
     font-family: arial;
-    height: 100%;
+    min-height: 100%;
     box-sizing: border-box;
     margin: 0;
     font-size: 16px;
+    width: 100%;
 }
 
 /* Time report page */
