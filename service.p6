@@ -4,6 +4,7 @@ use Routes;
 
 my $host = %*ENV<MICRONOMY_HOST> || 'localhost';
 my $port = %*ENV<MICRONOMY_PORT> || 80;
+my $prot = 'http';
 my %tls = ();
 if %*ENV<MICRONOMY_TLS_KEY> {
     %tls = %(
@@ -12,6 +13,7 @@ if %*ENV<MICRONOMY_TLS_KEY> {
     );
     $host = %*ENV<MICRONOMY_HOST> || '0.0.0.0';
     $port = %*ENV<MICRONOMY_PORT> ||  443;
+    $prot = 'https';
 }
 
 my Cro::Service $http = Cro::HTTP::Server.new(
@@ -25,7 +27,7 @@ my Cro::Service $http = Cro::HTTP::Server.new(
     ]
 );
 $http.start;
-say "Listening at https://$host:$port";
+say "Listening at $prot://$host:$port";
 react {
     whenever signal(SIGINT) {
         say "Shutting down...";
