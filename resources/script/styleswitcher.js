@@ -42,7 +42,7 @@ function createCookie(name,value,days) {
     var expires = "; expires="+date.toGMTString();
   }
   else expires = "";
-  document.cookie = name+"="+value+expires+"; path=/";
+  document.cookie = name+"="+value+expires+"; path=/; sameSite=strict";
 }
 
 function readCookie(name) {
