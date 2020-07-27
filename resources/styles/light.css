@@ -1,24 +1,158 @@
+:focus {
+    outline: 2px solid #6285ee;
+}
+
+:root {
+    --shadow-color: rgba(141, 141, 170, 0.75);
+    --hover-highlight-color: white;
+    --active-input-strip-color: #6285ee;
+}
+
+footer {
+    color: gray;
+}
+
+.date-input {
+    border: 1px solid #ccc;
+    border-bottom: 2px solid var(--active-input-strip-color);
+    box-shadow: 2px 2px 2px var(--shadow-color);
+    background: white;
+}
+
+.big-text-input {
+    border: 1px solid #ccc;
+    border-bottom: 2px solid var(--active-input-strip-color);
+    box-shadow: 2px 2px 2px var(--shadow-color);
+}
+
+.big-text-input::placeholder {
+    color: #3d3d3d;
+    font-style: italic;
+}
+
+.error {
+    background: #f55;
+    color: black;
+    border: 1px solid #f70000;
+}
+
+.fancy-button {
+    border: none;
+    box-shadow: 2px 2px 2px var(--shadow-color);
+    background: #C8D4E1;
+}
+
+.fancy-button:hover {
+    background: var(--hover-highlight-color);
+}
+
+.highlight {
+    border: 2px solid #82828c !important;
+    border-radius: 2px;
+}
+
+.hour-box {
+    border: 1px solid grey;
+    background: #cbcbcc;
+}
+
+.panel {
+    border: none;
+    background: #9AA5B1;
+}
+
+.panel-shadow {
+    filter: drop-shadow(2px 2px 2px var(--shadow-color));
+}
+
+.panel-title {
+    border: none;
+    background: #C8D4E1;
+}
+
+.save-button {
+    border: none;
+    border-top: none;
+
+    /* Same as fancy-button */
+    background: #C8D4E1;
+}
+
+.save-button:hover {
+    background: var(--hover-highlight-color);
+}
+
+a {
+    color: #7f88d2;
+}
+
+a:visited {
+    color: #8a447f;
+}
+
 body {
-    background: #ffffff;
+    background: #F5F7FA;
+    color: #000;
+}
+
+select {
+    background: #c8d4e1;
+}
+
+select option {
+    background: #c8d4e1;
+}
+
+.input__text {
+    border-bottom: 2px solid var(--active-input-strip-color);
+    min-width: 0;
+    background: white;
+}
+
+.input__text--disabled {
+    background: #cbcbcc;
+    border-bottom: 1px solid grey;
+
+}
+
+.date-boxes__box {
+    background: #9AA5B1;
+    border: none;
+}
+
+/* Login page */
+
+.coin-logo {
+    background: #d7d7d7;
+}
+
+.login-form {
+    background: #9aa5b1;
+}
+
+/* Username and password boxes. More contrast is needed
+   here to make them more recognizable than the inputs in
+   the time reporting form */
+.login-text-input {
+    background: white;
     color: black;
 }
-h1 {
-    color: #3600CC;
+
+.login-button {
+    color: #121213;
+    background: #c8d4e1;
 }
-h2 {
-    color: #0CCCCC;
+
+.login-button:hover {
+    background: #7a8c9f;
 }
-.title {
-    color: #3600CC;
+
+
+/* debug */
+.content {
+    background: pink !important;
 }
-input {
-    background: #eeeeee;
-    color: black;
-}
-input[type=submit]:hover {
-    background: #adadad;
-}
-input:disabled {
-    background: #d6d6d6;
-    color: black;
+
+html, body {
+    background: green !important;
 }
