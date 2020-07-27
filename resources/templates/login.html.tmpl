@@ -1,19 +1,29 @@
-<:use 'common.html.tmpl'><&head('login')>
-    <?.reason><div class='error'><.reason></div>
-    </?><form name="login" method="POST" action="/login">
-      <div>
-        Användarnamn: <input type="text" name="username" value="<.username>" autofocus="autofocus" />
-      </div>
-      <div>
-        Lösenord: <input type="password" name="password" />
-      </div>
-      <input type="submit" value="Logga in" />
+<:use 'common.html.tmpl'>
+<&head('login')>
+<?.reason><div class='error'><.reason></div></?>
+
+<div class="center-container">
+  <div class="panel-shadow content">
+    <form name="login" class="login-form" method="POST" action="/login">
+      <img src="b3.svg" class="coin-logo">
+      <div class="center-text login-banner">Micronomy</div>
+      <input type="text" name="username" placeholder="Anv&auml;ndarnamn"
+		   class="login-text-input center-text" autofocus
+		   value="<.username>">
+      <input type="password" name="password" placeholder="L&ouml;senord"
+	     class="login-text-input center-text">
+      <input type="submit" class="login-button" value="Logga in">
     </form>
-    <script>
-      <!--
-        if (document.login.username.value) {
-          document.login.password.focus();
-        }
-      -->
-    </script>
-<&foot>
+  </div>
+
+  <script>
+    <!--
+          if (document.login.username.value) {
+            document.login.password.focus();
+          }
+    -->
+  </script>
+  <&foot>
+</div>
+</body>
+</html>

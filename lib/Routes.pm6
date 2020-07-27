@@ -63,8 +63,11 @@ sub routes() is export {
         get -> 'script', *@path {
             static "resources/script", @path;
         }
-        get -> 'favicon.ico' {
-            static "resources/b3.png";
+        get -> 'clockicon.svg', *@path  {
+            static "resources/clockicon.svg", @path;
         }
+	get -> 'b3.svg', *@path {
+	    static "resources/b3.svg", @path;
+	}
     }
 }
