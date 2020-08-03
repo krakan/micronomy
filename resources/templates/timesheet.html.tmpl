@@ -1,156 +1,150 @@
 <:use 'common.html.tmpl'><&head('')>
-<?.error><div class='error'>Error: <.error></div></?>
-<div class="center-container">
-  <div class="content">
-    
-    <h2><.employee>, vecka <.week>, <.state></h2>
+    <?.error><div class='error'>Error: <.error></div></?>
+    <div class="center-container">
+      <div class="content">
 
-    <nav class="nav--bar">
-      <form class="nav--panel" action="/" method="POST">
-	<input type="hidden" name="date" value="<.previous>">
-	<input id="prevWk" type="submit" class="fancy-button arrow"
-		   name="submit" value="&lt;">
-      </form>
+        <h2><.employee>, vecka <.week>, <.state></h2>
 
-      <div class="date-picker">
-	<form class="nav--panel" action="/" method="POST">
-	  <input type="date" class="date-input" name="date" value="<.date>">
-	  <input id="selectedWk" type="submit" class="fancy-button" value="V&auml;lj">
-	</form>
-	
-	<form class="nav--panel" action="/" method="POST">
-	  <input id="currentWk" class="fancy-button" type="submit" value="Idag">
-	</form>
-      </div>
-      
-      <form class="nav--panel" action="/" method="POST">
-	<input type="hidden" name="date" value="<.next>">
-	<input id="nextWk" type="submit" class="fancy-button arrow"
-		   name="submit" value="&gt;">
-      </form>
-    </nav>
+        <nav class="nav--bar">
+          <form class="nav--panel" action="/" method="POST">
+            <input type="hidden" name="date" value="<.previous>">
+            <input id="prevWk" type="submit" class="fancy-button arrow" name="submit" value="&lt;">
+          </form>
 
-    <div class="date-boxes">
-      <@days>
-      <div class="date-boxes__box"><.date></div>
-      </@>
-    </div>
+          <div class="date-picker">
+            <form class="nav--panel" action="/" method="POST">
+              <input type="date" class="date-input" name="date" value="<.date>">
+              <input id="selectedWk" type="submit" class="fancy-button" name="submit" value="V&auml;lj">
+            </form>
 
-    <form class="content__block" action="/" method="POST">
-      <input type="hidden" name="concurrency" value="<.concurrency>" />
-      <input type="hidden" name="date" value="<.date>" />
-      <input type="hidden" name="filler" value="<.filler>" />
-      
+            <form class="nav--panel" action="/" method="POST">
+              <input id="currentWk" type="submit" class="fancy-button" name="submit" value="Idag">
+            </form>
+          </div>
 
-      <div class="panel-shadow">
-	<div class="panel-title">Rader</div>
-	<div class="panel rows-panel">
-	  <@rows>
-          <div class="title">
-	    <div><.title></div>
-	    <!-- Backend generated status element. ✔ or ✘ or ~ [text]  -->
-	    <&HTML(.status)>
-	  </div>
-	  <div class="hour-spacer">
-            <input type="hidden" name="concurrency-<.number>"
-	      value="<.concurrency>" />
-	    
-            <@days: $day>
-            <input type="hidden" name="hidden-<.number>-<$day.number>"
-	      value="<$day.hours>" />
-	    <input type="text"
-	      class="hour-box input__text<?{$day.disabled eq 'disabled'}> input__text--disabled</?>"
-	      name="hours-<.number>-<$day.number>"
-	      value="<$day.hours>" <$day.disabled> />
-            </@>
+          <form class="nav--panel" action="/" method="POST">
+            <input type="hidden" name="date" value="<.next>">
+            <input id="nextWk" type="submit" class="fancy-button arrow" name="submit" value="&gt;">
+          </form>
+        </nav>
 
-            <div class="hour-box highlight"><.weektotal></div>
-	    
-            
-	  </div>
-	  </@>
-	  
-	</div>
+        <div class="date-boxes">
+          <@days>
+          <div class="date-boxes__box"><.date></div>
+          </@>
+        </div>
 
-	<div class="save-button-container">
-	  <input type="submit" class="save-button" value="Spara" />
-	</div>	
-      </div>
+        <form class="content__block" action="/" method="POST">
+          <input type="hidden" name="concurrency" value="<.concurrency>" />
+          <input type="hidden" name="date" value="<.date>" />
+          <input type="hidden" name="filler" value="<.filler>" />
 
-      <div class="panel-shadow">
-        <div class="panel-title">Totalt</div>
-	<div class="panel">
-	  <div class="hour-spacer">
-            <@days>
-            <div class="hour-box"><.total></div>
-            </@>
-            <div class="hour-box highlight"><.total></div>
-	  </div>
-	</div>
-      </div>
+          <div class="panel-shadow">
+            <div class="panel-title">Rader</div>
+            <div class="panel rows-panel">
+              <@rows>
+              <div class="title">
+                <div><.title></div>
+                <!-- Backend generated status element. ✔ or ✘ or ~ [text]  -->
+                <&HTML(.status)>
+              </div>
+              <div class="hour-spacer">
+                <input type="hidden" name="concurrency-<.number>"
+                  value="<.concurrency>" />
 
-      <div class="panel-shadow">
-        <div class="panel-title">F&ouml;rv&auml;ntat</div>
-	<div class="panel">
-	  <div class="hour-spacer">
-            <@days>
-            <div class="hour-box"><.fixed></div>
-            <input type="hidden" name="expect-<.number>" value="<.fixed>" />
-            </@>
-            <div class="hour-box highlight"><.fixed></div>
-            <input type="hidden" name="expectSum" value="<.fixed>" />
-	  </div>
-	</div>
-      </div>
+                <@days: $day>
+                <input type="hidden" name="hidden-<.number>-<$day.number>"
+                  value="<$day.hours>" />
+                <input type="text"
+                  class="hour-box input__text<?{$day.disabled eq 'disabled'}> input__text--disabled</?>"
+                  name="hours-<.number>-<$day.number>"
+                  value="<$day.hours>" <$day.disabled> />
+                </@>
 
-      <div class="panel-shadow">
-        <div class="panel-title">Saldo</div>
-	<div class="panel">
-	  <div class="hour-spacer">
-            <@days>
-            <div class="hour-box"><.overtime></div>
-            </@>
-            <div class="hour-box highlight"><.overtime></div>
-	  </div>
-	</div>
-      </div>
+                <div class="hour-box highlight"><.weektotal></div>
 
-      <div class="panel-shadow">
-        <div class="panel-title">Fakturerbart</div>
-	<div class="panel">
-	  <div class="hour-spacer">
-            <@days>
-            <div class="hour-box"><.invoiceable></div>
-            </@>
-            <div class="hour-box highlight"><.invoiceable></div>
-	  </div>
-	</div>
-      </div>
-    </form>
+              </div>
+              </@>
 
-    <form class="reason-container" action="/submit" method="POST">
-      <input type="hidden" name="concurrency" value="<.concurrency>" />
-      <input type="hidden" name="date" value="<.date>" />
-      <input type="text" class="big-text-input" name="reason"
-	placeholder="&Auml;ndringsorsak" />
-      <input type="submit" class="fancy-button" value="Avl&auml;mna" />
-    </form>
+            </div>
 
-    <form action="/edit" method="POST">
-      <input type="hidden" name="date" value="<.date>" />
-      <input type="submit" class="fancy-button edit-button"
-	value="Redigera rader" />
-    </form>
+            <div class="save-button-container">
+              <input type="submit" class="save-button" value="Spara" />
+            </div>
+          </div>
 
-    <form class="logout-button" action="/logout" method="POST">
-      <input type="hidden" name="username" value="" />
-      <input type="submit" class="fancy-button" value="Logga ut" />
-    </form>
+          <div class="panel-shadow">
+            <div class="panel-title">Totalt</div>
+            <div class="panel">
+              <div class="hour-spacer">
+                <@days>
+                <div class="hour-box"><.total></div>
+                </@>
+                <div class="hour-box highlight"><.total></div>
+              </div>
+            </div>
+          </div>
 
-  </div> <!-- content -->
-  <&foot>
+          <div class="panel-shadow">
+            <div class="panel-title">F&ouml;rv&auml;ntat</div>
+            <div class="panel">
+              <div class="hour-spacer">
+                <@days>
+                <div class="hour-box"><.fixed></div>
+                <input type="hidden" name="expect-<.number>" value="<.fixed>" />
+                </@>
+                <div class="hour-box highlight"><.fixed></div>
+                <input type="hidden" name="expectSum" value="<.fixed>" />
+              </div>
+            </div>
+          </div>
 
-</div> <!-- center-container -->
+          <div class="panel-shadow">
+            <div class="panel-title">Saldo</div>
+            <div class="panel">
+              <div class="hour-spacer">
+                <@days>
+                <div class="hour-box"><.overtime></div>
+                </@>
+                <div class="hour-box highlight"><.overtime></div>
+              </div>
+            </div>
+          </div>
 
+          <div class="panel-shadow">
+            <div class="panel-title">Fakturerbart</div>
+            <div class="panel">
+              <div class="hour-spacer">
+                <@days>
+                <div class="hour-box"><.invoiceable></div>
+                </@>
+                <div class="hour-box highlight"><.invoiceable></div>
+              </div>
+            </div>
+          </div>
+        </form>
+
+        <form class="reason-container" action="/submit" method="POST">
+          <input type="hidden" name="concurrency" value="<.concurrency>" />
+          <input type="hidden" name="date" value="<.date>" />
+          <input type="text" class="big-text-input" name="reason"
+            placeholder="&Auml;ndringsorsak" />
+          <input type="submit" class="fancy-button" value="Avl&auml;mna" />
+        </form>
+
+        <form action="/edit" method="POST">
+          <input type="hidden" name="date" value="<.date>" />
+          <input type="submit" class="fancy-button edit-button"
+            value="Redigera rader" />
+        </form>
+
+        <form class="logout-button" action="/logout" method="POST">
+          <input type="hidden" name="username" value="" />
+          <input type="submit" class="fancy-button" value="Logga ut" />
+        </form>
+
+      </div> <!-- content -->
+      <&foot>
+    </div> <!-- center-container -->
   </body>
-  </html>
+</html>
