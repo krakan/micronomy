@@ -1,8 +1,8 @@
 /* Remove the dotted outline in Firefox. This is OK
-   only because another focus indicator is already 
+   only because another focus indicator is already
    defined in the themes*/
-input::-moz-focus-inner { 
-  border: 0; 
+input::-moz-focus-inner {
+  border: 0;
 }
 
 html, body {
@@ -33,11 +33,33 @@ html, body {
     text-align: center;
 }
 
+span#timestamp {
+    color: #888;
+}
+
 .theme-switcher {
     display: inline-block;
-    position: fixed;
-    bottom: 1em;
-    right: 2em;
+    border: 1px solid grey;
+    white-space-collapse: discard;
+    font-size: 0;
+}
+.theme-switcher a {
+    text-decoration: none;
+    font-size: 11pt;
+    padding-left: .5em;
+    padding-right: .5em;
+}
+.theme-switcher #light {
+    color: #000000;
+    background: #f5f7fa;
+}
+.theme-switcher #dark {
+    color: #c2c2c2;
+    background: #353243;
+}
+.theme-switcher #black {
+    color: #af8700;
+    background: #0f0f0f;
 }
 
 .center-container {
@@ -156,20 +178,6 @@ html, body {
     justify-content: space-between;
 }
 
-footer {
-    display: flex;
-    width: 100%;
-    justify-content: center;
-    align-items: center;
-    background: inherit;
-    padding-top: 1em;
-
-    /* Sink to the bottom of the page if there
-       isn't enough content to push it there */
-    margin-top: auto;
-    margin-bottom: 1em;
-}
-
 .edit-button {
     margin: 1em 0;
 }
@@ -221,7 +229,7 @@ footer {
     display: flex;
     width: 100%;
     justify-content: space-between;
-    flex-wrap: nowrap;   
+    flex-wrap: nowrap;
 }
 
 .date-picker {
@@ -298,7 +306,7 @@ input[type="text"] {
     font-style: italic;
 }
 
-/* Hide the placeholder text whenever the user gives 
+/* Hide the placeholder text whenever the user gives
    it focus */
 .login-form > input:focus::placeholder {
     color: transparent;
@@ -392,21 +400,6 @@ select {
     .panel-title {
 	font-size: 1.3rem;
 	bottom: -1.2em;
-    }
-
-    footer {
-	position: initial;
-    }
-
-    .theme-switcher {
-	position: initial;
-	display: inline;
-    }
-
-    .theme-switcher::before {
-	content: '●';
-	margin-left: 0.3em;
-	margin-right: 0.3em;
     }
 
     .rows-panel {
