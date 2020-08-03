@@ -622,7 +622,7 @@ class Micronomy {
             trace "  $key: $value", $token if $value;
         }
 
-        my $filler = %parameters<filler>;
+        my $filler = %parameters<filler> // -1;
         my %content;
         for 0..* -> $row {
             last unless %parameters{"concurrency-$row"};
