@@ -265,12 +265,9 @@ input[type="text"] {
 .coin-logo {
     width: 8em;
     height: 8em;
-    border-radius: 50%;
+    border-radius: 10%;
     position: relative;
-    top: -5.75em;
-    margin-bottom: -5em;
     padding: 0.5em;
-
     left: 50%;
     transform: translateX(-50%);
 }
