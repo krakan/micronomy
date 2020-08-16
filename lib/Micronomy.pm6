@@ -276,7 +276,6 @@ class Micronomy {
     }
 
     sub get-concurrency($token, $date) {
-        my $employeeNumber = 10368; ### FIXME
         trace "get concurrency", $token;
         # get card id
         my $url = "$server/$instances-path";
@@ -291,6 +290,7 @@ class Micronomy {
         my %content = await $response.body;
         my $containerInstanceId = %content<meta><containerInstanceId>;
         my $concurrency = get-header($response, 'maconomy-concurrency-control');
+        my $employeeNumber = 0;
 
         my $retries = 10;
         for 0 .. $retries -> $wait {
@@ -308,6 +308,7 @@ class Micronomy {
                 );
                 $concurrency = get-header($response, 'maconomy-concurrency-control');
                 %content = await $response.body;
+                $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
 
                 last;
             }
