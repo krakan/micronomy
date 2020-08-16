@@ -184,11 +184,6 @@ class Micronomy {
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         trace "sub get $date", $token;
         my $url = "$server/$registration-path?card.datevar=$date";
-        if $date ~~ / '.json' $/ {
-            # offline
-            $date = %*ENV<HOME> ~ "/micronomy/micronomy-$date" unless $date.IO.e;
-            return from-json slurp $date;
-        }
 
         my $request = Cro::HTTP::Client.get(
             $url,
@@ -215,6 +210,17 @@ class Micronomy {
         my %content = get($token, $date) and
             show($token, %content);
         trace "get method done", $token;
+    }
+
+    method demo(:$token) {
+        trace "demo", $token;
+        my $dir = $*PROGRAM-NAME;
+        $dir ~~ s/<-[^/]>* $//;
+        $dir ||= '.';
+        my $file = "$dir/resources/demo.json";
+        my %content = from-json slurp $file;
+        show($token, %content);
+        trace "demo method done", $token;
     }
 
     sub get-favorites($token) {
@@ -270,6 +276,7 @@ class Micronomy {
     }
 
     sub get-concurrency($token, $date) {
+        my $employeeNumber = 10368; ### FIXME
         trace "get concurrency", $token;
         # get card id
         my $url = "$server/$instances-path";
@@ -322,7 +329,7 @@ class Micronomy {
                         Maconomy-Concurrency-Control => $concurrency,
                         Content-Type => "application/json",
                     },
-                    body => '{"data":{"datevar":"' ~ $date ~ '","employeenumbervar":"10368"}}',
+                    body => '{"data":{"datevar":"' ~ $date ~ '","employeenumbervar":"' ~ $employeeNumber ~ '"}}',
                 );
                 $concurrency = get-header($response, 'maconomy-concurrency-control');
                 %content = await $response.body;
