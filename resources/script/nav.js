@@ -37,11 +37,12 @@ function documentKeyDown(evt) {
 }
 
 function setupNavigation() {
-  var boxes = document.getElementsByClassName('hours');
-  var rows = document.getElementsByClassName('row').length;
+  var boxes = document.getElementsByClassName('nav-field');
+  var rows = document.getElementsByClassName('nav-row').length;
   var cols = boxes.length / rows;
+
   lastTarget = boxes[0];
-  if (lastTarget) {
+  if (cols) {
     lastTarget.focus();
   }
 
@@ -83,6 +84,7 @@ function setupNavigation() {
         idx = row * cols + (col + 1) % cols;
         break;
       }
+      //idx = Math.floor(idx);
       var target = boxes[idx];
 
       if (target != null) {

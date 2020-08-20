@@ -43,7 +43,7 @@
             <div class="panel-title">Rader</div>
             <div class="panel rows-panel">
               <@rows>
-              <div class="title">
+              <div class="title<!{.disabled}> nav-row</!>">
                 <div><.title></div>
                 <!-- Backend generated status element. ✔ or ✘ or ~ [text]  -->
                 <&HTML(.status)>
@@ -56,7 +56,7 @@
                 <input type="hidden" name="hidden-<.number>-<$day.number>"
                   value="<$day.hours>" />
                 <input type="text"
-                  class="hour-box input__text<?{$day.disabled eq 'disabled'}> input__text--disabled</?>"
+                  class="hour-box input__text<!{$day.disabled eq 'disabled'}> nav-field</!><?{$day.disabled eq 'disabled'}> input__text--disabled</?>"
                   name="hours-<.number>-<$day.number>"
                   value="<$day.hours>" <$day.disabled> />
                 </@>

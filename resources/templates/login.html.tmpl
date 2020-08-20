@@ -4,7 +4,7 @@
 
     <div class="center-container">
       <div class="panel-shadow content">
-        <form name="login" class="login-form" method="POST" action="/login">
+        <form name="login" id="loginForm" class="login-form" method="POST" action="/login">
           <img src="b3.svg" class="coin-logo">
           <div class="center-text login-banner">Micronomy</div>
           <input type="text" name="username" placeholder="Anv&auml;ndarnamn"
@@ -18,9 +18,10 @@
 
       <script>
         <!--
-              if (document.login.username.value) {
-                document.login.password.focus();
-              }
+        var loginForm = document.getElementById('loginForm')
+        if (loginForm.username.value) {
+          loginForm.password.focus();
+        }
         -->
       </script>
       <&foot>

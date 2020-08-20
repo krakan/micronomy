@@ -114,12 +114,13 @@ class Micronomy {
                 concurrency => %table<records>[$row]<meta><concurrencyControl>,
                 weektotal => %table<records>[$row]<data><weektotal>,
                 status => $status,
+                disabled => $row == %data<filler>,
             );
 
             my @rowdays;
             for 1..7 -> $day {
                 my $disabled = @disabled[$day-1] // "";
-                $disabled = "disabled" if $row == %data<filler>;
+                $disabled = "disabled" if %row<disabled>;
                 @rowdays.push(
                     {
                         number => $day,
