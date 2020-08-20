@@ -21,6 +21,9 @@
         var loginForm = document.getElementById('loginForm')
         if (loginForm.username.value) {
           loginForm.password.focus();
+          setTimeout("loginForm.password.focus()", 500);
+        } else {
+          setTimeout("loginForm.username.focus()", 500);
         }
         -->
       </script>
