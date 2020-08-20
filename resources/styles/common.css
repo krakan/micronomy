@@ -329,13 +329,6 @@ input[type="text"] {
     align-items: center;
 }
 
-.center-row-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-}
-
 /* End edit rows page */
 
 select {

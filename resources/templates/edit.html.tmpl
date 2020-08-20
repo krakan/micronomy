@@ -10,57 +10,54 @@
           <div class="panel-title">Rader</div>
 
           <form action="/edit" method="POST">
-    	<div class="panel">
-    	  <input type="hidden" name="rows" value="<.next>" />
-    	  <input type="hidden" name="date" value="<.date>" />
-    	  <@rows>
+            <div class="panel">
+              <input type="hidden" name="rows" value="<.next>" />
+              <input type="hidden" name="date" value="<.date>" />
+              <@rows>
               <div class="row">
                 <div class="job">
-                  <input type="hidden" name="position-<.number>" value="<.number>" />
+                  <input type="text" size="1" name="position-<.number>" value="<.number>" />
 
-    	      <div class="job-title">
-    		<.jobname> / <?.tasknumber><.taskname></?>
-    	      </div>
+                  <div class="job-title">
+                    <.jobname> / <?.tasknumber><.taskname></?>
+                  </div>
 
-    	      <!.tasknumber>
-    	      <select name="set-task-<.number>">
-    		<option value="">Välj uppgift ...</option>
-    		<@tasks>
-    		<option value="<.number>"><.name></option>
-    		</@>
+                  <!.tasknumber>
+                  <select name="set-task-<.number>">
+                    <option value="">Välj uppgift ...</option>
+                    <@tasks>
+                    <option value="<.number>"><.name></option>
+                    </@>
                   </select>
-    	      </!>
+                  </!>
 
                   <input type="hidden" name="was-kept-<.number>" value="<.keep>" />
                   <select name="keep-<.number>">
-    		<option value="0">Tag bort</option>
-    		<option value="1"<!.keep> selected</!>>Denna vecka</option>
-    		<option value="2"<?.keep> selected</?>>Tills vidare</option>
+                    <option value="0">Tag bort</option>
+                    <option value="1"<!.keep> selected</!>>Denna vecka</option>
+                    <option value="2"<?.keep> selected</?>>Tills vidare</option>
                   </select>
                   <input type="hidden" name="job-<.number>" value="<.jobnumber>" />
                   <input type="hidden" name="task-<.number>" value="<.tasknumber>" />
                   <input type="hidden" name="hours-<.number>" value="<.hours>" />
                 </div>
               </div>
-    	  </@>
+              </@>
 
-    	  <div class="row">
-    	    <input type="hidden" name="position-<.next>" value="<.next>" />
+              <div class="row">
+                <input type="text" size="1" name="position-<.next>" value="<.next>" />
+                <select name="job-<.next>">
+                  <option value="">Lägg till favorit ...</option>
+                  <@favorites>
+                    <option value="<.jobnumber>/<.tasknumber>"><.favorite></option>
+                  </@>
+                </select>
+              </div>
 
-    	    <div class="center-row-container">
-                  <select name="job-<.next>">
-    		<option value="">Lägg till favorit ...</option>
-    		<@favorites>
-    		<option value="<.jobnumber>/<.tasknumber>"><.favorite></option>
-    		</@>
-                  </select>
-    	    </div>
-
-    	  </div>
-    	</div>
-    	<div class="save-button-container">
-    	  <input type="submit" class="save-button" value="Uppdatera" />
-    	</div>
+            </div>
+            <div class="save-button-container">
+              <input type="submit" class="save-button" value="Uppdatera" />
+            </div>
 
           </form>
         </div>
