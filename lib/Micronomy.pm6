@@ -517,7 +517,7 @@ class Micronomy {
             my $tasknumber = %table<records>[$row]<data><taskname>;
             %rows{$jobnumber}{$tasknumber} = 1;
             my @hours;
-            for ^7 -> $day {
+            for 1..7 -> $day {
                 @hours.push(%table<records>[$row]<data>{"numberday{$day}"} || 0);
             }
             my %row = (
