@@ -16,7 +16,7 @@
               <@rows>
               <div class="row">
                 <div class="job">
-                  <input type="text" size="1" name="position-<.number>" value="<.number>" />
+                  <input type="text" class="input__text" size="1" name="position-<.number>" value="<.number>" />
 
                   <div class="job-title">
                     <.jobname> / <?.tasknumber><.taskname></?>
@@ -45,7 +45,7 @@
               </@>
 
               <div class="row">
-                <input type="text" size="1" name="position-<.next>" value="<.next>" />
+                <input type="text" class="input__text" size="1" name="position-<.next>" value="<.next>" />
                 <select name="job-<.next>">
                   <option value="">Lägg till favorit ...</option>
                   <@favorites>
