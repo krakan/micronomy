@@ -355,7 +355,7 @@ class Micronomy {
         my $url = "$server/$instances-path/$containerInstanceId/data/panes/table";
         if (%parameters{"position-$source"} < $numberOfLines) {
             if $action eq "add" {
-                $url ~= "?row=" ~ %parameters{"position-$source"};
+                $url ~= "?row=" ~ $target;
             } else {
                 $url ~= "/$target";
             }
