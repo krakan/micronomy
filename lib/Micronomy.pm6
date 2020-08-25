@@ -699,7 +699,10 @@ class Micronomy {
             username => $username,
             reason => $reason,
         );
-        set-cookie "sessionToken", "";
+        set-cookie("sessionToken", "login",
+                   same-site => Cro::HTTP::Cookie::SameSite::Strict,
+                   expires => DateTime.now(),
+                  );
         template 'login.html.tmpl', %data;
         trace "sent login page";
     }
@@ -733,7 +736,9 @@ class Micronomy {
         }
         if $token {
             trace "$username logged in", $token;
-            set-cookie "sessionToken", $token;
+            set-cookie("sessionToken", $token,
+                       same-site => Cro::HTTP::Cookie::SameSite::Strict,
+                      );
             redirect "/", :see-other;
             trace "redirected from login to get", $token;
         } else {
@@ -763,7 +768,10 @@ class Micronomy {
                 }
             }
         }
-        set-cookie "sessionToken", "";
+        set-cookie("sessionToken", "logout",
+                   same-site => Cro::HTTP::Cookie::SameSite::Strict,
+                   expires => DateTime.now(),
+                  );
         redirect "/login?reason=Utloggad!", :see-other;
     }
 }
