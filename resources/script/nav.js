@@ -40,8 +40,11 @@ function setupNavigation() {
   var boxes = document.getElementsByClassName('nav-field');
   var rows = document.getElementsByClassName('nav-row').length;
   var cols = boxes.length / rows;
+  lastTarget = document.getElementById('focus-target');
+  if (lastTarget == null) {
+    lastTarget = boxes[0];
+  }
 
-  lastTarget = boxes[0];
   if (cols) {
     lastTarget.focus();
     setTimeout("lastTarget.focus()", 500);

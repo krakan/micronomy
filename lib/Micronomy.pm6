@@ -123,16 +123,25 @@ class Micronomy {
             for 1..7 -> $day {
                 my $disabled = @disabled[$day-1] // "";
                 $disabled = "disabled" if %row<disabled>;
+                my $classes = "hour-box input__text";
+                $classes ~= $disabled ?? " input__text--disabled" !! " nav-field";
                 @rowdays.push(
                     {
                         number => $day,
                         disabled => $disabled,
+                        classes => $classes,
                         hours => %table<records>[$row]<data>{"numberday{$day}"} || "",
                     }
                 );
             }
             %row<days> = @rowdays;
             @rows.push(%row);
+        }
+
+        for 1..7 -> $day {
+            if %card{"dateday{$day}var"} eq $today {
+                @rows[0]<days>[$day-1]<id> = "focus-target";
+            }
         }
         %data<rows> = @rows;
 
