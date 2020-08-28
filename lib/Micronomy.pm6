@@ -39,6 +39,7 @@ class Micronomy {
         $weekstatus = 'Avlämnad' if %table<records>[0]<data><submitted>;
         $weekstatus = 'Godkänd' if %card<approvedvar>;
         my $periodStart = Date.new(%card<periodstartvar>);
+        my $today = Date.today.gist;
         my $previous = $periodStart.earlier(days => 1);
         my $next = $periodStart.later(days => 7);
         $next = $next.truncated-to('month') if $periodStart.month != $next.month;
@@ -62,6 +63,7 @@ class Micronomy {
             state => $weekstatus,
             next => $next,
             previous => $previous,
+            today => $today,
             error => $error,
             concurrency => %meta<concurrencyControl>,
             employee => %card<employeenamevar>,
@@ -139,7 +141,7 @@ class Micronomy {
 
         CATCH {
             warn "error: invalid data";
-            %content = get($token, Date.today);
+            %content = get($token, Date.today.gist);
             show($token, %content, error => 'invalid data');
             return {};
         }
