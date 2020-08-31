@@ -138,9 +138,15 @@ class Micronomy {
             @rows.push(%row);
         }
 
-        if %content<last-target> {
-            %content<last-target> ~~ /"hours-" (\d+) "-" (\d+)/;
-            @rows[$0]<days>[$1-1]<id> = "focus-target";
+        if %content<last-target> and %content<last-target> ~~ / "hours-" $<row> = (\d+) "-" $<day> = (\d+) / {
+            my $day = $<day> - 1;;
+            for |($day ... 6), |($day ... 0) -> $day {
+                trace "day: $day";
+                unless @rows[$<row>]<days>[$day]<disabled> {
+                    @rows[$<row>]<days>[$day]<id> = "focus-target";
+                    last;
+                }
+            }
         } else {
             for 1..7 -> $day {
                 if %card{"dateday{$day}var"} eq $today and

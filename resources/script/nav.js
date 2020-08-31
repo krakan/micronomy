@@ -8,6 +8,14 @@ function unflash(target, bgcolor) {
 }
 
 var lastTarget;
+function persistTarget(form) {
+  var input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = 'last-target'
+  input.value = lastTarget.name;
+  form.appendChild(input);
+}
+
 document.addEventListener("keydown", documentKeyDown);
 function documentKeyDown(evt) {
   if (evt.which >= 37 && evt.which <= 41) {
@@ -15,10 +23,12 @@ function documentKeyDown(evt) {
       switch (evt.which) {
       case 37:
         var prevBtn = document.getElementById('prevWk');
+        persistTarget(prevBtn.form);
         prevBtn.click();
         break;
       case 39:
         var nextBtn = document.getElementById('nextWk');
+        persistTarget(nextBtn.form);
         nextBtn.click();
         break;
       case 38:
@@ -113,12 +123,7 @@ function setupNavigation() {
         evt.preventDefault();
       }
     } else if (evt.which == 13) { // enter
-      var loginForm = document.getElementById('hourForm')
-      var input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'last-target'
-      input.value = document.activeElement.name;
-      hourForm.appendChild(input);
+      persistTarget(document.getElementById('hourForm'));
     }
   }
 }
