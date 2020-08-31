@@ -139,7 +139,8 @@ class Micronomy {
         }
 
         for 1..7 -> $day {
-            if %card{"dateday{$day}var"} eq $today {
+            if %card{"dateday{$day}var"} eq $today and
+               not @rows[0]<days>[$day-1]<disabled> {
                 @rows[0]<days>[$day-1]<id> = "focus-target";
             }
         }
