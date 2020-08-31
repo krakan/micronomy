@@ -138,10 +138,15 @@ class Micronomy {
             @rows.push(%row);
         }
 
-        for 1..7 -> $day {
-            if %card{"dateday{$day}var"} eq $today and
-               not @rows[0]<days>[$day-1]<disabled> {
-                @rows[0]<days>[$day-1]<id> = "focus-target";
+        if %content<last-target> {
+            %content<last-target> ~~ /"hours-" (\d+) "-" (\d+)/;
+            @rows[$0]<days>[$1-1]<id> = "focus-target";
+        } else {
+            for 1..7 -> $day {
+                if %card{"dateday{$day}var"} eq $today and
+                                             not @rows[0]<days>[$day-1]<disabled> {
+                    @rows[0]<days>[$day-1]<id> = "focus-target";
+                }
             }
         }
         %data<rows> = @rows;
@@ -657,6 +662,7 @@ class Micronomy {
         }
 
         %content ||= get($token, %parameters<date>);
+        %content<last-target> =  %parameters<last-target>;
         show($token, %content);
         return;
 

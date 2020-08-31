@@ -112,6 +112,13 @@ function setupNavigation() {
         }
         evt.preventDefault();
       }
+    } else if (evt.which == 13) { // enter
+      var loginForm = document.getElementById('hourForm')
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'last-target'
+      input.value = document.activeElement.name;
+      hourForm.appendChild(input);
     }
   }
 }
