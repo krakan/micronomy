@@ -8,10 +8,10 @@
           <img src="b3.svg" class="coin-logo">
           <div class="center-text login-banner">Micronomy</div>
           <input type="text" name="username" placeholder="Anv&auml;ndarnamn"
-    		   class="login-text-input center-text" autofocus
-    		   value="<.username>">
+                 class="login-text-input center-text"
+                 value="<.username>">
           <input type="password" name="password" placeholder="L&ouml;senord"
-    	     class="login-text-input center-text">
+             class="login-text-input center-text">
           <input type="submit" class="login-button" value="Logga in">
         </form>
       </div>
@@ -21,9 +21,8 @@
         var loginForm = document.getElementById('loginForm')
         if (loginForm.username.value) {
           loginForm.password.focus();
-          setTimeout("loginForm.password.focus()", 500);
         } else {
-          setTimeout("loginForm.username.focus()", 500);
+          loginForm.username.focus();
         }
         -->
       </script>

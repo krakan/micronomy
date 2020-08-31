@@ -47,7 +47,8 @@ function setupNavigation() {
 
   if (cols) {
     lastTarget.focus();
-    setTimeout("lastTarget.focus()", 500);
+    lastTarget.selectionStart = 0;
+    lastTarget.selectionEnd = lastTarget.value.length;
   }
 
   for (var i = 0; i < boxes.length; i++) {
