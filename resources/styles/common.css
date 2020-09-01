@@ -346,6 +346,10 @@ select {
     margin: 0 0.5em;
 }
 
+.month-button {
+    margin-top: 1em;
+}
+
 .back-button {
     margin-top: 4em;
 }

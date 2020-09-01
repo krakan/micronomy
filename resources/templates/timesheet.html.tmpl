@@ -3,27 +3,30 @@
     <div class="center-container">
       <div class="content">
 
-        <h2><.employee>, vecka <.week>, <.state></h2>
+        <h2><.employee>, <.period><.state></h2>
 
         <nav class="nav--bar">
-          <form class="nav--panel" action="/" method="POST">
+          <form class="nav--panel" action="<.action>" method="POST">
             <input type="hidden" name="date" value="<.previous>">
             <input id="prevWk" type="submit" class="fancy-button arrow" name="submit" value="&lt;">
           </form>
 
           <div class="date-picker">
-            <form class="nav--panel" action="/" method="POST">
-              <input type="date" class="date-input" name="date" value="<.date>">
+            <form class="nav--panel" action="<.date-action>" method="POST">
+              <input type="date" class="date-input" name="date" value="<.date>"><!.state>
+              <input type="date" class="date-input" name="end-date" value="<.end-date>"></!>
               <input id="selectedWk" type="submit" class="fancy-button" name="submit" value="V&auml;lj">
             </form>
 
+            <?.state>
             <form class="nav--panel" action="/" method="POST">
             <input type="hidden" name="date" value="<.today>">
               <input id="currentWk" type="submit" class="fancy-button" name="submit" value="Idag">
             </form>
+            </?>
           </div>
 
-          <form class="nav--panel" action="/" method="POST">
+          <form class="nav--panel" action="<.action>" method="POST">
             <input type="hidden" name="date" value="<.next>">
             <input id="nextWk" type="submit" class="fancy-button arrow" name="submit" value="&gt;">
           </form>
@@ -70,9 +73,11 @@
 
             </div>
 
+            <?.state>
             <div class="save-button-container">
               <input type="submit" class="save-button" value="Spara" />
             </div>
+            </?>
           </div>
 
           <div class="panel-shadow">
@@ -126,12 +131,19 @@
           </div>
         </form>
 
+        <?.state>
         <form class="reason-container" action="/submit" method="POST">
           <input type="hidden" name="concurrency" value="<.concurrency>" />
           <input type="hidden" name="date" value="<.date>" />
           <input type="text" class="big-text-input" name="reason"
             placeholder="&Auml;ndringsorsak" />
           <input type="submit" class="fancy-button" value="Avl&auml;mna" />
+        </form>
+
+        <form action="/month" method="POST">
+          <input type="hidden" name="date" value="<.date>" />
+          <input type="submit" class="fancy-button month-button"
+            value="Månadssammanställning" />
         </form>
 
         <form action="/edit" method="POST">
@@ -144,6 +156,13 @@
           <input type="hidden" name="username" value="" />
           <input type="submit" class="fancy-button" value="Logga ut" />
         </form>
+        </?>
+        <!.state>
+        <form action="/" method="POST">
+          <input type="hidden" name="date" value="<.today>" />
+          <input class="fancy-button back-button" type="submit" value="Tillbaka" />
+        </form>
+        </!>
 
       </div> <!-- content -->
       <&foot>

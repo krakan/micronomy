@@ -13,6 +13,7 @@ class Micronomy {
     my $favorites-path = "containers/v1/b3/jobfavorites";
     my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline?fields=taskname,description&limit=100";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
+    my @months = <Dec Jan Feb Mar Apr Maj Jun Jul Aug Sep Okt Nov Dec>;
     template-location 'resources/templates/';
 
     sub trace($message, $token = '') {
@@ -29,8 +30,8 @@ class Micronomy {
         }
     }
 
-    sub show($token, %content, :$error) {
-        trace "show", $token;
+    sub show-week($token, %content, :$error) {
+        trace "show-week", $token;
         my %card = %content<panes><card><records>[0]<data>;
         my %meta = %content<panes><card><records>[0]<meta>;
         my %table = %content<panes><table>;
@@ -59,8 +60,10 @@ class Micronomy {
         }
 
         my %data = (
-            week => $week,
-            state => $weekstatus,
+            period => "vecka $week",
+            action => "/",
+            date-action => "/",
+            state => ", $weekstatus",
             next => $next,
             previous => $previous,
             today => $today,
@@ -163,7 +166,7 @@ class Micronomy {
         CATCH {
             warn "error: invalid data";
             %content = get-week($token, Date.today.gist);
-            show($token, %content, error => 'invalid data');
+            show-week($token, %content, error => 'invalid data');
             return {};
         }
     }
@@ -175,38 +178,150 @@ class Micronomy {
         $title ~= ' / ' ~ %row<jobnamevar>;
     }
 
-    method get-month(:$token, :$date = '') {
+    method get-month(:$token, :$date) {
         trace "get-month $date", $token;
-        my $current = Date.new($date).truncated-to('month');
-        my $number-of-days = $current.later(days => 31).truncated-to('month').earlier(days => 1).day;
+        my $start-date = $date ?? Date.new($date) !! Date.today;
+        $start-date .= first-date-in-month;
+        my $end-date = $start-date.last-date-in-month;
 
-        my $firstDay = $current.day-of-week;
-        my $day-of-month = 0;
-        my (%month, %monthtable);
+        Micronomy.get-period(:$token, :$start-date, :$end-date);
+    }
 
-        for ^6 -> $week {
-            my %content = get-week($token, $current.gist);
-            my %table = %content<panes><table>;
-            unless %month {
-                %month = %content;
-                %monthtable = %month<panes><table>;
-            }
+    method get-period(:$token, :$start-date, :$end-date) {
+        trace "get-period $start-date", $token;
 
-            for $firstDay .. 7 -> $day {
-                $day-of-month++;
-                for ^%table<meta><rowCount> -> $row {
-                    %monthtable<records>[$row]<data>{"numberday{$day-of-month}"} = %table<records>[$row]<data>{"numberday{$day}"},
-                }
-            }
-            $firstDay = 1;
+        my $bucketSize = 'week';
+        my $previous = $start-date.earlier(days => 1);
+        my $next = $end-date.later(days => 1);
+
+        if $start-date.truncated-to('year') != $end-date.truncated-to('year') {
+            $bucketSize = 'year';
+        } elsif $start-date.truncated-to('month') != $end-date.truncated-to('month') {
+            $bucketSize = 'month';
         }
 
-        show($token, %month);
+        my (%content, %sums, %totals, %card);
+        my $current = $start-date;
+        for 0..* -> $week {
+            %content = get-week($token, $current.gist);
+            my %table = %content<panes><table>;
+            %card = %content<panes><card><records>[0]<data>;
+            my $bucket = $current.truncated-to($bucketSize);
+
+            %totals<total>{$bucket} += %card<totalnumberofweekvar>;
+            %totals<fixed>{$bucket} += %card<fixednumberweekvar>;
+            %totals<overtime>{$bucket} += %card<overtimenumberweekvar>;
+            %totals<invoiceable>{$bucket} += %card<invoiceabletimedayweekvar>;
+
+            for 1 .. 7 -> $day {
+                my $date = %card{"dateday{$day}var"};
+                next if $date lt $start-date.gist;
+                last if $date gt $end-date.gist;
+
+                for ^%table<meta><rowCount> -> $row {
+                    my $hours = %table<records>[$row]<data>{"numberday{$day}"};
+                    if $hours {
+                        my $job = %table<records>[$row]<data>{"jobnumber"};
+                        my $task = %table<records>[$row]<data>{"taskname"};
+                        unless %sums{$job}{$task}<title>:exists {
+                            %sums{$job}{$task}<title> = title($row, %table),
+                        }
+                        %sums{$job}{$task}<bucket>{$bucket} += $hours;
+                    }
+                }
+            }
+            my $next = $current.later(days => 7).truncated-to('week');
+            last if $next gt $end-date;
+            if $next.month != $current.month and $next.day > 1 {
+                $current = $next.earlier(days => 1);
+            } else {
+                $current = $next;
+            }
+        }
+
+        my @buckets = %totals<total>.keys.sort;
+        for @buckets -> $bucket {
+             %totals<total><sum> += %totals<total>{$bucket};
+             %totals<fixed><sum> += %totals<fixed>{$bucket};
+             %totals<overtime><sum> += %totals<overtime>{$bucket};
+             %totals<invoiceable><sum> += %totals<invoiceable>{$bucket};
+        }
+
+        my %data = (
+            period => "$start-date - $end-date",
+            action => "/month",
+            date-action => "/period",
+            state => "",
+            next => $next,
+            previous => $previous,
+            today => Date.today.gist,
+            error => "",
+            concurrency => 'read-only',
+            employee => %card<employeenamevar>,
+            date => $start-date.gist,
+            end-date => $end-date.gist,
+            total => %totals<total><sum>,
+            fixed => %totals<fixed><sum>,
+            overtime => %totals<overtime><sum>,
+            invoiceable => %totals<invoiceable><sum>,
+            filler => -1,
+        );
+
+        my $fmt = {sprintf "v%02d", .week-number};
+        $fmt = {sprintf "%s", @months[.month]} if $bucketSize eq "month";
+        $fmt = {sprintf "%4d", .year} if $bucketSize eq "year";
+        for @buckets -> $bucket {
+            my %day = (number => $bucket);
+            my $suffix = "";
+            if $bucketSize eq "week" {
+                my $bucketStart = Date.new($bucket);
+                $suffix = "B" if $bucketStart < $start-date;
+                $suffix = "A" if $bucketStart.later(days => 6) > $end-date;
+            }
+            %day<date> = Date.new($bucket, formatter => $fmt).Str ~ $suffix;
+            %day<total> = %totals<total>{$bucket};
+            %day<fixed> = %totals<fixed>{$bucket};
+            %day<overtime> = %totals<overtime>{$bucket};
+            %day<invoiceable> = %totals<invoiceable>{$bucket};
+            %data<days>.push(%day);
+        }
+
+        my $row = 0;
+        for %sums.keys.sort -> $job {
+            for %sums{$job}.keys.sort -> $task {
+                my @rowbuckets;
+                for @buckets -> $bucket {
+                    %sums{$job}{$task}<sum> += %sums{$job}{$task}<bucket>{$bucket} // 0;
+                    @rowbuckets.push(
+                        {
+                            number => $bucket,
+                            disabled => "disabled",
+                            classes => "hour-box input__text input__text--disabled",
+                            hours => %sums{$job}{$task}<bucket>{$bucket} || "",
+                        }
+                    );
+                }
+
+                my %row = (
+                    number => $row++,
+                    title => %sums{$job}{$task}<title>,
+                    concurrency => 'read-only',
+                    weektotal => %sums{$job}{$task}<sum>,
+                    disabled => True,
+                    status => "",
+                    days => @rowbuckets,
+                );
+                %data<rows>.push(%row);
+            }
+        }
+
+        trace "sending timesheet", $token;
+        template 'timesheet.html.tmpl', %data;
     }
 
     sub get-week($token, $date is copy = '') {
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
-        trace "sub get $date", $token;
+        trace "sub get-week $date", $token;
         my $url = "$server/$registration-path?card.datevar=$date";
 
         my $request = Cro::HTTP::Client.get(
@@ -232,7 +347,7 @@ class Micronomy {
     method get(:$token, :$date = '') {
         trace "get $date", $token;
         my %content = get-week($token, $date) and
-            show($token, %content);
+            show-week($token, %content);
         trace "get method done", $token;
     }
 
@@ -243,7 +358,7 @@ class Micronomy {
         $dir ||= '.';
         my $file = "$dir/resources/demo.json";
         my %content = from-json slurp $file;
-        show($token, %content);
+        show-week($token, %content);
         trace "demo method done", $token;
     }
 
@@ -669,7 +784,7 @@ class Micronomy {
 
         %content ||= get-week($token, %parameters<date>);
         %content<last-target> =  %parameters<last-target>;
-        show($token, %content);
+        show-week($token, %content);
         return;
 
         CATCH {
@@ -700,7 +815,7 @@ class Micronomy {
         );
 
         my %content = await $response.body;
-        show($token, %content);
+        show-week($token, %content);
 
         CATCH {
             when X::Cro::HTTP::Error {
@@ -710,7 +825,7 @@ class Micronomy {
                     Micronomy.get-login(reason => "Var vänlig och logga in!");
                 } else {
                     %content = get-week($token, $date);
-                    show($token, %content, error => $body<errorMessage>);
+                    show-week($token, %content, error => $body<errorMessage>);
                 }
                 return {};
             }

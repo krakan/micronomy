@@ -21,6 +21,10 @@ sub routes() is export {
             }
         }
 
+        get -> 'month', :$sessionToken is cookie, :$date = '' {
+            Micronomy.get-month(token => $sessionToken, date => $date)
+        }
+
         get -> 'demo' {
             Micronomy.demo(token => "demo")
         }
@@ -28,6 +32,21 @@ sub routes() is export {
         post -> :$sessionToken is cookie = '' {
             request-body -> (*%parameters) {
                 Micronomy.set(parameters => %parameters, token => $sessionToken)
+            }
+        }
+
+        post -> 'month', :$sessionToken is cookie = '' {
+            request-body -> (*%parameters) {
+                Micronomy.get-month(token => $sessionToken, date => %parameters<date>)
+            }
+        }
+
+        post -> 'period', :$sessionToken is cookie = '' {
+            request-body -> (*%parameters) {
+                Micronomy.get-period(token => $sessionToken,
+                                     start-date => Date.new(%parameters<date>),
+                                     end-date => Date.new(%parameters<end-date>),
+                                    )
             }
         }
 
