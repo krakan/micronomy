@@ -162,7 +162,7 @@ class Micronomy {
 
         CATCH {
             warn "error: invalid data";
-            %content = get($token, Date.today.gist);
+            %content = get-week($token, Date.today.gist);
             show($token, %content, error => 'invalid data');
             return {};
         }
@@ -185,7 +185,7 @@ class Micronomy {
         my (%month, %monthtable);
 
         for ^6 -> $week {
-            my %content = get($token, $current.gist);
+            my %content = get-week($token, $current.gist);
             my %table = %content<panes><table>;
             unless %month {
                 %month = %content;
@@ -201,10 +201,10 @@ class Micronomy {
             $firstDay = 1;
         }
 
-        show($token, %month, number-of-days => $number-of-days);
+        show($token, %month);
     }
 
-    sub get($token, $date is copy = '') {
+    sub get-week($token, $date is copy = '') {
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         trace "sub get $date", $token;
         my $url = "$server/$registration-path?card.datevar=$date";
@@ -231,7 +231,7 @@ class Micronomy {
 
     method get(:$token, :$date = '') {
         trace "get $date", $token;
-        my %content = get($token, $date) and
+        my %content = get-week($token, $date) and
             show($token, %content);
         trace "get method done", $token;
     }
@@ -520,7 +520,7 @@ class Micronomy {
         edit($token, %parameters) if %parameters<rows>:exists;
 
         my %favorites = get-favorites($token) || return;
-        my %content = get($token, $date);
+        my %content = get-week($token, $date);
 
         my %card = %content<panes><card><records>[0]<data>;
         my %meta = %content<panes><card><records>[0]<meta>;
@@ -667,7 +667,7 @@ class Micronomy {
             %content = %result if %result;
         }
 
-        %content ||= get($token, %parameters<date>);
+        %content ||= get-week($token, %parameters<date>);
         %content<last-target> =  %parameters<last-target>;
         show($token, %content);
         return;
@@ -709,7 +709,7 @@ class Micronomy {
                 if .response.status == 401 {
                     Micronomy.get-login(reason => "Var vänlig och logga in!");
                 } else {
-                    %content = get($token, $date);
+                    %content = get-week($token, $date);
                     show($token, %content, error => $body<errorMessage>);
                 }
                 return {};
