@@ -62,11 +62,12 @@ footer {
 }
 
 .panel-shadow {
+    border: 1px solid transparent;
     filter: drop-shadow(2px 2px 2px var(--shadow-color));
 }
 
 .panel-title {
-    border: none;
+    border: 1px solid transparent;;
     background: #C8D4E1;
 }
 
