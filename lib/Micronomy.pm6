@@ -273,10 +273,18 @@ class Micronomy {
         for @buckets -> $bucket {
             my %day = (number => $bucket);
             my $suffix = "";
+            my $bucketDate = Date.new($bucket);
+            my $bucketStart = $start-date > $bucketDate ?? $start-date !! $bucketDate;
             if $bucketSize eq "week" {
-                my $bucketStart = Date.new($bucket);
-                $suffix = "B" if $bucketStart < $start-date;
-                $suffix = "A" if $bucketStart.later(days => 6) > $end-date;
+                $suffix = "B" if $bucketDate < $start-date;
+                $suffix = "A" if $bucketDate.later(days => 6) > $end-date;
+                %day<url> = "/?date=$bucketStart";
+            } elsif $bucketSize eq "month" {
+                %day<url> = "/month?date=$bucketStart";
+            } elsif $bucketSize eq "year" {
+                my $bucketEnd = $bucketStart.year ~ "-12-31";
+                $bucketEnd = $end-date if $end-date.gist lt $bucketEnd;
+                %day<url> = "/period?date=$bucketStart&end-date=$bucketEnd";
             }
             %day<date> = Date.new($bucket, formatter => $fmt).Str ~ $suffix;
             %day<total> = %totals<total>{$bucket};

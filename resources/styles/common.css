@@ -23,6 +23,11 @@ html, body {
     padding: 0.1em;
 }
 
+.date-boxes__box a, .date-boxes__box a:visited {
+    color: var(--default-font-color);
+    text-decoration: none;
+}
+
 .error {
     display: block;
     width: 100%;
