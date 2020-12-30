@@ -204,14 +204,15 @@ class Micronomy {
             $bucketSize = 'month';
         }
 
-        my (%content, %sums, %totals, %card, $employee);
+        my (%content, %sums, %totals, %card);
+        my $employee = %cache<employee> // '';
+
         my $current = $start-date;
         for 0..* -> $week {
             my $bucket = $current.truncated-to($bucketSize);
             $current ~~ /(\d+)"-"(\d+)"-"(\d+)/;
             my ($year, $month, $day) = ($0, $1, $2);
             if %cache{$year}{$month}{$day}:exists {
-                $employee = %cache<employee>;
                 %totals<total>{$bucket} += %cache{$year}{$month}{$day}<t>;
                 %totals<fixed>{$bucket} += %cache{$year}{$month}{$day}<f>;
                 %totals<overtime>{$bucket} += %cache{$year}{$month}{$day}<o>;;
@@ -235,11 +236,11 @@ class Micronomy {
                     }
                 }
             } else {
-                $employee = %card<employeenamevar>;
                 %content = get-week($token, $current.gist);
                 %cache = update-cache(%cache, %content, $current);
                 my %table = %content<panes><table>;
                 %card = %content<panes><card><records>[0]<data>;
+                $employee = %card<employeenamevar>;
 
                 %totals<total>{$bucket} += %card<totalnumberofweekvar>;
                 %totals<fixed>{$bucket} += %card<fixednumberweekvar>;
