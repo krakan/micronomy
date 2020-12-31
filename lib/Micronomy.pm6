@@ -174,11 +174,12 @@ class Micronomy {
         }
     }
 
-    sub title(Int $row, %table --> Str) {
+    multi sub title(Int $row, %table --> Str) {
         my %row = %table<records>[$row]<data>;
-        my $title = %row<entrytext>;
-        my $len = chars $title;
-        $title ~= ' / ' ~ %row<jobnamevar>;
+        title(%row<jobnamevar>, %row<entrytext>);
+    }
+    multi sub title(Str $job, Str $task --> Str) {
+        "$task / $job";
     }
 
     method get-month(:$token, :$date, :$hoursCache) {
@@ -229,7 +230,7 @@ class Micronomy {
 
                             my $hours = %cache{$year}{$month}{$day}{$job}{$task}{$wday};
                             unless %sums{$job}{$task}<title>:exists {
-                                %sums{$job}{$task}<title> = "%cache{$job}{$task} / %cache{$job}<n>",
+                                %sums{$job}{$task}<title> = title(%cache{$job}{$task}, %cache{$job}<n>);
                             }
                             %sums{$job}{$task}<bucket>{$bucket} += $hours;
                         }
@@ -822,7 +823,7 @@ class Micronomy {
             $overtime = $total if $overtime > $total;
             $overtime = 0 if $overtime < 0;
 
-            trace("filling day $day with $overtime");
+            trace "filling day $day with $overtime";
             %parameters{"hours-$filler-$day"} = $overtime;
             $total -= $overtime;
         }
