@@ -444,7 +444,7 @@ class Micronomy {
         $dir ~~ s/<-[^/]>* $//;
         $dir ||= '.';
         my $employeeNumber = %cache<employeeNumber>;
-        my $cacheFile = "$dir/$employeeNumber.json";
+        my $cacheFile = "$dir/resources/$employeeNumber.json";
         spurt $cacheFile, to-json(%output, :sorted-keys);
     }
 
