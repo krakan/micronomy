@@ -1,225 +1,124 @@
 {
-  "comment": "This demo data is heavily reduced compared to the real time data",
-  "panes": {
-    "card": {
-      "records": [
-        {
-          "data": {
-            "approvedvar": true,
-            "dateday1var": "2019-04-29",
-            "dateday2var": "2019-04-30",
-            "dateday3var": "2019-05-01",
-            "dateday4var": "2019-05-02",
-            "dateday5var": "2019-05-03",
-            "dateday6var": "2019-05-04",
-            "dateday7var": "2019-05-05",
-            "datevar": "2019-05-01",
-            "employeenamevar": "Nils Nilsson",
-            "employeenumber": "12345",
-            "fixednumberday1var": 0,
-            "fixednumberday2var": 0,
-            "fixednumberday3var": 0,
-            "fixednumberday4var": 8,
-            "fixednumberday5var": 8,
-            "fixednumberday6var": 0,
-            "fixednumberday7var": 0,
-            "fixednumberweekvar": 16,
-            "invoiceabletimeday1var": 0,
-            "invoiceabletimeday2var": 0,
-            "invoiceabletimeday3var": 4,
-            "invoiceabletimeday4var": 6.5,
-            "invoiceabletimeday5var": 8,
-            "invoiceabletimeday6var": 0,
-            "invoiceabletimeday7var": 0,
-            "invoiceabletimedayweekvar": 18.5,
-            "overtimenumberday1var": 0,
-            "overtimenumberday2var": 0,
-            "overtimenumberday3var": 5,
-            "overtimenumberday4var": -0.5,
-            "overtimenumberday5var": 0,
-            "overtimenumberday6var": 0,
-            "overtimenumberday7var": 2,
-            "overtimenumberweekvar": 6.5,
-            "periodstartvar": "2019-05-01",
-            "totalnumberday1var": 0,
-            "totalnumberday2var": 0,
-            "totalnumberday3var": 5,
-            "totalnumberday4var": 7.5,
-            "totalnumberday5var": 8,
-            "totalnumberday6var": 0,
-            "totalnumberday7var": 2,
-            "totalnumberofweekvar": 22.5,
-            "weeknumbervar": 18
-          },
-          "meta": {
-            "concurrencyControl": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\""
-          }
-        }
-      ]
+  "currentWeek": "2019-05-01",
+  "currentDate": "2019-05-01",
+  "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\"",
+  "employeeName": "Nils Nilsson",
+  "employeeNumber": "12345",
+  "jobs": {
+    "12020002": {
+      "name": "Konsultarbete - Kund",
+      "tasks": {
+        "100": "Konsulting",
+        "102": "Beredskap",
+        "104": "Beredskapsarbete"
+      }
     },
-    "table": {
-      "meta": {
-        "concurrencyControl": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\"",
-        "rowCount": 6
-      },
-      "records": [
-        {
-          "data": {
-            "approvalstatus": "approved",
-            "description": "Kund AB",
-            "entrytext": "Konsulting",
-            "favorite": "",
-            "jobnamevar": "Konsultarbete - Kund",
-            "jobnumber": "12020002",
-            "numberday1": 0,
-            "numberday2": 0,
-            "numberday3": 0,
-            "numberday4": 6.5,
-            "numberday5": 8,
-            "numberday6": 0,
-            "numberday7": 0,
-            "permanentline": true,
-            "remark": "",
-            "submitted": true,
-            "taskname": "100",
-            "tasktextvar": "Konsulting",
-            "weektotal": 14.5
-          },
-          "meta": {
-            "concurrencyControl": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"118a07d583740f3c3feb6ab1269dd2d487db0d0f\""
-          }
-        },
-        {
-          "data": {
-            "approvalstatus": "approved",
-            "description": "Kund AB",
-            "entrytext": "Beredskap",
-            "favorite": "",
-            "jobnamevar": "Konsultarbete - Kund",
-            "jobnumber": "12020002",
-            "numberday1": 0,
-            "numberday2": 0,
-            "numberday3": 20,
-            "numberday4": 9,
-            "numberday5": 0,
-            "numberday6": 0,
-            "numberday7": 0,
-            "permanentline": true,
-            "remark": "",
-            "submitted": true,
-            "taskname": "102",
-            "tasktextvar": "Beredskap",
-            "weektotal": 29
-          },
-          "meta": {
-            "concurrencyControl": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"d8aabe554b063b03e79ff5a79609eab3b0844b2f\""
-          }
-        },
-        {
-          "data": {
-            "approvalstatus": "approved",
-            "description": "Kund AB",
-            "entrytext": "Beredskapsarbete",
-            "favorite": "",
-            "jobnamevar": "Konsultarbete - Kund",
-            "jobnumber": "12020002",
-            "numberday1": 0,
-            "numberday2": 0,
-            "numberday3": 4,
-            "numberday4": 0,
-            "numberday5": 0,
-            "numberday6": 0,
-            "numberday7": 0,
-            "permanentline": true,
-            "remark": "",
-            "submitted": true,
-            "taskname": "104",
-            "tasktextvar": "Beredskapsarbete",
-            "weektotal": 4
-          },
-          "meta": {
-            "concurrencyControl": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"f65023a3d9d04fd9a81c9556147db23c6c99d656\""
-          }
-        },
-        {
-          "data": {
-            "approvalstatus": "approved",
-            "description": "Bolag AB",
-            "entrytext": "Internt Arbete",
-            "favorite": "",
-            "jobnamevar": "Interntid - Dotterbolag",
-            "jobnumber": "12020049",
-            "numberday1": 0,
-            "numberday2": 0,
-            "numberday3": 1,
-            "numberday4": 1,
-            "numberday5": 0,
-            "numberday6": 0,
-            "numberday7": 2,
-            "permanentline": true,
-            "remark": "",
-            "submitted": true,
-            "taskname": "900",
-            "tasktextvar": "Internt Arbete",
-            "weektotal": 4
-          },
-          "meta": {
-            "concurrencyControl": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"d8501a24306c9b092f6bdcd2770cd1541292c0bc\""
-          }
-        },
-        {
-          "data": {
-            "approvalstatus": "approved",
-            "description": "Bolag AB",
-            "entrytext": "Kompetensutveckling",
-            "favorite": "",
-            "jobnamevar": "Interntid - Dotterbolag",
-            "jobnumber": "12020049",
-            "numberday1": 0,
-            "numberday2": 0,
-            "numberday3": 0,
-            "numberday4": 0,
-            "numberday5": 0,
-            "numberday6": 0,
-            "numberday7": 0,
-            "permanentline": true,
-            "remark": "",
-            "submitted": true,
-            "taskname": "901",
-            "tasktextvar": "Kompetensutveckling",
-            "weektotal": 0
-          },
-          "meta": {
-            "concurrencyControl": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"5e81c49268a372735cdf2a8b02cd092ab6ca8124\""
-          }
-        },
-        {
-          "data": {
-            "approvalstatus": "approved",
-            "description": "Bolag AB",
-            "entrytext": "Tjänstledig mot RAM",
-            "favorite": "",
-            "jobnamevar": "Frånvaro - Dotterbolag",
-            "jobnumber": "12020045",
-            "numberday1": 0,
-            "numberday2": 0,
-            "numberday3": 0,
-            "numberday4": 0,
-            "numberday5": 0,
-            "numberday6": 0,
-            "numberday7": 0,
-            "permanentline": true,
-            "remark": "",
-            "submitted": true,
-            "taskname": "155",
-            "tasktextvar": "Tjänstledig mot RAM",
-            "weektotal": 0
-          },
-          "meta": {
-            "concurrencyControl": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23q\", \"table\"=\"cccef29393a43bf732690dccd2dd1422fb7bc098\""
+    "12020045": {
+      "name": "Frånvaro - Dotterbolag",
+      "tasks": {
+        "155": "Tjänstledig mot RAM"
+      }
+    },
+    "12020049": {
+      "name": "Interntid - Dotterbolag",
+      "tasks": {
+        "900": "Internt Arbete",
+        "901": "Kompetensutveckling"
+      }
+    }
+  },
+  "weeks": {
+    "2019": {
+      "05": {
+        "01": {
+          "fixed": 16,
+          "invoiceable": 18.5,
+          "name": "18B",
+          "overtime": 6.5,
+          "rows": [
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"118a07d583740f3c3feb6ab1269dd2d487db0d0f\"",
+              "hours": {
+                "4": 6.5,
+                "5": 8
+              },
+              "job": "12020002",
+              "state": "approved",
+              "task": "100",
+              "total": 14.5
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"d8aabe554b063b03e79ff5a79609eab3b0844b2f\"",
+              "hours": {
+                "3": 20,
+                "4": 9
+              },
+              "job": "12020002",
+              "state": "approved",
+              "task": "102",
+              "total": 29
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"f65023a3d9d04fd9a81c9556147db23c6c99d656\"",
+              "hours": {
+                "3": 4
+              },
+              "job": "12020002",
+              "state": "approved",
+              "task": "104",
+              "total": 4
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"d8501a24306c9b092f6bdcd2770cd1541292c0bc\"",
+              "hours": {
+                "3": 1,
+                "4": 1,
+                "7": 2
+              },
+              "job": "12020049",
+              "state": "approved",
+              "task": "900",
+              "total": 4
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"5e81c49268a372735cdf2a8b02cd092ab6ca8124\"",
+              "job": "12020049",
+              "state": "approved",
+              "task": "901"
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23q\", \"table\"=\"cccef29393a43bf732690dccd2dd1422fb7bc098\"",
+              "job": "12020045",
+              "state": "approved",
+              "task": "155"
+            }
+          ],
+          "state": 2,
+          "total": 22.5,
+          "totals": {
+            "3": {
+              "invoiceable": 4,
+              "overtime": 5,
+              "total": 5
+            },
+            "4": {
+              "fixed": 8,
+              "invoiceable": 6.5,
+              "overtime": -0.5,
+              "total": 7.5
+            },
+            "5": {
+              "fixed": 8,
+              "invoiceable": 8,
+              "total": 8
+            },
+            "7": {
+              "overtime": 2,
+              "total": 2
+            }
           }
         }
-      ]
+      }
     }
   }
 }

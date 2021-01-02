@@ -13,9 +13,9 @@ sub routes() is export {
             }
         }
 
-        get -> :$sessionToken is cookie = '', :$hoursCache is cookie = '', :$date = '' {
+        get -> :$sessionToken is cookie = '', :$date = '' {
             if $sessionToken {
-                Micronomy.get(token => $sessionToken, :$date, :$hoursCache)
+                Micronomy.get(token => $sessionToken, :$date)
             } else {
                 redirect "/login", :see-other;
             }
@@ -25,36 +25,34 @@ sub routes() is export {
             Micronomy.demo(token => "demo")
         }
 
-        post -> :$sessionToken is cookie = '', :$hoursCache is cookie = '' {
+        post -> :$sessionToken is cookie = '' {
             request-body -> (*%parameters) {
-                Micronomy.set(parameters => %parameters, token => $sessionToken, :$hoursCache)
+                Micronomy.set(parameters => %parameters, token => $sessionToken)
             }
         }
 
-        get -> 'month', :$sessionToken is cookie = '', :$hoursCache is cookie = '', :$date = '' {
-            Micronomy.get-month(token => $sessionToken, :$date, :$hoursCache)
+        get -> 'month', :$sessionToken is cookie = '', :$date = '' {
+            Micronomy.get-month(token => $sessionToken, :$date)
         }
 
-        post -> 'month', :$sessionToken is cookie = '', :$hoursCache is cookie = '' {
+        post -> 'month', :$sessionToken is cookie = '' {
             request-body -> (*%parameters) {
-                Micronomy.get-month(token => $sessionToken, date => %parameters<date>, :$hoursCache)
+                Micronomy.get-month(token => $sessionToken, date => %parameters<date>)
             }
         }
 
-        get -> 'period', :$sessionToken is cookie = '', :$hoursCache is cookie = '', :$date, :$end-date {
+        get -> 'period', :$sessionToken is cookie = '', :$date, :$end-date {
             Micronomy.get-period(token => $sessionToken,
                                  start-date => Date.new($date),
                                  end-date => Date.new($end-date),
-                                 :$hoursCache,
                                 )
         }
 
-        post -> 'period', :$sessionToken is cookie = '', :$hoursCache is cookie = '' {
+        post -> 'period', :$sessionToken is cookie = '' {
             request-body -> (*%parameters) {
                 Micronomy.get-period(token => $sessionToken,
                                      start-date => Date.new(%parameters<date>),
                                      end-date => Date.new(%parameters<end-date>),
-                                     :$hoursCache,
                                     )
             }
         }

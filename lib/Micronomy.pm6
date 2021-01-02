@@ -33,72 +33,64 @@ class Micronomy {
         }
     }
 
-    sub show-week($token, %content, :$error) {
+    sub show-week($token, %cache, :$error) {
         trace "show-week", $token;
-        my %card = %content<panes><card><records>[0]<data>;
-        my %meta = %content<panes><card><records>[0]<meta>;
-        my %table = %content<panes><table>;
 
-        my $weekstatus = 'Öppen';
-        $weekstatus = 'Avlämnad' if %table<records>[0]<data><submitted>;
-        $weekstatus = 'Godkänd' if %card<approvedvar>;
-        my $periodStart = Date.new(%card<periodstartvar>);
-        my $today = Date.today.gist;
+        my $periodStart = Date.new(%cache<currentWeek>);
+        $periodStart ~~ /(\d+)"-"(\d+)"-"(\d+)/;
+        my ($year, $month, $mday) = ($0, $1, $2);
+        my %week = %cache<weeks>{$year}{$month}{$mday};
+        my $week = %week<name>;
+
+        my @weekStatus = <Öppen Avlämnad Godkänd>;
+        my $weekStatus = @weekStatus[%week<state>];
+
+        my $today = Date.today;
         my $previous = $periodStart.earlier(days => 1);
         my $next = $periodStart.later(days => 7);
         $next = $next.truncated-to('month') if $periodStart.month != $next.month;
 
-        my $week = %card<weeknumbervar>;
-        my @disabled;
-        my $sundayDate = $periodStart.truncated-to('week').later(days => 6).day;
-        if $sundayDate < 7 {
-            my $split = 7 - $sundayDate;
-            if $periodStart.day-of-week != 1 {
-                $week ~= 'B';
-                @disabled = "disabled" xx $split;
-            } else {
-                $week ~= 'A';
-                @disabled = flat("" xx $split, "disabled" xx 6);
-            }
-        }
+        my $fmt = {sprintf "%s %02d/%02d", @days[.day-of-week], .day, .month};
+        my $previousSunday = $periodStart.clone(formatter => $fmt).truncated-to('week').earlier(days => 1);
 
         my %data = (
             period => "vecka $week",
             action => "/",
             date-action => "/",
-            state => ", $weekstatus",
+            state => ", $weekStatus",
             next => $next,
             previous => $previous,
-            today => $today,
-            error => $error,
-            concurrency => %meta<concurrencyControl>,
-            employee => %card<employeenamevar>,
-            date => %card<datevar>,
-            total => %card<totalnumberofweekvar>,
-            fixed => %card<fixednumberweekvar>,
-            overtime => %card<overtimenumberweekvar>,
-            invoiceable => %card<invoiceabletimedayweekvar>,
+            today => $today.gist,
+            error => $error // '',
+            concurrency => %cache<concurrency>,
+            employee => %cache<employeeName>,
+            date => %cache<currentDate>,
+            total => %week<total>,
+            fixed => %week<fixed>,
+            overtime => %week<overtime>,
+            invoiceable => %week<invoiceable>,
             filler => -1,
         );
-        for ^%table<meta><rowCount> -> $row {
-            %data<filler> = $row if %table<records>[$row]<data><entrytext> eq "Tjänstledig mot RAM";
+
+        for ^%week<rows> -> $row {
+            %data<filler> = $row if %cache<jobs>{%week<rows>[$row]<job>}<tasks>{%week<rows>[$row]<task>} eq "Tjänstledig mot RAM";
         }
 
-        my $fmt = {sprintf "%s %02d/%02d", @days[.day-of-week], .day, .month};
-        for 1..7 -> $day {
-            my %day = (number => $day);
-            %day<date> = Date.new(%card{"dateday{$day}var"}, formatter => $fmt).Str;
-            %day<total> = %card{"totalnumberday{$day}var"};
-            %day<fixed> = %card{"fixednumberday{$day}var"};
-            %day<overtime> = %card{"overtimenumberday{$day}var"};
-            %day<invoiceable> = %card{"invoiceabletimeday{$day}var"};
+        for 1..7 -> $wday {
+            my %day = (number => $wday);
+            %day<date> = $previousSunday.later(days => $wday).Str;
+            %day<total> = %week<totals>{$wday}<total> // 0;
+            %day<fixed> = %week<totals>{$wday}<fixed> // 0;
+            %day<overtime> = %week<totals>{$wday}<overtime> // 0;
+            %day<invoiceable> = %week<totals>{$wday}<invoiceable> // 0;
             %data<days>.push(%day);
         }
 
         my @rows;
-        for ^%table<meta><rowCount> -> $row {
-            my $status = %table<records>[$row]<data><approvalstatus>;
-            $status = "approved" if $status eq "nil" and %card<approvedvar>;
+        for ^%week<rows> -> $row {
+            my %rowData = %week<rows>[$row];
+            my $status = %rowData<state>;
+            $status = "approved" if $status eq "nil" and %week<state> == 2;
             given $status {
                 when "nil" {
                     $status = "";
@@ -116,27 +108,28 @@ class Micronomy {
                     $status = '<div class="status" style="color:#ff4646;">' ~ $status ~ '</div>';
                 }
             }
+
             my %row = (
                 number => $row,
-                title => title($row, %table),
-                concurrency => %table<records>[$row]<meta><concurrencyControl>,
-                weektotal => %table<records>[$row]<data><weektotal>,
+                title => title(%cache<jobs>{%rowData<job>}<name>, %cache<jobs>{%rowData<job>}<tasks>{%rowData<task>}),
+                concurrency => %rowData<concurrency>,
+                weektotal => %rowData<total> // 0,
                 status => $status,
                 disabled => $row == %data<filler>,
             );
 
             my @rowdays;
-            for 1..7 -> $day {
-                my $disabled = @disabled[$day-1] // "";
+            for 1..7 -> $wday {
+                my $disabled = $periodStart.month ne $previousSunday.later(days => $wday).month ?? "disabled" !! "";
                 $disabled = "disabled" if %row<disabled>;
                 my $classes = "hour-box input__text";
                 $classes ~= $disabled ?? " input__text--disabled" !! " nav-field";
                 @rowdays.push(
                     {
-                        number => $day,
+                        number => $wday,
                         disabled => $disabled,
                         classes => $classes,
-                        hours => %table<records>[$row]<data>{"numberday{$day}"} || "",
+                        hours => %rowData<hours>{$wday} || "",
                     }
                 );
             }
@@ -144,20 +137,20 @@ class Micronomy {
             @rows.push(%row);
         }
 
-        if %content<last-target> and %content<last-target> ~~ / "hours-" $<row> = (\d+) "-" $<day> = (\d+) / {
+        if %cache<last-target> and %cache<last-target> ~~ / "hours-" $<row> = (\d+) "-" $<day> = (\d+) / {
             my $day = $<day> - 1;;
-            for |($day ... 6), |($day ... 0) -> $day {
-                trace "day: $day";
-                unless @rows[$<row>]<days>[$day]<disabled> {
-                    @rows[$<row>]<days>[$day]<id> = "focus-target";
+            for |($day ... 6), |($day ... 0) -> $wday {
+                trace "day: $wday";
+                unless @rows[$<row>]<days>[$wday]<disabled> {
+                    @rows[$<row>]<days>[$wday]<id> = "focus-target";
                     last;
                 }
             }
         } else {
-            for 1..7 -> $day {
-                if %card{"dateday{$day}var"} eq $today and
-                                             not @rows[0]<days>[$day-1]<disabled> {
-                    @rows[0]<days>[$day-1]<id> = "focus-target";
+            for 1..7 -> $wday {
+                if $previousSunday.later(days => $wday) == $today and
+                    not @rows[0]<days>[$wday-1]<disabled> {
+                    @rows[0]<days>[$wday-1]<id> = "focus-target";
                 }
             }
         }
@@ -168,10 +161,83 @@ class Micronomy {
 
         CATCH {
             warn "error: invalid data";
-            %content = get-week($token, Date.today.gist);
+            my %content = get-week($token, Date.today.gist);
             show-week($token, %content, error => 'invalid data');
             return {};
         }
+    }
+
+    sub parse-week(%content) {
+        my %card = %content<panes><card><records>[0]<data>;
+        my %meta = %content<panes><card><records>[0]<meta>;
+        my %table = %content<panes><table>;
+
+        my $weekstatus = 0;
+        $weekstatus = 1 if %table<records>[0]<data><submitted>;
+        $weekstatus = 2 if %card<approvedvar>;
+
+        my %cache = get-cache(%card<employeenumber>);
+
+        %cache<employeeName> = %card<employeenamevar>;
+        %cache<employeeNumber> = %card<employeenumber>;
+
+        my %weekData = (
+            name => %card<weeknumbervar> ~ %card<partvar>,
+            state => $weekstatus,
+            total => %card<totalnumberofweekvar>,
+            fixed => %card<fixednumberweekvar>,
+            overtime => %card<overtimenumberweekvar>,
+            invoiceable => %card<invoiceabletimedayweekvar>,
+        );
+
+        for 1..7 -> $wday {
+            my %day;
+            %day<total> = %card{"totalnumberday{$wday}var"} if %card{"totalnumberday{$wday}var"};
+            %day<fixed> = %card{"fixednumberday{$wday}var"} if %card{"fixednumberday{$wday}var"};
+            %day<overtime> = %card{"overtimenumberday{$wday}var"} if %card{"overtimenumberday{$wday}var"};
+            %day<invoiceable> = %card{"invoiceabletimeday{$wday}var"} if %card{"invoiceabletimeday{$wday}var"};
+            %weekData<totals>{$wday} = %day if %day.keys;
+        }
+
+        for ^%table<meta><rowCount> -> $row {
+            my %rowData = %table<records>[$row]<data>;
+            my $jobName = %rowData<jobnamevar>;
+            my $jobNumber = %rowData<jobnumber>;
+            my $taskNumber = %rowData<taskname>;
+            my $taskName = %rowData<entrytext>;
+
+            %cache<jobs>{$jobNumber}<name> = $jobName;
+            %cache<jobs>{$jobNumber}<tasks>{$taskNumber} = $taskName;
+
+            my $total = %table<records>[$row]<data><weektotal>;
+
+            %weekData<rows>[$row] = {
+                job => $jobNumber,
+                task => $taskNumber,
+            };
+            %weekData<rows>[$row]<total> = $total if $total;
+            for 1..7 -> $wday {
+                my $hours = %table<records>[$row]<data>{"numberday{$wday}"};
+                %weekData<rows>[$row]<hours>{$wday} = $hours if $hours;
+            }
+        }
+
+        %card<periodstartvar> ~~ /(\d+)"-"(\d+)"-"(\d+)/;
+        my ($year, $month, $mday) = ($0, $1, $2);
+        %cache<weeks>{$year}{$month}{$mday} = %weekData;
+
+        set-cache(%cache);
+
+        %cache<currentWeek> = %card<periodstartvar>;
+        %cache<currentDate> = %card<datevar>;
+        %cache<concurrency> = %meta<concurrencyControl>;
+        for ^%table<meta><rowCount> -> $row {
+            my %rowData = %table<records>[$row]<data>;
+            %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<state> = %rowData<approvalstatus>;
+            %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency> = %table<records>[$row]<meta><concurrencyControl>;
+        }
+
+        return %cache;
     }
 
     multi sub title(Int $row, %table --> Str) {
@@ -182,18 +248,31 @@ class Micronomy {
         "$task / $job";
     }
 
-    method get-month(:$token, :$date, :$hoursCache) {
+    method get-month(:$token, :$date) {
         trace "get-month $date", $token;
         my $start-date = $date ?? Date.new($date) !! Date.today;
         $start-date .= first-date-in-month;
         my $end-date = $start-date.last-date-in-month;
 
-        Micronomy.get-period(:$token, :$start-date, :$end-date, :$hoursCache);
+        Micronomy.get-period(:$token, :$start-date, :$end-date);
     }
 
-    method get-period(:$token, :$start-date, :$end-date, :$hoursCache) {
+    method get-period(:$token, :$start-date, :$end-date) {
         trace "get-period $start-date", $token;
-        my %cache = get-cache($hoursCache);
+
+        my $url = "$server/$employee-path/data;any";
+        my $request = Cro::HTTP::Client.get(
+            $url,
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Content-Type => "application/json",
+                Content-Length => 0,
+            },
+        );
+        my $response = await $request;
+        my %content = await $response.body;
+        my $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
+        my %cache = get-cache($employeeNumber);
 
         my $bucketSize = 'week';
         my $previous = $start-date.earlier(days => 1);
@@ -205,68 +284,42 @@ class Micronomy {
             $bucketSize = 'month';
         }
 
-        my (%content, %sums, %totals, %card);
-        my $employee = %cache<employee> // '';
+        my (%sums, %totals);
+        my $employee = %cache<employeeName> // '';
 
         my $current = $start-date;
         for 0..* -> $week {
             my $bucket = $current.truncated-to($bucketSize);
             $current ~~ /(\d+)"-"(\d+)"-"(\d+)/;
-            my ($year, $month, $day) = ($0, $1, $2);
-            if %cache{$year}{$month}{$day}:exists {
-                %totals<total>{$bucket} += %cache{$year}{$month}{$day}<t>;
-                %totals<fixed>{$bucket} += %cache{$year}{$month}{$day}<f>;
-                %totals<overtime>{$bucket} += %cache{$year}{$month}{$day}<o>;;
-                %totals<invoiceable>{$bucket} += %cache{$year}{$month}{$day}<i>;;
-
-                for %cache{$year}{$month}{$day}.keys -> $job {
-                    next if $job ~~ /\D/;
-                    for %cache{$year}{$month}{$day}{$job}.keys -> $task {
-                        for %cache{$year}{$month}{$day}{$job}{$task}.keys -> $wday {
-
-                            my $date = $current.later(days => $wday - 1).gist;
-                            next if $date lt $start-date.gist;
-                            last if $date gt $end-date.gist;
-
-                            my $hours = %cache{$year}{$month}{$day}{$job}{$task}{$wday};
-                            unless %sums{$job}{$task}<title>:exists {
-                                %sums{$job}{$task}<title> = title(%cache{$job}{$task}, %cache{$job}<n>);
-                            }
-                            %sums{$job}{$task}<bucket>{$bucket} += $hours;
-                        }
-                    }
-                }
+            my ($year, $month, $mday) = ($0, $1, $2);
+            if %cache<weeks>{$year}{$month}{$mday}:exists {
+                trace "using cached week $current", $token;
             } else {
-                %content = get-week($token, $current.gist);
-                %cache = update-cache(%cache, %content, $current);
-                my %table = %content<panes><table>;
-                %card = %content<panes><card><records>[0]<data>;
-                $employee = %card<employeenamevar>;
+                %cache = get-week($token, $current.gist);
+            }
 
-                %totals<total>{$bucket} += %card<totalnumberofweekvar>;
-                %totals<fixed>{$bucket} += %card<fixednumberweekvar>;
-                %totals<overtime>{$bucket} += %card<overtimenumberweekvar>;
-                %totals<invoiceable>{$bucket} += %card<invoiceabletimedayweekvar>;
+            %totals<total>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<total>;
+            %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<fixed>;
+            %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<overtime>;;
+            %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<invoiceable>;;
 
-                for 1 .. 7 -> $wday {
-                    my $date = %card{"dateday{$wday}var"};
+            for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+                my $job = %row<job>;
+                my $task = %row<task>;
+                for %row<hours>.keys -> $wday {
+                    my $date = $current.later(days => $wday - 1).gist;
                     next if $date lt $start-date.gist;
                     last if $date gt $end-date.gist;
 
-                    for ^%table<meta><rowCount> -> $row {
-                        my $hours = %table<records>[$row]<data>{"numberday{$wday}"};
-                        if $hours {
-                            my $job = %table<records>[$row]<data>{"jobnumber"};
-                            my $task = %table<records>[$row]<data>{"taskname"};
-                            unless %sums{$job}{$task}<title>:exists {
-                                %sums{$job}{$task}<title> = title($row, %table),
-                            }
-                            %sums{$job}{$task}<bucket>{$bucket} += $hours;
-                        }
+                    my $hours = %row<hours>{$wday};
+                    unless %sums{$job}{$task}<title>:exists {
+                        %sums{$job}{$task}<title> = title(%cache<jobs>{$job}<name>, %cache<jobs>{$job}<tasks>{$task});
                     }
+                    %sums{$job}{$task}<bucket>{$bucket} += $hours;
                 }
             }
-            my $next = $current.later(days => 7).truncated-to('week');
+
+            my $next = $current.later(weeks => 1).truncated-to("week");
             last if $next gt $end-date;
             if $next.month != $current.month and $next.day > 1 {
                 $current = $next.earlier(days => 1).first-date-in-month;
@@ -359,56 +412,40 @@ class Micronomy {
             }
         }
 
-        set-cache(%cache);
-
         trace "sending timesheet", $token;
         template 'timesheet.html.tmpl', %data;
     }
 
-    sub get-cache($cookie) {
-        $cookie ?? from-json uncompress(base64-decode($cookie)).decode !! {};
-    }
-
-    sub update-cache(%cache, %content, $date) {
-        my %table = %content<panes><table>;
-        my %card = %content<panes><card><records>[0]<data>;
-        $date ~~ /(\d+)"-"(\d+)"-"(\d+)/;
-        my ($year, $month, $day) = ($0, $1, $2);
-
-        if %card<approvedvar> {
-            %cache<employee> = %card<employeenamevar>;
-            %cache{$year}{$month}{$day}<t> = %card<totalnumberofweekvar>;
-            %cache{$year}{$month}{$day}<f> = %card<fixednumberweekvar>;;
-            %cache{$year}{$month}{$day}<o> = %card<overtimenumberweekvar>;
-            %cache{$year}{$month}{$day}<i> = %card<invoiceabletimedayweekvar>;
-            for ^%table<meta><rowCount> -> $row {
-                my $job = %table<records>[$row]<data><jobnumber>;
-                my $task = %table<records>[$row]<data><taskname>;
-                %cache{$job}<n> = %table<records>[$row]<data><jobnamevar>;
-                %cache{$job}{$task} = %table<records>[$row]<data><entrytext>;
-                for 1..7 -> $weekday  {
-                    my $hours = %table<records>[$row]<data>{"numberday{$weekday}"};
-                    if $hours {
-                        %cache{$year}{$month}{$day}{$weekday}:delete;
-                        %cache{$year}{$month}{$day}{$job}{$task}{$weekday} = $hours;
-                    } else {
-                        %cache{$year}{$month}{$day}{$job}{$task}{$weekday}:delete;
-                    }
-                }
-            }
-        } elsif $date {
-            %cache{$year}{$month}{$day}:delete;
-        }
-
-        return %cache;
+    sub get-cache($employeeNumber) {
+        my $dir = $*PROGRAM-NAME;
+        $dir ~~ s/<-[^/]>* $//;
+        $dir ||= '.';
+        my $cacheFile = "$dir/resources/$employeeNumber.json";
+        return from-json slurp $cacheFile if $cacheFile.IO.e;
     }
 
     sub set-cache(%cache) {
-        my $cookie = base64-encode(compress(to-json(%cache, :!pretty).encode), :str);
-        trace "cookie: [{$cookie.chars}] $cookie";
-        set-cookie("hoursCache", $cookie,
-                   same-site => Cro::HTTP::Cookie::SameSite::Strict,
-                  );
+        # only cache approved weeks
+        my %output = (
+            jobs => %cache<jobs>,
+            employeeName => %cache<employeeName>,
+            employeeNumber => %cache<employeeNumber>,
+        );
+        for %cache<weeks>.keys -> $year {
+            for %cache<weeks>{$year}.keys -> $month {
+                for %cache<weeks>{$year}{$month}.keys -> $mday {
+                    my %week = %cache<weeks>{$year}{$month}{$mday};
+                    %output<weeks>{$year}{$month}{$mday} = %week if %week<state> == 2;
+                }
+            }
+        }
+
+        my $dir = $*PROGRAM-NAME;
+        $dir ~~ s/<-[^/]>* $//;
+        $dir ||= '.';
+        my $employeeNumber = %cache<employeeNumber>;
+        my $cacheFile = "$dir/$employeeNumber.json";
+        spurt $cacheFile, to-json(%output, :sorted-keys);
     }
 
     sub get-week($token, $date is copy = '') {
@@ -424,7 +461,7 @@ class Micronomy {
         );
         my $response = await $request;
         my $body = await $response.body;
-        return $body;
+        return parse-week($body);
 
         CATCH {
             when X::Cro::HTTP::Error {
@@ -436,26 +473,18 @@ class Micronomy {
         }
     }
 
-    method get(:$token, :$date = '', :$hoursCache = '') {
+    method get(:$token, :$date = '') {
         trace "get $date", $token;
         my %content = get-week($token, $date) and
             show-week($token, %content);
-
-        my %cache = get-cache($hoursCache);
-        %cache = update-cache(%cache, %content, $date);
-        set-cache(%cache);
 
         trace "get method done", $token;
     }
 
     method demo(:$token) {
         trace "demo", $token;
-        my $dir = $*PROGRAM-NAME;
-        $dir ~~ s/<-[^/]>* $//;
-        $dir ||= '.';
-        my $file = "$dir/resources/demo.json";
-        my %content = from-json slurp $file;
-        show-week($token, %content);
+        my %content = get-cache("demo");
+        show-week($token, %content, error => "Demovecka");
         trace "demo method done", $token;
     }
 
@@ -858,7 +887,7 @@ class Micronomy {
         }
     }
 
-    method set(:$token, :%parameters, :$hoursCache) {
+    method set(:$token, :%parameters) {
         trace "set", $token;
         for %parameters.keys.sort({.split('-', 2)[1]//''}) -> $key {
             next if $key ~~ /concurrency/;
@@ -882,10 +911,6 @@ class Micronomy {
         %content ||= get-week($token, %parameters<date>);
         %content<last-target> =  %parameters<last-target>;
         show-week($token, %content);
-
-        my %cache = get-cache($hoursCache);
-        %cache = update-cache(%cache, %content, %parameters<date>);
-        set-cache(%cache);
 
         return;
 
@@ -917,6 +942,7 @@ class Micronomy {
         );
 
         my %content = await $response.body;
+        %content = parse-week(%content);
         show-week($token, %content);
 
         CATCH {
