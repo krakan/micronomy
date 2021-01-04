@@ -392,6 +392,7 @@ class Micronomy {
             %day<invoiceable> = %totals<invoiceable>{$bucket};
             %data<days>.push(%day);
         }
+        %data<font-size> = "8pt" if @buckets > 7;
 
         my $row = 0;
         for %sums.keys.sort -> $job {
