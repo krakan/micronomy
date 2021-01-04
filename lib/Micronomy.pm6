@@ -41,6 +41,7 @@ class Micronomy {
         my ($year, $month, $mday) = ($0, $1, $2);
         my %week = %cache<weeks>{$year}{$month}{$mday};
         my $week = %week<name>;
+        %week<rows> //= ();
 
         my @weekStatus = <Öppen Avlämnad Godkänd>;
         my $weekStatus = @weekStatus[%week<state>];
@@ -70,6 +71,7 @@ class Micronomy {
             overtime => %week<overtime>,
             invoiceable => %week<invoiceable>,
             filler => -1,
+            rows => [],
         );
 
         for ^%week<rows> -> $row {
@@ -118,7 +120,7 @@ class Micronomy {
                 disabled => $row == %data<filler>,
             );
 
-            my @rowdays;
+            my @rowdays = [];
             for 1..7 -> $wday {
                 my $disabled = $periodStart.month ne $previousSunday.later(days => $wday).month ?? "disabled" !! "";
                 $disabled = "disabled" if %row<disabled>;
@@ -294,14 +296,21 @@ class Micronomy {
             my ($year, $month, $mday) = ($0, $1, $2);
             if %cache<weeks>{$year}{$month}{$mday}:exists {
                 trace "using cached week $current", $token;
+            } elsif $current lt '2019-05-01' {
+                trace "ignoring week before 2019-05-01", $token;
+                %cache<weeks>{$year}{$month}{$mday}<total> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<fixed> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<overtime> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<invoicable> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<rows> = ();
             } else {
                 %cache = get-week($token, $current.gist);
             }
 
-            %totals<total>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<total>;
-            %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<fixed>;
-            %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<overtime>;;
-            %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<invoiceable>;;
+            %totals<total>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<total> // 0;
+            %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<fixed> // 0;
+            %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<overtime> // 0;;
+            %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<invoiceable> // 0;;
 
             for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
                 my $job = %row<job>;
@@ -354,6 +363,7 @@ class Micronomy {
             overtime => %totals<overtime><sum>,
             invoiceable => %totals<invoiceable><sum>,
             filler => -1,
+            rows => [],
         );
 
         my $fmt = {sprintf "v%02d", .week-number};
