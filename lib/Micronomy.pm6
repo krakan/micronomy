@@ -122,8 +122,8 @@ class Micronomy {
 
             my @rowdays = [];
             for 1..7 -> $wday {
-                my $disabled = $periodStart.month ne $previousSunday.later(days => $wday).month ?? "disabled" !! "";
-                $disabled = "disabled" if %row<disabled>;
+                my $disabled = $periodStart.month ne $previousSunday.later(days => $wday).month;
+                $disabled ||= %row<disabled>;
                 my $classes = "hour-box input__text";
                 $classes ~= $disabled ?? " input__text--disabled" !! " nav-field";
                 @rowdays.push(

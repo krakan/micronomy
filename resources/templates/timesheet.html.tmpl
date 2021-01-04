@@ -54,16 +54,15 @@
                 <&HTML(.status)>
               </div>
               <div class="hour-spacer">
-                <input type="hidden" name="concurrency-<.number>"
-                       value="<.concurrency>" />
+                <input type="hidden" name="concurrency-<.number>" value="<.concurrency>" />
 
                 <@days: $day>
-                <input type="hidden" name="hidden-<.number>-<$day.number>"
-                       value="<$day.hours>" />
+                <input type="hidden" name="hidden-<.number>-<$day.number>" value="<$day.hours>" /><?$day.disabled>
+                <div class="hour-box"><$day.hours></div></?><!$day.disabled>
                 <input type="text"
                        class="<$day.classes>"<?$day.id> id="<$day.id>"</?>
                        name="hours-<.number>-<$day.number>"
-                       value="<$day.hours>" <$day.disabled> />
+                       value="<$day.hours>" /></!>
                 </@>
 
                 <div class="hour-box highlight"><.weektotal></div>
