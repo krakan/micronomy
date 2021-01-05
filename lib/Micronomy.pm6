@@ -2,11 +2,9 @@ use Cro::HTTP::Router;
 use Cro::HTTP::Client;
 use Cro::WebApp::Template;
 use Cro::HTTP::Cookie;
-use Base64::Native;
 use URI::Encode;
 use JSON::Fast;
 use Digest::MD5;
-use Compress::Zlib;
 
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
