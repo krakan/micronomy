@@ -259,7 +259,7 @@ class Micronomy {
         Micronomy.get-period(:$token, :$start-date, :$end-date);
     }
 
-    method get-period(:$token, :$start-date, :$end-date) {
+    method get-period(Str :$token, Date :$start-date, Date :$end-date, Int :$hours-cache is copy = 0) {
         trace "get-period $start-date", $token;
 
         my $url = "$server/$employee-path/data;any";
@@ -273,8 +273,25 @@ class Micronomy {
         );
         my $response = await $request;
         my %content = await $response.body;
+        my $employee = %content<panes><card><records>[0]<data><name1>;
         my $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
         my %cache = get-cache($employeeNumber);
+
+        if $hours-cache == 1 {
+            %cache<employeeName> = $employee;
+            %cache<employeeNumber> = $employeeNumber;
+            %cache<enabled> = True;
+            set-cache(%cache);
+        } elsif $hours-cache == -1 {
+            %cache = (
+                employeeName => $employee,
+                employeeNumber => $employeeNumber,
+                enabled => False,
+            );
+            set-cache(%cache)
+        } else {
+            $hours-cache = %cache<enabled> // False;
+        }
 
         my $bucketSize = 'week';
         my $previous = $start-date.earlier(days => 1);
@@ -287,7 +304,6 @@ class Micronomy {
         }
 
         my (%sums, %totals);
-        my $employee = %cache<employeeName> // '';
 
         my $current = $start-date;
         for 0..* -> $week {
@@ -364,6 +380,7 @@ class Micronomy {
             invoiceable => %totals<invoiceable><sum>,
             filler => -1,
             rows => [],
+            hours-cache => $hours-cache == 1,
         );
 
         my $fmt = {sprintf "v%02d", .week-number};
@@ -438,15 +455,20 @@ class Micronomy {
     sub set-cache(%cache) {
         # only cache approved weeks
         my %output = (
-            jobs => %cache<jobs>,
             employeeName => %cache<employeeName>,
             employeeNumber => %cache<employeeNumber>,
+            enabled => %cache<enabled>,
         );
-        for %cache<weeks>.keys -> $year {
-            for %cache<weeks>{$year}.keys -> $month {
-                for %cache<weeks>{$year}{$month}.keys -> $mday {
-                    my %week = %cache<weeks>{$year}{$month}{$mday};
-                    %output<weeks>{$year}{$month}{$mday} = %week if %week<state> == 2;
+
+        if %cache<enabled> {
+            %output<jobs> = %cache<jobs>;
+
+            for %cache<weeks>.keys -> $year {
+                for %cache<weeks>{$year}.keys -> $month {
+                    for %cache<weeks>{$year}{$month}.keys -> $mday {
+                        my %week = %cache<weeks>{$year}{$month}{$mday};
+                        %output<weeks>{$year}{$month}{$mday} = %week if %week<state> == 2;
+                    }
                 }
             }
         }

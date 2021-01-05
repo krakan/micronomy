@@ -15,6 +15,8 @@
           <div class="date-picker">
             <form class="nav--panel" action="<.date-action>" method="POST">
               <input type="date" class="date-input" name="date" value="<.date>"><!.state>
+              <input type="hidden" name="hours-cache" value="on">
+              <input type="hidden" name="set-cache" value="">
               <input type="date" class="date-input" name="end-date" value="<.end-date>"></!>
               <input id="selectedWk" type="submit" class="fancy-button" name="submit" value="V&auml;lj">
             </form>
@@ -143,7 +145,7 @@
         <form action="/month" method="POST">
           <input type="hidden" name="date" value="<.date>" />
           <input type="submit" class="fancy-button month-button"
-            value="Månadssammanställning" />
+            value="M&aring;nadssammanst&auml;llning" />
         </form>
 
         <form action="/edit" method="POST">
@@ -158,9 +160,15 @@
         </form>
         </?>
         <!.state>
+        <form action="/period" method="POST">
+          <input type="hidden" name="date" value="<.date>" />
+          <input type="hidden" name="end-date" value="<.end-date>" />
+          <input type="checkbox" name="hours-cache" <?.hours-cache>checked</?> /> Mellanlagra godk&auml;nda timmar
+          <input type="submit" name="set-cache" class="fancy-button edit-button" value="Spara inst&auml;llning" />
+        </form>
         <form action="/" method="POST">
           <input type="hidden" name="date" value="<.today>" />
-          <input class="fancy-button back-button" type="submit" value="Tillbaka" />
+          <input class="fancy-button back-button" type="submit" value="Innevarande vecka" />
         </form>
         </!>
 
