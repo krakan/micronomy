@@ -939,8 +939,9 @@ class Micronomy {
             %content = %result if %result;
         }
 
-        %content ||= get-week($token, %parameters<date>);
+        %content = get-week($token, %parameters<date>);
         %content<last-target> =  %parameters<last-target>;
+
         show-week($token, %content);
 
         return;
