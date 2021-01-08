@@ -479,7 +479,7 @@ class Micronomy {
         spurt $cacheFile, to-json(%output, :sorted-keys);
     }
 
-    sub get-week($token, $date is copy = '') {
+    sub get-week($token, $date is copy = '', Bool :$raw = False) {
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         trace "sub get-week $date", $token;
         my $url = "$server/$registration-path?card.datevar=$date";
@@ -492,6 +492,7 @@ class Micronomy {
         );
         my $response = await $request;
         my $body = await $response.body;
+        return $body if $raw;
         return parse-week($body);
 
         CATCH {
@@ -792,7 +793,7 @@ class Micronomy {
         edit($token, %parameters) if %parameters<rows>:exists;
 
         my %favorites = get-favorites($token) || return;
-        my %content = get-week($token, $date);
+        my %content = get-week($token, $date, raw => True);
 
         my %card = %content<panes><card><records>[0]<data>;
         my %meta = %content<panes><card><records>[0]<meta>;
