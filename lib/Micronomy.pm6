@@ -260,20 +260,27 @@ class Micronomy {
     method get-period(Str :$token, Date :$start-date, Date :$end-date, Int :$hours-cache is copy = 0) {
         trace "get-period $start-date", $token;
 
-        my $url = "$server/$employee-path/data;any";
-        my $request = Cro::HTTP::Client.get(
-            $url,
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
-                Content-Length => 0,
-            },
-        );
-        my $response = await $request;
-        my %content = await $response.body;
-        my $employee = %content<panes><card><records>[0]<data><name1>;
-        my $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
-        my %cache = get-cache($employeeNumber);
+        my ($employee, $employeeNumber, %cache);
+        if $token ne "demo" {
+            my $url = "$server/$employee-path/data;any";
+            my $request = Cro::HTTP::Client.get(
+                $url,
+                headers => {
+                    Authorization => "X-Reconnect $token",
+                    Content-Type => "application/json",
+                    Content-Length => 0,
+                },
+            );
+            my $response = await $request;
+            my %content = await $response.body;
+            $employee = %content<panes><card><records>[0]<data><name1>;
+            $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
+            %cache = get-cache($employeeNumber);
+        } else {
+            %cache = get-cache("demo");
+            $employee = %cache<employeeName>;
+            $employeeNumber = %cache<employeeNumber>;
+        }
 
         if $hours-cache == 1 {
             %cache<employeeName> = $employee;
@@ -286,7 +293,8 @@ class Micronomy {
                 employeeNumber => $employeeNumber,
                 enabled => False,
             );
-            set-cache(%cache)
+            set-cache(%cache);
+            %cache = get-cache("demo") if $token eq "demo";
         } else {
             $hours-cache = %cache<enabled> // False;
         }
@@ -317,6 +325,8 @@ class Micronomy {
                 %cache<weeks>{$year}{$month}{$mday}<overtime> = 0;
                 %cache<weeks>{$year}{$month}{$mday}<invoicable> = 0;
                 %cache<weeks>{$year}{$month}{$mday}<rows> = ();
+            } elsif $token eq "demo" {
+                %cache<weeks>{$year}{$month}{$mday} = %cache<weeks><2019><05><01>;
             } else {
                 %cache = get-week($token, $current.gist);
             }
@@ -482,26 +492,31 @@ class Micronomy {
     sub get-week($token, $date is copy = '', Bool :$raw = False) {
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         trace "sub get-week $date", $token;
-        my $url = "$server/$registration-path?card.datevar=$date";
 
-        my $request = Cro::HTTP::Client.get(
-            $url,
-            headers => {
-                Authorization => "X-Reconnect $token",
-            },
-        );
-        my $response = await $request;
-        my $body = await $response.body;
-        return $body if $raw;
-        return parse-week($body);
+        if $token ne "demo" {
+            my $url = "$server/$registration-path?card.datevar=$date";
 
-        CATCH {
-            when X::Cro::HTTP::Error {
-                warn "error: " ~ .response.status;
-                Micronomy.get-login() if .response.status == 401;
-                return {};
+            my $request = Cro::HTTP::Client.get(
+                $url,
+                headers => {
+                    Authorization => "X-Reconnect $token",
+                },
+            );
+            my $response = await $request;
+            my $body = await $response.body;
+            return $body if $raw;
+            return parse-week($body);
+
+            CATCH {
+                when X::Cro::HTTP::Error {
+                    warn "error: " ~ .response.status;
+                    Micronomy.get-login() if .response.status == 401;
+                    return {};
+                }
+                Micronomy.get-login(reason => "Ogiltig session! ")
             }
-            Micronomy.get-login(reason => "Ogiltig session! ")
+        } else {
+            return get-cache("demo");
         }
     }
 
@@ -511,13 +526,6 @@ class Micronomy {
             show-week($token, %content);
 
         trace "get method done", $token;
-    }
-
-    method demo(:$token) {
-        trace "demo", $token;
-        my %content = get-cache("demo");
-        show-week($token, %content, error => "Demovecka");
-        trace "demo method done", $token;
     }
 
     sub get-favorites($token) {
@@ -892,6 +900,8 @@ class Micronomy {
     }
 
     sub set(%parameters, $row, $token) {
+        return {} if $token eq "demo";
+
         my @changes;
         for 1..7 -> $day  {
             my $hours = %parameters{"hours-$row-$day"} || "0";
@@ -961,21 +971,26 @@ class Micronomy {
 
     method submit(:$token, :$date = '', :$reason, :$concurrency) {
         trace "submit $date", $token;
-        my $url = "$server/$registration-path/card/0/action;name=submittimesheet?card.datevar=$date";
-        $url ~= "&card.resubmissionexplanationvar=$reason" if $reason;
-        my $response = await Cro::HTTP::Client.post(
-            $url,
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
-                Accept => "application/json",
-                Maconomy-Concurrency-Control => $concurrency,
-                Content-Length => 0,
-            },
-        );
+        my %content;
+        if $token ne "demo" {
+            my $url = "$server/$registration-path/card/0/action;name=submittimesheet?card.datevar=$date";
+            $url ~= "&card.resubmissionexplanationvar=$reason" if $reason;
+            my $response = await Cro::HTTP::Client.post(
+                $url,
+                headers => {
+                    Authorization => "X-Reconnect $token",
+                    Content-Type => "application/json",
+                    Accept => "application/json",
+                    Maconomy-Concurrency-Control => $concurrency,
+                    Content-Length => 0,
+                },
+            );
 
-        my %content = await $response.body;
-        %content = parse-week(%content);
+            %content = await $response.body;
+            %content = parse-week(%content);
+        } else {
+            %content = get-cache("demo");
+        }
         show-week($token, %content);
 
         CATCH {
@@ -1011,26 +1026,30 @@ class Micronomy {
         my ($token, $status);
         if $username and $password {
             trace "login $username ***";
-            my $url = "$server/$employee-path/data;any";
-            my $response = await Cro::HTTP::Client.get(
-                $url,
-                auth => {
-                    username => $username,
-                    password => $password
-                },
-                headers => {
-                    Maconomy-Authentication => 'X-Reconnect',
-                    Set-Cookie => 'sessionToken=',
-                },
-            );
-            $token = get-header($response, 'maconomy-reconnect');
-            trace "logged in $username", $token;
+            if $username eq $password eq "demo" {
+                $token = "demo";
+            } else {
+                my $url = "$server/$employee-path/data;any";
+                my $response = await Cro::HTTP::Client.get(
+                    $url,
+                    auth => {
+                        username => $username,
+                        password => $password
+                    },
+                    headers => {
+                        Maconomy-Authentication => 'X-Reconnect',
+                        Set-Cookie => 'sessionToken=',
+                    },
+                );
+                $token = get-header($response, 'maconomy-reconnect');
+                trace "logged in $username", $token;
 
-            CATCH {
-                when X::Cro::HTTP::Error {
-                    my $error = (await .response.body)<errorMessage>;
-                    $error = $error ?? '[' ~ .response.status ~ '] ' ~ $error !! .message();
-                    $status = uri_encode_component($error);
+                CATCH {
+                    when X::Cro::HTTP::Error {
+                        my $error = (await .response.body)<errorMessage>;
+                        $error = $error ?? '[' ~ .response.status ~ '] ' ~ $error !! .message();
+                        $status = uri_encode_component($error);
+                    }
                 }
             }
         }
@@ -1052,7 +1071,7 @@ class Micronomy {
     method logout(:$token) {
         trace "logout", $token;
         my $status;
-        if $token {
+        if $token and $token ne "demo" {
             my $url = "$server/$employee-path/data;any";
             my $response = await Cro::HTTP::Client.get(
                 $url,

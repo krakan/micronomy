@@ -22,7 +22,7 @@ sub routes() is export {
         }
 
         get -> 'demo' {
-            Micronomy.demo(token => "demo")
+            Micronomy.get(token => "demo")
         }
 
         post -> :$sessionToken is cookie = '' {
