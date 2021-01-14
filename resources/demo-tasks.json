@@ -1,0 +1,62 @@
+{
+  "12020002": [
+    {
+      "number": 100,
+      "name": "Konsulting"
+    },
+    {
+      "number": 102,
+      "name": "Beredskap"
+    },
+    {
+      "number": 104,
+      "name": "Beredskapsarbete"
+    }
+  ],
+  "12020003": [
+    {
+      "number": 100,
+      "name": "Konsulting"
+    },
+    {
+      "number": 102,
+      "name": "Beredskap"
+    },
+    {
+      "number": 104,
+      "name": "Beredskapsarbete"
+    }
+  ],
+  "12020045": [
+    {
+      "number": 100,
+      "name": "Sjukdom, hel dag"
+    },
+    {
+      "number": 110,
+      "name": "Sjukdom, del av dag"
+    },
+    {
+      "number": 120,
+      "name": "Semester"
+    },
+    {
+      "number": 155,
+      "name": "Tjänstledig mot RAM"
+    }
+  ],
+  "12020049": [
+    {
+      "number": 900,
+      "name": "Internt Arbete"
+    },
+    {
+      "number": 901,
+      "name": "Kompetensutveckling"
+    },
+    {
+      "number": 906,
+      "name": "Internt arbete med timpris"
+    }
+  ]
+}

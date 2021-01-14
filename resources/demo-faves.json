@@ -1,0 +1,108 @@
+{
+  "panes": {
+    "table": {
+      "meta": {
+        "rowCount": 5
+      },
+      "records": [
+        {
+          "data": {
+            "jobnumber": 12020002,
+            "taskname": 100,
+            "favorite": "Konsulting",
+            "jobnamevar": "Konsultarbete - Kund",
+            "tasktextvar": "Konsulting"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020002,
+            "taskname": 102,
+            "favorite": "Beredskap",
+            "jobnamevar": "Konsultarbete - Kund",
+            "tasktextvar": "Beredskap"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020002,
+            "taskname": 104,
+            "favorite": "Beredskapsarbete",
+            "jobnamevar": "Konsultarbete - Kund",
+            "tasktextvar": "Beredskapsarbete"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020003,
+            "favorite": "Kund 2",
+            "jobnamevar": "Konsultarbete - Annan kund"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020045,
+            "taskname": 100,
+            "favorite": "Sjuk",
+            "jobnamevar": "Frånvaro - Dotterbolag",
+            "tasktextvar": "Sjukdom, hel dag"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020045,
+            "taskname": 110,
+            "favorite": "Lite sjuk",
+            "jobnamevar": "Frånvaro - Dotterbolag",
+            "tasktextvar": "Sjukdom, del av dag"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020045,
+            "taskname": 120,
+            "favorite": "Semester",
+            "jobnamevar": "Frånvaro - Dotterbolag",
+            "tasktextvar": "Semester"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020045,
+            "taskname": 155,
+            "favorite": "Kompledig",
+            "jobnamevar": "Frånvaro - Dotterbolag",
+            "tasktextvar": "Tjänstledig mot RAM"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020049,
+            "taskname": 900,
+            "favorite": "Internt Arbete",
+            "jobnamevar": "Interntid - Dotterbolag",
+            "tasktextvar": "Internt Arbete"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020049,
+            "taskname": 901,
+            "favorite": "Kompetensutveckling",
+            "jobnamevar": "Interntid - Dotterbolag",
+            "tasktextvar": "Kompetensutveckling"
+          }
+        },
+        {
+          "data": {
+            "jobnumber": 12020049,
+            "taskname": 906,
+            "favorite": "Kompetensutveckling",
+            "jobnamevar": "Interntid - Dotterbolag",
+            "tasktextvar": "Internt arbete med timpris"
+          }
+        }
+      ]
+    }
+  }
+}

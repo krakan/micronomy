@@ -170,10 +170,11 @@ class Micronomy {
     sub parse-week(%content) {
         my %card = %content<panes><card><records>[0]<data>;
         my %meta = %content<panes><card><records>[0]<meta>;
-        my %table = %content<panes><table>;
+        my @records = @(%content<panes><table><records>);
+        my $rowCount = %content<panes><table><meta><rowCount>;
 
         my $weekstatus = 0;
-        $weekstatus = 1 if %table<records>[0]<data><submitted>;
+        $weekstatus = 1 if @records[0]<data><submitted>;
         $weekstatus = 2 if %card<approvedvar>;
 
         my %cache = get-cache(%card<employeenumber>);
@@ -199,8 +200,8 @@ class Micronomy {
             %weekData<totals>{$wday} = %day if %day.keys;
         }
 
-        for ^%table<meta><rowCount> -> $row {
-            my %rowData = %table<records>[$row]<data>;
+        for ^$rowCount -> $row {
+            my %rowData = @records[$row]<data>;
             my $jobName = %rowData<jobnamevar>;
             my $jobNumber = %rowData<jobnumber>;
             my $taskNumber = %rowData<taskname>;
@@ -209,15 +210,16 @@ class Micronomy {
             %cache<jobs>{$jobNumber}<name> = $jobName;
             %cache<jobs>{$jobNumber}<tasks>{$taskNumber} = $taskName;
 
-            my $total = %table<records>[$row]<data><weektotal>;
+            my $total = @records[$row]<data><weektotal>;
 
             %weekData<rows>[$row] = {
                 job => $jobNumber,
                 task => $taskNumber,
             };
+            %weekData<rows>[$row]<temp> = True unless @records[$row]<data><permanentline>;
             %weekData<rows>[$row]<total> = $total if $total;
             for 1..7 -> $wday {
-                my $hours = %table<records>[$row]<data>{"numberday{$wday}"};
+                my $hours = @records[$row]<data>{"numberday{$wday}"};
                 %weekData<rows>[$row]<hours>{$wday} = $hours if $hours;
             }
         }
@@ -231,20 +233,16 @@ class Micronomy {
         %cache<currentWeek> = %card<periodstartvar>;
         %cache<currentDate> = %card<datevar>;
         %cache<concurrency> = %meta<concurrencyControl>;
-        for ^%table<meta><rowCount> -> $row {
-            my %rowData = %table<records>[$row]<data>;
+        for ^$rowCount -> $row {
+            my %rowData = @records[$row]<data>;
             %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<state> = %rowData<approvalstatus>;
-            %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency> = %table<records>[$row]<meta><concurrencyControl>;
+            %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency> = @records[$row]<meta><concurrencyControl>;
         }
 
         return %cache;
     }
 
-    multi sub title(Int $row, %table --> Str) {
-        my %row = %table<records>[$row]<data>;
-        title(%row<jobnamevar>, %row<entrytext>);
-    }
-    multi sub title(Str $job, Str $task --> Str) {
+    sub title(Str $job, Str $task --> Str) {
         "$task / $job";
     }
 
@@ -277,7 +275,7 @@ class Micronomy {
             $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
             %cache = get-cache($employeeNumber);
         } else {
-            %cache = get-cache("demo");
+            %cache = get-demo($start-date);
             $employee = %cache<employeeName>;
             $employeeNumber = %cache<employeeNumber>;
         }
@@ -294,7 +292,7 @@ class Micronomy {
                 enabled => False,
             );
             set-cache(%cache);
-            %cache = get-cache("demo") if $token eq "demo";
+            %cache = get-demo($start-date) if $token eq "demo";
         } else {
             $hours-cache = %cache<enabled> // False;
         }
@@ -326,7 +324,7 @@ class Micronomy {
                 %cache<weeks>{$year}{$month}{$mday}<invoicable> = 0;
                 %cache<weeks>{$year}{$month}{$mday}<rows> = ();
             } elsif $token eq "demo" {
-                %cache<weeks>{$year}{$month}{$mday} = %cache<weeks><2019><05><01>;
+                %cache = get-demo($current);
             } else {
                 %cache = get-week($token, $current.gist);
             }
@@ -461,14 +459,15 @@ class Micronomy {
     }
 
     sub set-cache(%cache) {
+        my $employeeNumber = %cache<employeeNumber>;
         # only cache approved weeks
         my %output = (
             employeeName => %cache<employeeName>,
-            employeeNumber => %cache<employeeNumber>,
+            employeeNumber => $employeeNumber,
             enabled => %cache<enabled>,
         );
 
-        if %cache<enabled> {
+        if %cache<enabled> or $employeeNumber eq "demo" {
             %output<jobs> = %cache<jobs>;
 
             for %cache<weeks>.keys -> $year {
@@ -484,9 +483,49 @@ class Micronomy {
         my $dir = $*PROGRAM-NAME;
         $dir ~~ s/<-[^/]>* $//;
         $dir ||= '.';
-        my $employeeNumber = %cache<employeeNumber>;
         my $cacheFile = "$dir/resources/$employeeNumber.json";
         spurt $cacheFile, to-json(%output, :sorted-keys);
+    }
+
+    sub get-demo($date is copy) {
+        my %cache = get-cache("demo");
+        %cache<currentDate> = $date;
+
+        $date = Date.new($date);
+        my $week = $date.week-number;
+        my $monday = $date.truncated-to("week");
+        my $sunday = $monday.later(days => 6);
+        my $currentWeek = $monday;
+        if $monday.month == $date.month != $sunday.month {
+            $week ~= "A";
+        } elsif $monday.month != $date.month == $sunday.month {
+            $week ~= "B";
+            $currentWeek = $date.truncated-to("month");
+        }
+        %cache<currentWeek> = $currentWeek;
+
+        %cache<concurrency> = '"card"="demo"';
+        %cache<currentWeek> ~~ /(\d+)"-"(\d+)"-"(\d+)/;
+        my ($year, $month, $mday) = ($0, $1, $2);
+        if not %cache<weeks>{$year}{$month}{$mday}:exists {
+            %cache<weeks>{$year}{$month}{$mday} = from-json to-json %cache<weeks><2019><05><06>;
+            if $week ~~ /"A"/ {
+                for $currentWeek.last-date-in-month.later(days => 1).day-of-week .. 7 -> $wday {
+                    for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> $row {
+                        $row<hours>{$wday}:delete;
+                    }
+                }
+            } elsif $week ~~ /"B"/ {
+                for 1 .. $currentWeek.earlier(days => 1).day-of-week -> $wday {
+                    for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> $row {
+                        $row<hours>{$wday}:delete;
+                    }
+                }
+            }
+        }
+
+        %cache<weeks>{$year}{$month}{$mday}<name> = $week;
+        return %cache;
     }
 
     sub get-week($token, $date is copy = '', Bool :$raw = False) {
@@ -516,7 +555,7 @@ class Micronomy {
                 Micronomy.get-login(reason => "Ogiltig session! ")
             }
         } else {
-            return get-cache("demo");
+            return get-demo($date);
         }
     }
 
@@ -530,18 +569,23 @@ class Micronomy {
 
     sub get-favorites($token) {
         trace "sub get-favorites", $token;
-        my $url = "$server/$favorites-path/data;any";
-        my $request = Cro::HTTP::Client.get(
-            $url,
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
-                Content-Length => 0,
-            },
-        );
-        my $response = await $request;
-        my $body = await $response.body;
-        return $body;
+        my $body;
+        if $token ne "demo" {
+            my $url = "$server/$favorites-path/data;any";
+            my $request = Cro::HTTP::Client.get(
+                $url,
+                headers => {
+                    Authorization => "X-Reconnect $token",
+                    Content-Type => "application/json",
+                    Content-Length => 0,
+                },
+            );
+            my $response = await $request;
+            $body = await $response.body;
+            return $body;
+        } else {
+            return get-cache("demo-faves");
+        }
 
         CATCH {
             when X::Cro::HTTP::Error {
@@ -556,32 +600,39 @@ class Micronomy {
     sub get-tasks($token, $jobnumber) {
         trace "sub get-tasks for $jobnumber", $token;
 
-        my $url = "$server/$tasks-path";
-        my $request = Cro::HTTP::Client.post(
-            $url,
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
-            },
-            body => '{"data": {"jobnumber":"' ~ $jobnumber ~ '"}}',
-        );
-        my $response = await $request;
-        my $body = await $response.body;
-
-        my @tasks;
-        for @($body<panes><filter><records>) -> $record {
-            @tasks.push(
-                {
-                    number => $record<data><taskname>,
-                    name => $record<data><description>,
-                }
+        if $token ne "demo" {
+            my $url = "$server/$tasks-path";
+            my $request = Cro::HTTP::Client.post(
+                $url,
+                headers => {
+                    Authorization => "X-Reconnect $token",
+                    Content-Type => "application/json",
+                },
+                body => '{"data": {"jobnumber":"' ~ $jobnumber ~ '"}}',
             );
+            my $response = await $request;
+            my $body = await $response.body;
+
+            my @tasks;
+            for @($body<panes><filter><records>) -> $record {
+                @tasks.push(
+                    {
+                        number => $record<data><taskname>,
+                        name => $record<data><description>,
+                    }
+                );
+            }
+            return @tasks;
+        } else {
+            my %tasks = get-cache("demo-tasks");
+            return %tasks{$jobnumber};
         }
-        return @tasks;
     }
 
     sub get-concurrency($token, $date) {
         trace "get concurrency", $token;
+        return "demo", "demo" if $token eq "demo";
+
         # get card id
         my $url = "$server/$instances-path";
         my $response = await Cro::HTTP::Client.post(
@@ -710,25 +761,33 @@ class Micronomy {
         my ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
 
         # delete row
-        my $url = "$server/$instances-path";
-        for ^10 -> $wait {
-            sleep $wait/10;
-            try {
-                my $response = await Cro::HTTP::Client.delete(
-                    "$url/$containerInstanceId/data/panes/table/$target",
-                    headers => {
-                        Authorization => "X-Reconnect $token",
-                        Maconomy-Concurrency-Control => $concurrency,
-                    },
-                );
-                return get-header($response, 'maconomy-concurrency-control');
-            }
+        if $token ne "demo" {
+            my $url = "$server/$instances-path";
+            for ^10 -> $wait {
+                sleep $wait/10;
+                try {
+                    my $response = await Cro::HTTP::Client.delete(
+                        "$url/$containerInstanceId/data/panes/table/$target",
+                        headers => {
+                            Authorization => "X-Reconnect $token",
+                            Maconomy-Concurrency-Control => $concurrency,
+                        },
+                    );
+                    return get-header($response, 'maconomy-concurrency-control');
+                }
 
-            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < 9 {
-                trace "delete-row received 404 - retrying [{$wait+1}/9]", $token;
-            } else {
-                die $!;
+                if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < 9 {
+                    trace "delete-row received 404 - retrying [{$wait+1}/9]", $token;
+                } else {
+                    die $!;
+                }
             }
+        } else {
+            %parameters<date> ~~ /(\d+)"-"(\d+)"-"(\d+)/;
+            my ($year, $month, $mday) = ($0, $1, $2);
+            my %cache = get-demo(%parameters<date>);
+            %cache<weeks>{$year}{$month}{$mday}<rows>.splice($target, 1);
+            set-cache(%cache);
         }
     }
 
@@ -801,58 +860,59 @@ class Micronomy {
         edit($token, %parameters) if %parameters<rows>:exists;
 
         my %favorites = get-favorites($token) || return;
-        my %content = get-week($token, $date, raw => True);
-
-        my %card = %content<panes><card><records>[0]<data>;
-        my %meta = %content<panes><card><records>[0]<meta>;
-        my %table = %content<panes><table>;
-        my $week = %card<weeknumbervar>;
+        my %cache = get-week($token, $date);
+        my $week = %cache<currentWeek>;
 
         my %data = (
             week => $week,
             error => '',
-            concurrency => %meta<concurrencyControl>,
-            employee => %card<employeenamevar>,
+            concurrency => %cache<concurrency>,
+            employee => %cache<employeeName>,
             date => $date,
         );
+
+        $week ~~ /(\d+)"-"(\d+)"-"(\d+)/;
+        my ($year, $month, $mday) = ($0, $1, $2);
         my (@rows, %rows);
-        for ^%table<meta><rowCount> -> $row {
-            my $jobnumber  = %table<records>[$row]<data><jobnumber>;
-            my $tasknumber = %table<records>[$row]<data><taskname>;
-            %rows{$jobnumber}{$tasknumber} = 1;
+        my $row = 0;
+        for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+            my $jobNumber = %row<job>;
+            my $jobName = %cache<jobs>{%row<job>}<name>;
+            my $taskNumber = %row<task>;
+            my $taskName = %cache<jobs>{%row<job>}<tasks>{$taskNumber};
+            %rows{$jobNumber}{$taskNumber} = 1;
             my @hours;
-            for 1..7 -> $day {
-                @hours.push(%table<records>[$row]<data>{"numberday{$day}"} || 0);
+            for 1..7 -> $wday {
+                @hours.push(%row<hours>{$wday} || 0);
             }
-            my %row = (
-                number => $row,
-                description => %table<records>[$row]<data><description>,
-                jobnumber   => $jobnumber,
-                jobname     => %table<records>[$row]<data><jobnamevar>,
-                tasknumber  => $tasknumber,
-                taskname    => %table<records>[$row]<data><tasktextvar>,
-                concurrency => %table<records>[$row]<meta><concurrencyControl>,
-                keep        => %table<records>[$row]<data><permanentline>,
+            my %rowData = (
+                number => $row++,
+                jobnumber   => $jobNumber,
+                jobname     => $jobName,
+                tasknumber  => $taskNumber,
+                taskname    => $taskName,
+                concurrency => %row<concurrency>,
+                keep        => not %row<temp>,
                 hours       => @hours.join(";"),
             );
-            if not $tasknumber {
-                %row<tasks> = get-tasks($token, $jobnumber);
+            if not $taskNumber {
+                %rowData<tasks> = get-tasks($token, $jobNumber);
             }
-            @rows.push(%row);
+            @rows.push(%rowData);
         }
         %data<rows> = @rows;
         %data<next> = @rows.elems;
 
         my @favorites;
         for ^%favorites<panes><table><meta><rowCount> -> $row {
-            my $jobnumber = %favorites<panes><table><records>[$row]<data><jobnumber>;
-            my $tasknumber = %favorites<panes><table><records>[$row]<data><taskname>;
-            next if %rows{$jobnumber}{$tasknumber};
+            my $jobNumber = %favorites<panes><table><records>[$row]<data><jobnumber>;
+            my $taskNumber = %favorites<panes><table><records>[$row]<data><taskname>;
+            next if %rows{$jobNumber}{$taskNumber};
             my %favorite = (
                 favorite   => %favorites<panes><table><records>[$row]<data><favorite>,
-                jobnumber  => $jobnumber,
+                jobnumber  => $jobNumber,
                 jobname    => %favorites<panes><table><records>[$row]<data><jobnamevar>,
-                tasknumber => $tasknumber,
+                tasknumber => $taskNumber,
                 taskname   => %favorites<panes><table><records>[$row]<data><tasktextvar>,
             );
             @favorites.push(%favorite);
@@ -876,18 +936,18 @@ class Micronomy {
         return False unless %content;
 
         my %card = %content<panes><card><records>[0]<data>;
-        my %table = %content<panes><table>;
-        my $previous = %table<records>[$filler]<data><weektotal>;
+        my @records = @(%content<panes><table><records>);
+        my $previous = @records[$filler]<data><weektotal>;
         my $total = %card<fixednumberweekvar> - %card<totalnumberofweekvar> + $previous;
 
         for (1..7).sort(
             {
                 %card{"overtimenumberday{$_}var"}
                 -
-                %table<records>[$filler]<data>{"numberday{$_}"}
+                @records[$filler]<data>{"numberday{$_}"}
             }
         ) -> $day  {
-            my $previous = %table<records>[$filler]<data>{"numberday{$day}"},
+            my $previous = @records[$filler]<data>{"numberday{$day}"},
             my $overtime = $previous - %card{"overtimenumberday{$day}var"};
             $overtime = $total if $overtime > $total;
             $overtime = 0 if $overtime < 0;
@@ -989,7 +1049,7 @@ class Micronomy {
             %content = await $response.body;
             %content = parse-week(%content);
         } else {
-            %content = get-cache("demo");
+            %content = get-demo($date);
         }
         show-week($token, %content);
 

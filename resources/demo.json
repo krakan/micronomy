@@ -1,9 +1,7 @@
 {
-  "currentWeek": "2019-05-01",
-  "currentDate": "2019-05-01",
-  "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\"",
   "employeeName": "Nils Nilsson",
-  "employeeNumber": "NaN",
+  "employeeNumber": "demo",
+  "enabled": null,
   "jobs": {
     "12020002": {
       "name": "Konsultarbete - Kund",
@@ -30,15 +28,18 @@
   "weeks": {
     "2019": {
       "05": {
-        "01": {
+        "06": {
           "fixed": 16,
           "invoiceable": 18.5,
-          "name": "18B",
+          "name": "19",
           "overtime": 6.5,
           "rows": [
             {
               "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"118a07d583740f3c3feb6ab1269dd2d487db0d0f\"",
               "hours": {
+                "1": 8,
+                "2": 8,
+                "3": 8,
                 "4": 6.5,
                 "5": 8
               },
@@ -78,6 +79,7 @@
               "job": "12020049",
               "state": "approved",
               "task": "900",
+              "temp": true,
               "total": 4
             },
             {
