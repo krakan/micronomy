@@ -29,10 +29,7 @@
     "2019": {
       "05": {
         "06": {
-          "fixed": 16,
-          "invoiceable": 18.5,
           "name": "19",
-          "overtime": 6.5,
           "rows": [
             {
               "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"118a07d583740f3c3feb6ab1269dd2d487db0d0f\"",
@@ -90,34 +87,64 @@
             },
             {
               "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23q\", \"table\"=\"cccef29393a43bf732690dccd2dd1422fb7bc098\"",
+              "hours": {
+                "4": 0.5
+              },
               "job": "12020045",
               "state": "approved",
               "task": "155"
             }
           ],
           "state": 2,
-          "total": 22.5,
           "totals": {
-            "3": {
-              "invoiceable": 4,
-              "overtime": 5,
-              "total": 5
+            "days": {
+              "1": {
+                "fixed": 8,
+                "invoiceable": 8,
+                "overtime": 0,
+                "reported": 8
+              },
+              "2": {
+                "fixed": 8,
+                "invoiceable": 8,
+                "overtime": 0,
+                "reported": 8
+              },
+              "3": {
+                "fixed": 8,
+                "invoiceable": 12,
+                "overtime": 5,
+                "reported": 13
+              },
+              "4": {
+                "fixed": 8,
+                "invoiceable": 6.5,
+                "overtime": 0,
+                "reported": 7.5
+              },
+              "5": {
+                "fixed": 8,
+                "invoiceable": 8,
+                "overtime": 0,
+                "reported": 8
+              },
+              "6": {
+                "fixed": 0,
+                "invoiceable": 0,
+                "overtime": 0,
+                "reported": 0
+              },
+              "7": {
+                "fixed": 0,
+                "invoiceable": 0,
+                "overtime": 2,
+                "reported": 2
+              }
             },
-            "4": {
-              "fixed": 8,
-              "invoiceable": 6.5,
-              "overtime": -0.5,
-              "total": 7.5
-            },
-            "5": {
-              "fixed": 8,
-              "invoiceable": 8,
-              "total": 8
-            },
-            "7": {
-              "overtime": 2,
-              "total": 2
-            }
+            "fixed": 40,
+            "invoiceable": 42.5,
+            "overtime": 7,
+            "reported": 46.5
           }
         }
       }

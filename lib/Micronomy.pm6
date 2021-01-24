@@ -64,10 +64,10 @@ class Micronomy {
             concurrency => %cache<concurrency>,
             employee => %cache<employeeName>,
             date => %cache<currentDate>,
-            total => %week<total>,
-            fixed => %week<fixed>,
-            overtime => %week<overtime>,
-            invoiceable => %week<invoiceable>,
+            total => %week<totals><reported>,
+            fixed => %week<totals><fixed>,
+            overtime => %week<totals><overtime>,
+            invoiceable => %week<totals><invoiceable>,
             filler => -1,
             rows => [],
         );
@@ -79,10 +79,10 @@ class Micronomy {
         for 1..7 -> $wday {
             my %day = (number => $wday);
             %day<date> = $previousSunday.later(days => $wday).Str;
-            %day<total> = %week<totals>{$wday}<total> // 0;
-            %day<fixed> = %week<totals>{$wday}<fixed> // 0;
-            %day<overtime> = %week<totals>{$wday}<overtime> // 0;
-            %day<invoiceable> = %week<totals>{$wday}<invoiceable> // 0;
+            %day<total> = %week<totals><days>{$wday}<reported> // 0;
+            %day<fixed> = %week<totals><days>{$wday}<fixed> // 0;
+            %day<overtime> = %week<totals><days>{$wday}<overtime> // 0;
+            %day<invoiceable> = %week<totals><days>{$wday}<invoiceable> // 0;
             %data<days>.push(%day);
         }
 
@@ -185,19 +185,21 @@ class Micronomy {
         my %weekData = (
             name => %card<weeknumbervar> ~ %card<partvar>,
             state => $weekstatus,
-            total => %card<totalnumberofweekvar>,
-            fixed => %card<fixednumberweekvar>,
-            overtime => %card<overtimenumberweekvar>,
-            invoiceable => %card<invoiceabletimedayweekvar>,
+            totals => {
+                reported => %card<totalnumberofweekvar>,
+                fixed => %card<fixednumberweekvar>,
+                overtime => %card<overtimenumberweekvar>,
+                invoiceable => %card<invoiceabletimedayweekvar>,
+            },
         );
 
         for 1..7 -> $wday {
             my %day;
-            %day<total> = %card{"totalnumberday{$wday}var"} if %card{"totalnumberday{$wday}var"};
+            %day<reported> = %card{"totalnumberday{$wday}var"} if %card{"totalnumberday{$wday}var"};
             %day<fixed> = %card{"fixednumberday{$wday}var"} if %card{"fixednumberday{$wday}var"};
             %day<overtime> = %card{"overtimenumberday{$wday}var"} if %card{"overtimenumberday{$wday}var"};
             %day<invoiceable> = %card{"invoiceabletimeday{$wday}var"} if %card{"invoiceabletimeday{$wday}var"};
-            %weekData<totals>{$wday} = %day if %day.keys;
+            %weekData<totals><days>{$wday} = %day if %day.keys;
         }
 
         for ^$rowCount -> $row {
@@ -318,10 +320,10 @@ class Micronomy {
                 trace "using cached week $current", $token;
             } elsif $current lt '2019-05-01' {
                 trace "ignoring week before 2019-05-01", $token;
-                %cache<weeks>{$year}{$month}{$mday}<total> = 0;
-                %cache<weeks>{$year}{$month}{$mday}<fixed> = 0;
-                %cache<weeks>{$year}{$month}{$mday}<overtime> = 0;
-                %cache<weeks>{$year}{$month}{$mday}<invoicable> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<totals><fixed> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<totals><overtime> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> = 0;
                 %cache<weeks>{$year}{$month}{$mday}<rows> = ();
             } elsif $token eq "demo" {
                 %cache = get-demo($current);
@@ -329,10 +331,10 @@ class Micronomy {
                 %cache = get-week($token, $current.gist);
             }
 
-            %totals<total>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<total> // 0;
-            %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<fixed> // 0;
-            %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<overtime> // 0;;
-            %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<invoiceable> // 0;;
+            %totals<reported>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
+            %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><fixed> // 0;
+            %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><overtime> // 0;;
+            %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> // 0;;
 
             for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
                 my $job = %row<job>;
@@ -359,9 +361,9 @@ class Micronomy {
             }
         }
 
-        my @buckets = %totals<total>.keys.sort;
+        my @buckets = %totals<reported>.keys.sort;
         for @buckets -> $bucket {
-             %totals<total><sum> += %totals<total>{$bucket};
+             %totals<reported><sum> += %totals<reported>{$bucket};
              %totals<fixed><sum> += %totals<fixed>{$bucket};
              %totals<overtime><sum> += %totals<overtime>{$bucket};
              %totals<invoiceable><sum> += %totals<invoiceable>{$bucket};
@@ -380,7 +382,7 @@ class Micronomy {
             employee => $employee,
             date => $start-date.gist,
             end-date => $end-date.gist,
-            total => %totals<total><sum>,
+            total => %totals<reported><sum>,
             fixed => %totals<fixed><sum>,
             overtime => %totals<overtime><sum>,
             invoiceable => %totals<invoiceable><sum>,
@@ -409,7 +411,7 @@ class Micronomy {
                 %day<url> = "/period?date=$bucketStart&end-date=$bucketEnd";
             }
             %day<date> = Date.new($bucket, formatter => $fmt).Str ~ $suffix;
-            %day<total> = %totals<total>{$bucket};
+            %day<total> = %totals<reported>{$bucket};
             %day<fixed> = %totals<fixed>{$bucket};
             %day<overtime> = %totals<overtime>{$bucket};
             %day<invoiceable> = %totals<invoiceable>{$bucket};
@@ -474,7 +476,7 @@ class Micronomy {
                 for %cache<weeks>{$year}.keys -> $month {
                     for %cache<weeks>{$year}{$month}.keys -> $mday {
                         my %week = %cache<weeks>{$year}{$month}{$mday};
-                        %output<weeks>{$year}{$month}{$mday} = %week if %week<state> == 2;
+                        %output<weeks>{$year}{$month}{$mday} = %week if %week<state> == 2 or $employeeNumber eq "demo";
                     }
                 }
             }
@@ -487,44 +489,193 @@ class Micronomy {
         spurt $cacheFile, to-json(%output, :sorted-keys);
     }
 
-    sub get-demo($date is copy) {
-        my %cache = get-cache("demo");
-        %cache<currentDate> = $date;
-
+    sub get-current-week($date is copy) {
         $date = Date.new($date);
         my $week = $date.week-number;
         my $monday = $date.truncated-to("week");
         my $sunday = $monday.later(days => 6);
-        my $currentWeek = $monday;
+        my $start-date = $monday;
         if $monday.month == $date.month != $sunday.month {
             $week ~= "A";
         } elsif $monday.month != $date.month == $sunday.month {
             $week ~= "B";
-            $currentWeek = $date.truncated-to("month");
+            $start-date = $date.truncated-to("month");
         }
-        %cache<currentWeek> = $currentWeek;
 
+        my $year = sprintf "%4d", $start-date.year;
+        my $month = sprintf "%02d", $start-date.month;
+        my $mday = sprintf "%02d", $start-date.day;
+
+        return $week, $start-date, $year, $month, $mday;
+    }
+
+    sub get-demo($date) {
+        trace "sub get-demo $date";
+        my %cache = get-cache("demo");
+        %cache<currentDate> = $date;
         %cache<concurrency> = '"card"="demo"';
-        %cache<currentWeek> ~~ /(\d+)"-"(\d+)"-"(\d+)/;
-        my ($year, $month, $mday) = ($0, $1, $2);
+
+        my ($week, $start-date, $year, $month, $mday) = get-current-week($date);
+        %cache<currentWeek> = $start-date.yyyy-mm-dd;
+
         if not %cache<weeks>{$year}{$month}{$mday}:exists {
             %cache<weeks>{$year}{$month}{$mday} = from-json to-json %cache<weeks><2019><05><06>;
-            if $week ~~ /"A"/ {
-                for $currentWeek.last-date-in-month.later(days => 1).day-of-week .. 7 -> $wday {
-                    for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> $row {
-                        $row<hours>{$wday}:delete;
-                    }
-                }
-            } elsif $week ~~ /"B"/ {
-                for 1 .. $currentWeek.earlier(days => 1).day-of-week -> $wday {
-                    for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> $row {
-                        $row<hours>{$wday}:delete;
-                    }
-                }
+            if $week ~~ /<[AB]>/ {
+                %cache = sum-up-demo(%cache<currentWeek>, %cache);
             }
         }
 
         %cache<weeks>{$year}{$month}{$mday}<name> = $week;
+        return %cache;
+    }
+
+    sub easter(Int $year, Int $diff = 0) {
+        # Meeus/Jones/Butcher
+        my $a = $year mod 19;
+        my $b = $year div 100;
+        my $c = $year mod 100;
+        my $d = $b div 4;
+        my $e = $b mod 4;
+        my $f = ($b + 8) div 25;
+        my $g = ($b - $f + 1) div 3;
+        my $h = (19*$a + $b - $d - $g + 15) mod 30;
+        my $i = $c div 4 ;
+        my $k = $c mod 4 ;
+        my $l = (32 + 2*$e + 2*$i - $h - $k) mod 7 ;
+        my $m = ($a + 11*$h + 22*$l) div 451 ;
+        my $month = ($h + $l - 7*$m + 114) div 31 ;
+        my $day = (($h + $l - 7*$m + 114) mod 31) + 1;
+
+        my $fmt = { sprintf "%02d%02d", .month, .day };
+        my $date = Date.new($year, $month, $day, formatter => $fmt).later(days => $diff);
+        return $date.Str;
+    }
+
+    sub floating-date(Int $year, Int $month, Int $mday, Int $wday, Int :$count = 1, Int :$diff = 0) {
+        # $diff days after $count:th $wday on or after $year-$month-$mday
+        my $fmt = { sprintf "%02d%02d", .month, .day };
+        my $origin = Date.new(sprintf("%d-%02d-%02d", $year, $month, $mday), formatter => $fmt);
+        my $oday = $origin.day-of-week;
+        my $later = (7 - ($oday - $wday) % 7) % 7;
+        $later += ($count - 1) * 7;
+        $later += $diff;
+        return  $origin.later(days => $later + $diff).Str;
+    }
+    sub midsummer($year, $diff = 0) {
+        # 1st Sat on/after 20 June
+        return floating-date $year, 6, 20, 6, :$diff;
+    }
+    sub allsaints($year, $diff = 0) {
+        # 1st Sat on/after 31 Oct
+        return floating-date $year, 10, 31, 6, :$diff;
+    }
+
+    sub expected($day) {
+        return 0 if $day.day-of-week > 5;
+        given sprintf "%02d%02d", $day.month, $day.day {
+            when "0101"                   { return 0; }  # Nyårsdagen
+            when "0105"                   { return 6; }  # 12-dag Jul
+            when "0106"                   { return 0; }  # 13-dag Jul
+            when easter($day.year, -3)    { return 4; }  # Skärtorsdag
+            when easter($day.year, -2)    { return 0; }  # Långfredag
+            when easter($day.year, -1)    { return 0; }  # Påskafton
+            when easter($day.year)        { return 0; }  # Påskdagen
+            when easter($day.year,  1)    { return 0; }  # Annandag Påsk
+            when "0430"                   { return 4; }  # Valborg
+            when "0501"                   { return 0; }  # 1:a Maj
+            when easter($day.year, 39)    { return 0; }  # Kristi Himmelfärdsdag
+            when easter($day.year, 40)    { return 0; }  # klämdag
+            when easter($day.year, 48)    { return 0; }  # Pingstafton
+            when easter($day.year, 49)    { return 0; }  # Pingstdagen
+            when "0606"                   { return 0; }  # Nationaldagen
+            when midsummer($day.year, -1) { return 0; }  # Midsommarafton
+            when midsummer($day.year)     { return 0; }  # Midsommardagen
+            when allsaints($day.year, -1) { return 4; }  # Allhelgonaafton
+            when allsaints($day.year)     { return 0; }  # Alla Helgons Dag
+            when "1223"                   { return 6; }  # dan före dopparedan
+            when "1224"                   { return 0; }  # Julafton
+            when "1225"                   { return 0; }  # Juldagen
+            when "1226"                   { return 0; }  # Annandag Jul
+            when "1227"                   { return 0; }  # mellandag
+            when "1228"                   { return 0; }  # mellandag
+            when "1229"                   { return 0; }  # mellandag
+            when "1230"                   { return 0; }  # mellandag
+            when "1231"                   { return 0; }  # Nyårsafton
+            default { return 8; }
+        }
+    }
+
+    sub sum-up-demo(Str $date, %cache, $filler = -1) {
+        trace "sub sum-up-demo $date, $filler";
+        my ($week-name, $start-date, $year, $month, $mday) = get-current-week($date);
+        my $start-day = $start-date.day-of-week;
+
+        %cache<weeks>{$year}{$month}{$mday}<totals><fixed> = 0;
+        %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> = 0;
+        %cache<weeks>{$year}{$month}{$mday}<totals><overtime> = 0;
+        %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
+
+        for 1..7 -> $wday {
+            my $fixed;
+            my $skipped = False;
+            my $day = $start-date.later(days => $wday - $start-day);
+            if $wday < $start-day or $day.month != $start-date.month {
+                # skip out of week data
+                $skipped = True;
+                %cache<weeks>{$year}{$month}{$mday}<totals><days>{$wday}:delete;
+            } else {
+                $fixed = expected($day);
+                %cache<weeks>{$year}{$month}{$mday}<totals><days>{$wday}<fixed> = $fixed;
+            }
+
+            my $rowNum = -1;
+            my $invoiceable = 0;
+            my $reported = 0;
+            for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+                if ($skipped or not %row<hours>{$wday}) {
+                    # skip out of week data or zero hours
+                    %row<hours>{$wday}:delete;
+                } elsif %row<task> ne "102" { # don't sum "Beredskap"
+                    $invoiceable += %row<hours>{$wday} if %row<job> eq <12020002 12020003>.any;
+                    $reported += %row<hours>{$wday};
+                }
+            }
+            next if $skipped;
+
+            %cache<weeks>{$year}{$month}{$mday}<totals><days>{$wday}<reported> = $reported;
+            %cache<weeks>{$year}{$month}{$mday}<totals><days>{$wday}<invoiceable> = $invoiceable;
+            my $overtime = $reported - $fixed;
+            %cache<weeks>{$year}{$month}{$mday}<totals><days>{$wday}<overtime> = $overtime;
+
+            %cache<weeks>{$year}{$month}{$mday}<totals><fixed> += $fixed;
+            %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> += $invoiceable;
+            %cache<weeks>{$year}{$month}{$mday}<totals><reported> += $reported;
+            %cache<weeks>{$year}{$month}{$mday}<totals><overtime> += $overtime;
+        }
+        for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+            %row<total> = 0;
+            for 1..7 -> $wday {
+                %row<total> += %row<hours>{$wday} // 0;
+            }
+        }
+
+        if $filler >= 0 {
+            my %parameters;
+            set-filler(%cache, %parameters, $filler);
+            for 1..7 -> $wday {
+                my $previous = %cache<weeks>{$year}{$month}{$mday}<rows>[$filler]<hours>{$wday} // 0;
+                my $compensation = %parameters{"hours-$filler-$wday"};
+                %cache<weeks>{$year}{$month}{$mday}<rows>[$filler]<hours>{$wday} = $compensation;
+                if $compensation != $previous {
+                    $compensation -= $previous;
+                    %cache<weeks>{$year}{$month}{$mday}<rows>[$filler]<total> += $compensation;
+                    %cache<weeks>{$year}{$month}{$mday}<totals><days>{$wday}<reported> += $compensation;
+                    %cache<weeks>{$year}{$month}{$mday}<totals><days>{$wday}<overtime> += $compensation;
+                    %cache<weeks>{$year}{$month}{$mday}<totals><reported> += $compensation;
+                    %cache<weeks>{$year}{$month}{$mday}<totals><overtime> += $compensation;
+                }
+            }
+        }
         return %cache;
     }
 
@@ -783,9 +934,8 @@ class Micronomy {
                 }
             }
         } else {
-            %parameters<date> ~~ /(\d+)"-"(\d+)"-"(\d+)/;
-            my ($year, $month, $mday) = ($0, $1, $2);
-            my %cache = get-demo(%parameters<date>);
+            my ($week-name, $start-date, $year, $month, $mday) = get-current-week(%parameters<date>);
+            my %cache = get-demo($start-date);
             %cache<weeks>{$year}{$month}{$mday}<rows>.splice($target, 1);
             set-cache(%cache);
         }
@@ -932,23 +1082,28 @@ class Micronomy {
     }
 
     sub set-filler(%content, %parameters, $filler --> Bool) {
+        trace "set-filler $filler";
         return False if $filler < 0;
-        return False unless %content;
+        return False unless %content<weeks>:exists;
 
-        my %card = %content<panes><card><records>[0]<data>;
-        my @records = @(%content<panes><table><records>);
-        my $previous = @records[$filler]<data><weektotal>;
-        my $total = %card<fixednumberweekvar> - %card<totalnumberofweekvar> + $previous;
+        my ($week, $start-date, $year, $month, $mday) = get-current-week(%content<currentWeek>);
+
+        my $previous = %content<weeks>{$year}{$month}{$mday}<rows>[$filler]<total> // 0;
+        my $fixed = %content<weeks>{$year}{$month}{$mday}<totals><fixed> // 0;
+        my $reported = %content<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
+        my $total = $fixed - $reported + $previous;
 
         for (1..7).sort(
             {
-                %card{"overtimenumberday{$_}var"}
+                (%content<weeks>{$year}{$month}{$mday}<totals><days>{$_}<overtime> // 0)
                 -
-                @records[$filler]<data>{"numberday{$_}"}
+                (%content<weeks>{$year}{$month}{$mday}<rows>[$filler]<hours>{$_} // 0)
             }
         ) -> $day  {
-            my $previous = @records[$filler]<data>{"numberday{$day}"},
-            my $overtime = $previous - %card{"overtimenumberday{$day}var"};
+            my $previous = %content<weeks>{$year}{$month}{$mday}<rows>[$filler]<hours>{$day} // 0;
+            my $overtime = %content<weeks>{$year}{$month}{$mday}<totals><days>{$day}<overtime> // 0;
+
+            $overtime = $previous - $overtime;
             $overtime = $total if $overtime > $total;
             $overtime = 0 if $overtime < 0;
 
@@ -960,32 +1115,44 @@ class Micronomy {
     }
 
     sub set(%parameters, $row, $token) {
-        return {} if $token eq "demo";
-
-        my @changes;
-        for 1..7 -> $day  {
-            my $hours = %parameters{"hours-$row-$day"} || "0";
-            $hours = +$hours.subst(",", ".");
-            my $previous = %parameters{"hidden-$row-$day"} || 0;
-            if $hours ne $previous {
-                @changes.push("\"numberday$day\": " ~ $hours);
+        if $token ne "demo" {
+            my @changes;
+            for 1..7 -> $day  {
+                my $hours = %parameters{"hours-$row-$day"} || "0";
+                $hours = +$hours.subst(",", ".");
+                my $previous = %parameters{"hidden-$row-$day"} || 0;
+                if $hours ne $previous {
+                    @changes.push("\"numberday$day\": " ~ $hours);
+                }
             }
-        }
-        if @changes {
-            trace "setting row $row", $token;
-            my $concurrency = %parameters{"concurrency-$row"};
-            my $url = "$server/$registration-path/table/$row?card.datevar=%parameters<date>";
-            my $response = await Cro::HTTP::Client.post(
-                $url,
-                headers => {
-                    Authorization => "X-Reconnect $token",
-                    Content-Type => "application/json",
-                    Accept => "application/json",
-                    Maconomy-Concurrency-Control => $concurrency,
-                },
-                body => '{"data":{' ~ @changes.join(", ") ~ '}}',
-            );
-            return await $response.body;
+            if @changes {
+                trace "setting row $row", $token;
+                my $concurrency = %parameters{"concurrency-$row"};
+                my $url = "$server/$registration-path/table/$row?card.datevar=%parameters<date>";
+                my $response = await Cro::HTTP::Client.post(
+                    $url,
+                    headers => {
+                        Authorization => "X-Reconnect $token",
+                        Content-Type => "application/json",
+                        Accept => "application/json",
+                        Maconomy-Concurrency-Control => $concurrency,
+                    },
+                    body => '{"data":{' ~ @changes.join(", ") ~ '}}',
+                );
+                return parse-week(await $response.body);
+            }
+        } else {
+            my %cache = get-demo(%parameters<date>);
+
+            my ($week-name, $start-date, $year, $month, $mday) = get-current-week(%parameters<date>);
+
+            for 1..7 -> $wday  {
+                my $hours = %parameters{"hours-$row-$wday"} || "0";
+                $hours = +$hours.subst(",", ".");
+                %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<hours>{$$wday} = $hours;;
+            }
+            set-cache(%cache);
+            return %cache;
         }
     }
 
@@ -999,16 +1166,22 @@ class Micronomy {
 
         my $filler = %parameters<filler> // -1;
         my %content;
-        for 0..* -> $row {
-            last unless %parameters{"concurrency-$row"};
-            next if $row == $filler;
-            my %result = set(%parameters, $row, $token);
-            %content = %result if %result;
-        }
-        if set-filler(%content, %parameters, $filler) {
-            my %result = set(%parameters, $filler, $token);
-            %content = %result if %result;
-        }
+        if (%parameters<concurrency>) {
+ 	    for 0..* -> $row {
+ 	        last unless %parameters{"concurrency-$row"};
+ 	        next if $row == $filler;
+ 	        my %result = set(%parameters, $row, $token);
+ 	        %content = %result if %result;
+ 	    }
+ 	    if $token eq "demo" {
+                %content = get-demo(%parameters<date>);
+ 	        %content = sum-up-demo(%parameters<date>, %content, $filler);
+                set-cache(%content);
+ 	    } elsif set-filler(%content, %parameters, $filler) {
+ 	        my %result = set(%parameters, $filler, $token);
+ 	        %content = %result if %result;
+ 	    }
+ 	}
 
         %content = get-week($token, %parameters<date>);
         %content<last-target> =  %parameters<last-target>;
