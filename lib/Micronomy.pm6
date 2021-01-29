@@ -858,52 +858,102 @@ class Micronomy {
         my $numberOfLines = %parameters<rows>;
         my ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
 
-        my $url = "$server/$instances-path/$containerInstanceId/data/panes/table";
-        if (%parameters{"position-$source"} < $numberOfLines) {
-            if $action eq "add" {
-                $url ~= "?row=" ~ $target;
-            } else {
-                $url ~= "/$target";
+        if $token ne "demo" {
+            my $url = "$server/$instances-path/$containerInstanceId/data/panes/table";
+            if (%parameters{"position-$source"} < $numberOfLines) {
+                if $action eq "add" {
+                    $url ~= "?row=" ~ $target;
+                } else {
+                    $url ~= "/$target";
+                }
             }
-        }
 
-        my $retries = 9;
-        for 0 .. $retries -> $wait {
-            sleep $wait/10;
-            try {
-                # populate row
-                my @data = ();
-                @data.push('"jobnumber": "' ~ %parameters{"job-$source"} ~ '"') if %parameters{"job-$source"};
-                @data.push('"taskname": "' ~  %parameters{"task-$source"} ~ '"') if %parameters{"task-$source"};
-                @data.push('"permanentline": ' ~ (%parameters{"keep-$source"} == 1 ?? "false" !! "true"));
-                if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
-                    my $day = 0;
-                    for %parameters{"hours-$source"}.split(";") -> $hours {
-                        $day++;
-                        @data.push("\"numberday{$day}\": $hours") if $hours ne "0";
+            my $retries = 9;
+            for 0 .. $retries -> $wait {
+                sleep $wait/10;
+                try {
+                    # populate row
+                    my @data = ();
+                    @data.push('"jobnumber": "' ~ %parameters{"job-$source"} ~ '"') if %parameters{"job-$source"};
+                    @data.push('"taskname": "' ~  %parameters{"task-$source"} ~ '"') if %parameters{"task-$source"};
+                    @data.push('"permanentline": ' ~ (%parameters{"keep-$source"} == 1 ?? "false" !! "true"));
+                    if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
+                        my $day = 0;
+                        for %parameters{"hours-$source"}.split(";") -> $hours {
+                            $day++;
+                            @data.push("\"numberday{$day}\": $hours") if $hours ne "0";
+                        }
+                    }
+                    my $data = '{"data": {' ~ @data.join(",") ~ '}}';
+                    trace "$url $data";
+
+                    my $response = await Cro::HTTP::Client.post(
+                        "$url",
+                        headers => {
+                            Authorization => "X-Reconnect $token",
+                            Maconomy-Concurrency-Control => $concurrency,
+                            Content-Type => "application/json",
+                        },
+                        body => $data,
+                    );
+
+                    return get-header($response, 'maconomy-concurrency-control');
+                }
+
+                if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
+                    trace "add-data received 404 - retrying [{$wait+1}/$retries]", $token;
+                } else {
+                    die $!;
+                }
+            }
+        } else {
+            my ($week-name, $start-date, $year, $month, $mday) = get-current-week(%parameters<date>);
+            my %cache = get-demo(%parameters<date>);
+            my %row;
+            %row<job> = %parameters{"job-$source"} if %parameters{"job-$source"};
+            my $task = %parameters{"task-$source"} // "";
+            %row<task> = $task if %parameters{"task-$source"};
+            %row<temp> = True unless %parameters{"keep-$source"};
+            %row<concurrency> = '"card=""demo", "table"="demo"';
+            %row<state> = "";
+            if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
+                my $day = 0;
+                my $total = 0;
+                for %parameters{"hours-$source"}.split(";") -> $hours {
+                    $day++;
+                    %row<hours>{$day} = $hours if $hours ne "0";
+                    $total += $hours;
+                }
+                %row<total> = $total if $total != 0;
+            }
+            if $action eq "add" {
+                %cache<weeks>{$year}{$month}{$mday}<rows>.splice(+$target, 0, %row);
+            } else {
+                %cache<weeks>{$year}{$month}{$mday}<rows>[$target] = %row;
+            }
+
+            unless %cache<jobs>{%row<job>}<tasks>{$task}:exists {
+                unless %cache<jobs>{%row<job>}:exists {
+                    my %favorites = get-cache("demo-faves");
+                    for @(%favorites<panes><table><records>) -> %data {
+                        if %data<data><jobnumber> == %row<job> {
+                            %cache<jobs>{%row<job>}<name> = %data<data><jobnamevar>;
+                            last;
+                        }
                     }
                 }
-                my $data = '{"data": {' ~ @data.join(",") ~ '}}';
-                trace "$url $data";
-
-                my $response = await Cro::HTTP::Client.post(
-                    "$url",
-                    headers => {
-                        Authorization => "X-Reconnect $token",
-                        Maconomy-Concurrency-Control => $concurrency,
-                        Content-Type => "application/json",
-                    },
-                    body => $data,
-                );
-
-                return get-header($response, 'maconomy-concurrency-control');
+                if $task {
+                    my %tasks = get-cache("demo-tasks");
+                    for @(%tasks{%row<job>}) -> %task {
+                        if %task<number> == $task {
+                            %cache<jobs>{%row<job>}<tasks>{$task} = %task<name>;
+                            last;
+                        }
+                    }
+                }
             }
 
-            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
-                trace "add-data received 404 - retrying [{$wait+1}/$retries]", $token;
-            } else {
-                die $!;
-            }
+            set-cache(%cache);
         }
     }
 
@@ -1028,7 +1078,7 @@ class Micronomy {
         for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
             my $jobNumber = %row<job>;
             my $jobName = %cache<jobs>{%row<job>}<name>;
-            my $taskNumber = %row<task>;
+            my $taskNumber = %row<task> // "";
             my $taskName = %cache<jobs>{%row<job>}<tasks>{$taskNumber};
             %rows{$jobNumber}{$taskNumber} = 1;
             my @hours;
@@ -1056,7 +1106,7 @@ class Micronomy {
         my @favorites;
         for ^%favorites<panes><table><meta><rowCount> -> $row {
             my $jobNumber = %favorites<panes><table><records>[$row]<data><jobnumber>;
-            my $taskNumber = %favorites<panes><table><records>[$row]<data><taskname>;
+            my $taskNumber = %favorites<panes><table><records>[$row]<data><taskname> // "";
             next if %rows{$jobNumber}{$taskNumber};
             my %favorite = (
                 favorite   => %favorites<panes><table><records>[$row]<data><favorite>,
