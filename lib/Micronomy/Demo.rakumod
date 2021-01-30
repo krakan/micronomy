@@ -47,7 +47,7 @@ sub set-demo-filler(%parameters) is export {
     set-cache(%content);
 }
 
-sub add-demo-data($action, $source, $target, %parameters) is export {
+sub add-demo-data($action, $source, $target is copy, %parameters) is export {
     trace "add demo data [$source -> $target] " ~ %parameters{"position-$source"}, "demo";
 
     my ($week-name, $start-date, $year, $month, $mday) = get-current-week(%parameters<date>);
@@ -57,7 +57,7 @@ sub add-demo-data($action, $source, $target, %parameters) is export {
     my $task = %parameters{"task-$source"} // "";
     %row<task> = $task if %parameters{"task-$source"};
     %row<temp> = True unless %parameters{"keep-$source"};
-    %row<concurrency> = '"card=""demo", "table"="demo"';
+    %row<concurrency> = '"card"="demo", "table"="demo"';
     %row<state> = "";
     if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
         my $day = 0;
@@ -69,8 +69,11 @@ sub add-demo-data($action, $source, $target, %parameters) is export {
         }
         %row<total> = $total if $total != 0;
     }
+
+    my $max = %cache<weeks>{$year}{$month}{$mday}<rows>.elems;
+    $target = min($max, $target);
     if $action eq "add" {
-        %cache<weeks>{$year}{$month}{$mday}<rows>.splice(+$target, 0, %row);
+        %cache<weeks>{$year}{$month}{$mday}<rows>.splice($target, 0, %row);
     } else {
         %cache<weeks>{$year}{$month}{$mday}<rows>[$target] = %row;
     }
