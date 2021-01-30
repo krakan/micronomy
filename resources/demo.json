@@ -87,9 +87,6 @@
             },
             {
               "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23q\", \"table\"=\"cccef29393a43bf732690dccd2dd1422fb7bc098\"",
-              "hours": {
-                "4": 0.5
-              },
               "job": "12020045",
               "state": "approved",
               "task": "155"
@@ -119,7 +116,7 @@
               "4": {
                 "fixed": 8,
                 "invoiceable": 6.5,
-                "overtime": 0,
+                "overtime": -0.5,
                 "reported": 7.5
               },
               "5": {
@@ -143,7 +140,7 @@
             },
             "fixed": 40,
             "invoiceable": 42.5,
-            "overtime": 7,
+            "overtime": 6.5,
             "reported": 46.5
           }
         }
