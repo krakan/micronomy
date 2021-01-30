@@ -2,7 +2,7 @@
   "panes": {
     "table": {
       "meta": {
-        "rowCount": 5
+        "rowCount": 11
       },
       "records": [
         {
@@ -97,7 +97,7 @@
           "data": {
             "jobnumber": 12020049,
             "taskname": 906,
-            "favorite": "Kompetensutveckling",
+            "favorite": "Internt arbete med timpris",
             "jobnamevar": "Interntid - Dotterbolag",
             "tasktextvar": "Internt arbete med timpris"
           }
