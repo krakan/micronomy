@@ -43,7 +43,7 @@ case $target in
         if test -z $exist || {
                 touch --date=$(docker inspect micronomy:latest | jq -r .[].Created) Dockerfile &&
                     find . -newer Dockerfile -type f | \
-                        egrep '^./((lib|resources)/|^service.p6)' | grep -v ./lib/.precomp;
+                        egrep '^./((lib|resources)/|^service.raku)' | grep -v ./lib/.precomp;
             }
         then
             docker build -t micronomy .
@@ -51,11 +51,11 @@ case $target in
         docker run -it --rm -p 443:443 micronomy
         ;;
 
-    local) MICRONOMY_PORT=4443 MICRONOMY_HOST=0.0.0.0 perl6 -I lib service.p6;;
+    local) MICRONOMY_PORT=4443 MICRONOMY_HOST=0.0.0.0 raku -I lib service.raku;;
 
     deploy)
         if rsync -zva --exclude .precomp . micronomy:micronomy/ | tee /dev/tty |
-                egrep -q '^(lib|resources)/|^service.p6'
+                egrep -q '^(lib|resources)/|^service.raku'
         then
             echo "INFO: restarting micronomy"
             ssh -t micronomy.jonaseel.se sudo pkill moar
@@ -74,7 +74,7 @@ case $target in
         fi
         cd $(dirname $0)
 
-        type perl6 >/dev/null 2>&1 || usage "perl6 command not found"
+        type raku >/dev/null 2>&1 || usage "raku command not found"
 
         # stop old processes
         pgrep 'micronomy|moar' | grep -v $$ | xargs -r kill
@@ -108,9 +108,9 @@ case $target in
             test $port && export MICRONOMY_PORT=$port
             if id -u | grep -qx 0
             then
-                script -c "perl6 -I lib service.p6" /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
+                script -c "raku -I lib service.raku" /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
             else
-                perl6 -I lib service.p6
+                raku -I lib service.raku
             fi
             # wait for optional extra CTRL-C
             sleep 1
