@@ -856,17 +856,32 @@ class Micronomy {
             trace "setting row $row", $token;
             my $concurrency = %parameters{"concurrency-$row"};
             my $url = "$server/$registration-path/table/$row?card.datevar=%parameters<date>";
-            my $response = await Cro::HTTP::Client.post(
-                $url,
-                headers => {
-                    Authorization => "X-Reconnect $token",
-                    Content-Type => "application/json",
-                    Accept => "application/json",
-                    Maconomy-Concurrency-Control => $concurrency,
-                },
-                body => '{"data":{' ~ @changes.join(", ") ~ '}}',
-            );
-            return parse-week(await $response.body);
+
+            for ^10 -> $wait {
+                sleep $wait/10;
+                try {
+                    my $response = await Cro::HTTP::Client.post(
+                        $url,
+                        headers => {
+                            Authorization => "X-Reconnect $token",
+                            Content-Type => "application/json",
+                            Accept => "application/json",
+                            Maconomy-Concurrency-Control => $concurrency,
+                        },
+                        body => '{"data":{' ~ @changes.join(", ") ~ '}}',
+                    );
+                    return parse-week(await $response.body);
+                }
+
+                if $! ~~ X::Cro::HTTP::Error and $!.response.status == 409 and $wait < 9 {
+                    trace "set received 409 - retrying [{$wait+1}/9]", $token;
+                    my %content = get-week($token, %parameters<date>);
+                    my ($week-name, $start-date, $year, $month, $mday) = get-current-week(%parameters<date>);
+                    $concurrency = %content<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency>;
+                } else {
+                    die $!;
+                }
+            }
         }
     }
 
