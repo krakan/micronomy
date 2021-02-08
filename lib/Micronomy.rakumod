@@ -88,15 +88,15 @@ class Micronomy {
                     $status = "";
                 }
                 when "approved" {
-		    # #31d23b = bright green
+                    # #31d23b = bright green
                     $status = '<div class="status" style="color:#31d23b;">✔</div>';
                 }
                 when "denied" {
-		    # #ff4646 = bright red
+                    # #ff4646 = bright red
                     $status = '<div class="status" style="color:#ff4646;">✘</div>';
                 }
                 default {
-		    # #ff4646 = bright red same as the above
+                    # #ff4646 = bright red same as the above
                     $status = '<div class="status" style="color:#ff4646;">' ~ $status ~ '</div>';
                 }
             }
@@ -874,6 +874,10 @@ class Micronomy {
                     my %content = get-week($token, %parameters<date>);
                     my ($week-name, $start-date, $year, $month, $mday) = get-current-week(%parameters<date>);
                     $concurrency = %content<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency>;
+                    for 0..* -> $row {
+                        last unless %parameters{"concurrency-$row"};
+                        %parameters{"concurrency-$row"} = %content<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency>;
+                    }
                 } else {
                     die $!;
                 }
@@ -892,19 +896,19 @@ class Micronomy {
         my $filler = %parameters<filler> // -1;
         my %content;
         if (%parameters<concurrency>) {
- 	    for 0..* -> $row {
- 	        last unless %parameters{"concurrency-$row"};
- 	        next if $row == $filler;
- 	        my %result = set(%parameters, $row, $token);
- 	        %content = %result if %result;
- 	    }
- 	    if $token eq "demo" {
+            for 0..* -> $row {
+                last unless %parameters{"concurrency-$row"};
+                next if $row == $filler;
+                my %result = set(%parameters, $row, $token);
+                %content = %result if %result;
+            }
+            if $token eq "demo" {
                 set-demo-filler(%parameters);
- 	    } elsif set-filler(%content, %parameters, $filler) {
- 	        my %result = set(%parameters, $filler, $token);
- 	        %content = %result if %result;
- 	    }
- 	}
+            } elsif set-filler(%content, %parameters, $filler) {
+                my %result = set(%parameters, $filler, $token);
+                %content = %result if %result;
+            }
+        }
 
         %content = get-week($token, %parameters<date>);
         %content<last-target> =  %parameters<last-target>;
