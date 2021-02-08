@@ -28,9 +28,7 @@ class Micronomy {
     sub show-week($token, %cache, :$error) {
         trace "show-week", $token;
 
-        my $periodStart = Date.new(%cache<currentWeek>);
-        $periodStart ~~ /(\d+)"-"(\d+)"-"(\d+)/;
-        my ($year, $month, $mday) = ($0, $1, $2);
+        my ($week-name, $periodStart, $year, $month, $mday) = get-current-week(%cache<currentWeek>);
         my %week = %cache<weeks>{$year}{$month}{$mday};
         my $week = %week<name>;
         %week<rows> //= ();
@@ -220,8 +218,7 @@ class Micronomy {
             }
         }
 
-        %card<periodstartvar> ~~ /(\d+)"-"(\d+)"-"(\d+)/;
-        my ($year, $month, $mday) = ($0, $1, $2);
+        my ($week-name, $periodStart, $year, $month, $mday) = get-current-week(%card<periodstartvar>);
         %cache<weeks>{$year}{$month}{$mday} = %weekData;
 
         set-cache(%cache);
@@ -304,8 +301,8 @@ class Micronomy {
         my $current = $start-date;
         for 0..* -> $week {
             my $bucket = $current.truncated-to($bucketSize);
-            $current ~~ /(\d+)"-"(\d+)"-"(\d+)/;
-            my ($year, $month, $mday) = ($0, $1, $2);
+
+            my ($week-name, $week-start, $year, $month, $mday) = get-current-week($current);
             if %cache<weeks>{$year}{$month}{$mday}:exists {
                 trace "using cached week $current", $token;
             } elsif $current lt '2019-05-01' {
@@ -780,8 +777,7 @@ class Micronomy {
             date => $date,
         );
 
-        $week ~~ /(\d+)"-"(\d+)"-"(\d+)/;
-        my ($year, $month, $mday) = ($0, $1, $2);
+        my ($week-name, $start-date, $year, $month, $mday) = get-current-week($week);
         my (@rows, %rows);
         my $row = 0;
         for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
