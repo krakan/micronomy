@@ -103,7 +103,7 @@ After the server is set up, clone this repo to it and run
 ```
 export MICRONOMY_PORT=443
 export MICRONOMY_HOST=0.0.0.0
-perl6 -I lib service.raku
+perl6 -I lib service.p6
 ```
 
 You may want to change port and host IP. There is also a script
