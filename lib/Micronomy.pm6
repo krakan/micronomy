@@ -238,8 +238,8 @@ class Micronomy {
     method get-month(:$token, :$date) {
         trace "get-month $date", $token;
         my $start-date = $date ?? Date.new($date) !! Date.today;
-        $start-date .= first-date-in-month;
-        my $end-date = $start-date.last-date-in-month;
+        $start-date .= truncated-to('month');
+        my $end-date = $start-date.later(months => 1).pred;
 
         Micronomy.get-period(:$token, :$start-date, :$end-date);
     }
@@ -342,7 +342,7 @@ class Micronomy {
             my $next = $current.later(weeks => 1).truncated-to("week");
             last if $next gt $end-date;
             if $next.month != $current.month and $next.day > 1 {
-                $current = $next.earlier(days => 1).first-date-in-month;
+                $current = $next.earlier(days => 1).truncated-to('month');
             } else {
                 $current = $next;
             }
