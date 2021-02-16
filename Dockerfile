@@ -1,4 +1,4 @@
-FROM croservices/cro-http:0.8.2
+FROM croservices/cro-http:0.8.4
 RUN zef install Cro::WebApp URI::Encode Digest::MD5
 
 RUN apt-get update && \
