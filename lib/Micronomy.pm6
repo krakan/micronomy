@@ -42,7 +42,7 @@ class Micronomy {
         $next = $next.truncated-to('month') if $periodStart.month != $next.month;
 
         my $fmt = {sprintf "%s %02d/%02d", @days[.day-of-week], .day, .month};
-        my $previousSunday = $periodStart.truncated-to('week').earlier(days => 1).clone(formatter => $fmt);
+        my $previousSunday = $periodStart.truncated-to('week').earlier(days => 1);
 
         my %data = (
             period => "vecka $week",
@@ -70,7 +70,7 @@ class Micronomy {
 
         for 1..7 -> $wday {
             my %day = (number => $wday);
-            %day<date> = $previousSunday.later(days => $wday).Str;
+            %day<date> = $previousSunday.later(days => $wday).clone(formatter => $fmt).Str;
             %day<total> = %week<totals><days>{$wday}<reported> // 0;
             %day<fixed> = %week<totals><days>{$wday}<fixed> // 0;
             %day<overtime> = %week<totals><days>{$wday}<overtime> // 0;
