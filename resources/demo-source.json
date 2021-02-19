@@ -1,0 +1,150 @@
+{
+  "employeeName": "Nils Nilsson",
+  "employeeNumber": "demo",
+  "enabled": null,
+  "jobs": {
+    "12020002": {
+      "name": "Konsultarbete - Kund",
+      "tasks": {
+        "100": "Konsulting",
+        "102": "Beredskap",
+        "104": "Beredskapsarbete"
+      }
+    },
+    "12020045": {
+      "name": "Frånvaro - Dotterbolag",
+      "tasks": {
+        "155": "Tjänstledig mot RAM"
+      }
+    },
+    "12020049": {
+      "name": "Interntid - Dotterbolag",
+      "tasks": {
+        "900": "Internt Arbete",
+        "901": "Kompetensutveckling"
+      }
+    }
+  },
+  "weeks": {
+    "2019": {
+      "05": {
+        "06": {
+          "name": "19",
+          "rows": [
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"118a07d583740f3c3feb6ab1269dd2d487db0d0f\"",
+              "hours": {
+                "1": 8,
+                "2": 8,
+                "3": 8,
+                "4": 6.5,
+                "5": 8
+              },
+              "job": "12020002",
+              "state": "approved",
+              "task": "100",
+              "total": 14.5
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"d8aabe554b063b03e79ff5a79609eab3b0844b2f\"",
+              "hours": {
+                "3": 20,
+                "4": 9
+              },
+              "job": "12020002",
+              "state": "approved",
+              "task": "102",
+              "total": 29
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"f65023a3d9d04fd9a81c9556147db23c6c99d656\"",
+              "hours": {
+                "3": 4
+              },
+              "job": "12020002",
+              "state": "approved",
+              "task": "104",
+              "total": 4
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"d8501a24306c9b092f6bdcd2770cd1541292c0bc\"",
+              "hours": {
+                "3": 1,
+                "4": 1,
+                "7": 2
+              },
+              "job": "12020049",
+              "state": "approved",
+              "task": "900",
+              "temp": true,
+              "total": 4
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"5e81c49268a372735cdf2a8b02cd092ab6ca8124\"",
+              "job": "12020049",
+              "state": "approved",
+              "task": "901"
+            },
+            {
+              "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23q\", \"table\"=\"cccef29393a43bf732690dccd2dd1422fb7bc098\"",
+              "job": "12020045",
+              "state": "approved",
+              "task": "155"
+            }
+          ],
+          "state": 2,
+          "totals": {
+            "days": {
+              "1": {
+                "fixed": 8,
+                "invoiceable": 8,
+                "overtime": 0,
+                "reported": 8
+              },
+              "2": {
+                "fixed": 8,
+                "invoiceable": 8,
+                "overtime": 0,
+                "reported": 8
+              },
+              "3": {
+                "fixed": 8,
+                "invoiceable": 12,
+                "overtime": 5,
+                "reported": 13
+              },
+              "4": {
+                "fixed": 8,
+                "invoiceable": 6.5,
+                "overtime": -0.5,
+                "reported": 7.5
+              },
+              "5": {
+                "fixed": 8,
+                "invoiceable": 8,
+                "overtime": 0,
+                "reported": 8
+              },
+              "6": {
+                "fixed": 0,
+                "invoiceable": 0,
+                "overtime": 0,
+                "reported": 0
+              },
+              "7": {
+                "fixed": 0,
+                "invoiceable": 0,
+                "overtime": 2,
+                "reported": 2
+              }
+            },
+            "fixed": 40,
+            "invoiceable": 42.5,
+            "overtime": 6.5,
+            "reported": 46.5
+          }
+        }
+      }
+    }
+  }
+}

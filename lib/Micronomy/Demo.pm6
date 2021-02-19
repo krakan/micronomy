@@ -14,7 +14,9 @@ sub get-demo($date) is export {
     %cache<currentWeek> = $start-date.yyyy-mm-dd;
 
     if not %cache<weeks>{$year}{$month}{$mday}:exists {
-        %cache<weeks>{$year}{$month}{$mday} = from-json to-json %cache<weeks><2019><05><06>;
+        my %source = get-cache("demo-source");
+        %cache<weeks>{$year}{$month}{$mday} = from-json to-json %source<weeks><2019><05><06>;
+        %cache<jobs> //= from-json to-json %source<jobs>;
         if $week ~~ /<[AB]>/ {
             %cache = sum-up-demo(%cache<currentWeek>, %cache);
         }
