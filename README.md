@@ -82,21 +82,15 @@ Start with eg. a basic Debian 10 (which is also known as Debian Buster
 and the current `stable`) and then run the following:
 
 ```
-echo deb http://ftp.debian.org/debian/ stretch main non-free contrib |
-  sudo tee /etc/apt/sources.list.d/stretch.list >/dev/null
 sudo apt update
-sudo apt install -y libssl1.0.2 git curl make gcc perl6-zef perl6-readline rsync certbot nginx tmux
-sudo ln -fs libssl.so.1.0.2 /usr/lib/x86_64-linux-gnu/libssl.so
-sudo ln -fs libcrypto.so.1.0.2 /usr/lib/x86_64-linux-gnu/libcrypto.so
+sudo apt install -y libssl-dev git curl make gcc perl6-zef perl6-readline rsync certbot nginx tmux
 zef install --serial Cro::WebApp URI::Encode Digest::MD5
 ```
 
-Some parts of the Cro libraries still requires OpenSSL 1.0 which is
-available from Debian 9 (which is also known as Debian Stretch and the
-current `oldstable`). Note also that the `rakudo` package is called
-`perl6` in Debian 10. Basing this on Debian is of course optional -
-any platform that can run `rakudo` should work but then the above
-installation commands will be different.
+Note that the `rakudo` package is called `perl6` in Debian 10. Basing
+this on Debian is of course optional - any platform that can run
+`rakudo` should work but then the above installation commands will be
+different.
 
 After the server is set up, clone this repo to it and run
 
