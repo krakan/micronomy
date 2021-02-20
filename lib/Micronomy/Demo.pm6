@@ -6,6 +6,7 @@ use Micronomy::Common;
 
 sub get-demo($date) is export {
     trace "Micronomy::Demo.get-demo $date";
+    my $today = Date.today;
     my %cache = get-cache("demo");
     %cache<currentDate> = $date;
     %cache<concurrency> = '"card"="demo"';
@@ -13,13 +14,52 @@ sub get-demo($date) is export {
     my ($week, $start-date, $year, $month, $mday) = get-current-week($date);
     %cache<currentWeek> = $start-date.yyyy-mm-dd;
 
+    # find previous week if missing
     if not %cache<weeks>{$year}{$month}{$mday}:exists {
-        my %source = get-cache("demo-source");
-        %cache<weeks>{$year}{$month}{$mday} = from-json to-json %source<weeks><2019><05><06>;
-        %cache<jobs> //= from-json to-json %source<jobs>;
-        if $week ~~ /<[AB]>/ {
-            %cache = sum-up-demo(%cache<currentWeek>, %cache);
+        outer:
+        for %cache<weeks>.keys.sort.reverse -> $year2 {
+            next if $year2 > $year;
+            for %cache<weeks>{$year2}.keys.sort.reverse -> $month2 {
+                next if "$year2-$month2" gt "$year-$month";
+                for %cache<weeks>{$year2}{$month2}.keys.sort.reverse -> $mday2 {
+                    next if "$year2-$month2-$mday2" gt "$year-$month-$mday";
+                    trace "copying $year2-$month2-$mday2 (%cache<weeks>{$year2}{$month2}{$mday2}<name>)";
+                    %cache<weeks>{$year}{$month}{$mday} = from-json to-json %cache<weeks>{$year2}{$month2}{$mday2};
+                    last outer;
+                }
+            }
         }
+        if not %cache<weeks>{$year}{$month}{$mday}:exists {
+            trace "copying 1970-01-05 (2)";
+            my %source = get-cache("demo-source");
+            %cache<weeks>{$year}{$month}{$mday} = from-json to-json %source<weeks><1970><01><05>;
+            %cache<jobs> //= from-json to-json %source<jobs>;
+        }
+
+        # don't copy temporary rows
+        my @keep;
+        for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+            @keep.push(%row) unless %row<temp>;
+        }
+        %cache<weeks>{$year}{$month}{$mday}<rows> = @keep;
+
+        # don't add future hours
+        if $start-date >= $today.truncated-to('week') {
+            for 1..7 -> $wday {
+                if $start-date.later(days => $wday-1) >= $today {
+                    for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+                        %row<hours>{$wday}:delete
+                    }
+                }
+            }
+        }
+
+        %cache = sum-up-demo(%cache<currentWeek>, %cache);
+    }
+
+    # auto approve old weeks
+    if $start-date < $today.truncated-to('week') {
+        %cache<weeks>{$year}{$month}{$mday}<state> = 2;
     }
 
     %cache<weeks>{$year}{$month}{$mday}<name> = $week;

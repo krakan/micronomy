@@ -26,10 +26,10 @@
     }
   },
   "weeks": {
-    "2019": {
-      "05": {
-        "06": {
-          "name": "19",
+    "1970": {
+      "01": {
+        "05": {
+          "name": "2",
           "rows": [
             {
               "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"118a07d583740f3c3feb6ab1269dd2d487db0d0f\"",
@@ -41,7 +41,7 @@
                 "5": 8
               },
               "job": "12020002",
-              "state": "approved",
+              "state": "nil",
               "task": "100",
               "total": 14.5
             },
@@ -52,7 +52,7 @@
                 "4": 9
               },
               "job": "12020002",
-              "state": "approved",
+              "state": "nil",
               "task": "102",
               "total": 29
             },
@@ -62,7 +62,7 @@
                 "3": 4
               },
               "job": "12020002",
-              "state": "approved",
+              "state": "nil",
               "task": "104",
               "total": 4
             },
@@ -74,7 +74,7 @@
                 "7": 2
               },
               "job": "12020049",
-              "state": "approved",
+              "state": "nil",
               "task": "900",
               "temp": true,
               "total": 4
@@ -82,17 +82,17 @@
             {
               "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23\", \"table\"=\"5e81c49268a372735cdf2a8b02cd092ab6ca8124\"",
               "job": "12020049",
-              "state": "approved",
+              "state": "nil",
               "task": "901"
             },
             {
               "concurrency": "\"card\"=\"ef18f22b67ecaf822df7055e24e0f74efa77da23q\", \"table\"=\"cccef29393a43bf732690dccd2dd1422fb7bc098\"",
               "job": "12020045",
-              "state": "approved",
+              "state": "nil",
               "task": "155"
             }
           ],
-          "state": 2,
+          "state": 0,
           "totals": {
             "days": {
               "1": {

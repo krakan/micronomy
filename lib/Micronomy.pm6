@@ -949,6 +949,7 @@ class Micronomy {
             %content = await $response.body;
             %content = parse-week(%content);
         } else {
+            # submit-demo($date);
             %content = get-demo($date);
         }
         show-week($token, %content);
