@@ -149,6 +149,7 @@ class Micronomy {
         %data<rows> = @rows;
 
         trace "sending timesheet", $token;
+        header "X-Frame-Options: DENY";
         template 'timesheet.html.tmpl', %data;
 
         CATCH {
@@ -436,6 +437,7 @@ class Micronomy {
         }
 
         trace "sending timesheet", $token;
+        header "X-Frame-Options: DENY";
         template 'timesheet.html.tmpl', %data;
     }
 
@@ -824,6 +826,7 @@ class Micronomy {
         }
         %data<favorites> = @favorites;
 
+        header "X-Frame-Options: DENY";
         template 'edit.html.tmpl', %data;
 
         #CATCH {
@@ -977,8 +980,10 @@ class Micronomy {
         );
         set-cookie("sessionToken", "login",
                    same-site => Cro::HTTP::Cookie::SameSite::Strict,
+                   http-only => True,
                    expires => DateTime.now(),
                   );
+        header "X-Frame-Options: DENY";
         template 'login.html.tmpl', %data;
         trace "sent login page";
     }
@@ -1018,6 +1023,7 @@ class Micronomy {
             trace "$username logged in", $token;
             set-cookie("sessionToken", $token,
                        same-site => Cro::HTTP::Cookie::SameSite::Strict,
+                       http-only => True,
                       );
             redirect "/", :see-other;
             trace "redirected from login to get", $token;
@@ -1050,6 +1056,7 @@ class Micronomy {
         }
         set-cookie("sessionToken", "logout",
                    same-site => Cro::HTTP::Cookie::SameSite::Strict,
+                   http-only => True,
                    expires => DateTime.now(),
                   );
         redirect "/login?reason=Utloggad!", :see-other;

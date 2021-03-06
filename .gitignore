@@ -7,3 +7,9 @@ node_modules/
 
 # cache files
 resources/*.json
+
+# extra docker files
+Dockerfile.*
+
+# reports
+*.pdf
