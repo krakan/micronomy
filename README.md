@@ -78,19 +78,24 @@ reported as issues. Follow the same procedure as for bugs.
 
 # Server setup
 
-Start with eg. a basic Debian 10 (which is also known as Debian Buster
-and the current `stable`) and then run the following:
+Start with eg. a basic Debian and then run the following:
 
 ```
 sudo apt update
-sudo apt install -y libssl-dev git curl make gcc perl6-zef perl6-readline rsync certbot nginx tmux
+sudo apt install -y libssl-dev git perl curl rsync certbot nginx tmux
+
+curl https://rakubrew.org/install-on-perl.sh | bash
+eval "$($HOME/.rakubrew/bin/rakubrew init Bash)"
+
+rakubrew download
+rakubrew build zef
+
 zef install --serial Cro::WebApp URI::Encode Digest::MD5
 ```
 
-Note that the `rakudo` package is called `perl6` in Debian 10. Basing
-this on Debian is of course optional - any platform that can run
-`rakudo` should work but then the above installation commands will be
-different.
+Basing this on Debian is of course optional - any platform that can
+run `rakudo` should work but then the above installation commands will
+be different.
 
 After the server is set up, clone this repo to it and run
 
