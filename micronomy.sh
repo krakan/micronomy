@@ -10,22 +10,24 @@ usage() {
     exec >&2
     test "$*" && echo -e "ERROR: $*\n"
     echo "usage: $0 [--debug] docker|local|deploy|tmux"
-    echo "or:    $0 [--debug] [--port <int>] [--certdir <path>|--fake] [run]"
+    echo "or:    $0 [--debug] [--host <address>] [--port <int>] [--certdir <path>] [--standalone] [run]"
     exit 1
 }
 
+scriptdir=$(readlink -f $(dirname $0))
 target=run
 port=
 xtrace=
-fake=
 cert=/etc/letsencrypt/live/micronomy.jonaseel.se
+sudo test -d $cert || cert=$scriptdir/resources/fake-tls
+standalone=
 while test $# -gt 0
 do
     case $1 in
         -p|--port) port=$2; shift;;
         -h|--host) export MICRONOMY_HOST=$2; shift;;
         -c|--cert*) cert=$2; shift;;
-        -f|--fake*) fake=1;;
+        -s|--standalone) standalone=1;;
         -x|--debug) xtrace=on; set -x;;
         -*) usage "unknown option '$1'";;
         *) target=$1;;
@@ -34,7 +36,7 @@ do
 done
 
 # set home dir
-test $target = run || cd $(dirname $0)
+test $target = run || cd $scriptdir
 
 # do your thing
 case $target in
@@ -70,9 +72,9 @@ case $target in
         # run as root to allow low port
         if test ${port:-0} -lt 1024
         then
-            id -u | grep -qx 0 || exec sudo -E PATH=$PATH $0 --cert $cert ${port:+--port $port} ${xtrace:+--debug}
+            id -u | grep -qx 0 || exec sudo -E PATH=$PATH $0 --cert $cert ${standalone:+--standalone} ${port:+--port $port} ${xtrace:+--debug}
         fi
-        cd $(dirname $0)
+        cd $scriptdir
 
         type perl6 >/dev/null 2>&1 || usage "perl6 command not found"
 
@@ -82,23 +84,18 @@ case $target in
         # keep going
         while true
         do
-            # setup nginx redirect
-            if id -u | grep -qx 0 && test -d /etc/nginx
-            then
-                cp resources/index.html /var/www/html/index.html
-                sed -Ei 's:^([ \t]*try_files) .*:\1 $uri /index.html =405;:' /etc/nginx/sites-enabled/default
-            fi
-
             # update certificate if needed
-            if test $fake
+            if echo "$cert" | grep -q letsencrypt
             then
-                export MICRONOMY_TLS_CERT=$PWD/resources/fake-tls/server-crt.pem
-                export MICRONOMY_TLS_KEY=$PWD/resources/fake-tls/server-key.pem
-            elif test -d $cert
+                valid=$(sudo certbot certificates 2>/dev/null | grep -o 'VALID.*' | cut -d' ' -f2)
+                if test ${valid:-90} -le 30
+                then
+                    sudo certbot renew
+                    sudo systemctl restart nginx
+                fi
+            fi
+            if test $standalone
             then
-                systemctl stop nginx
-                certbot renew
-                systemctl start nginx
                 export MICRONOMY_TLS_CERT=$cert/fullchain.pem
                 export MICRONOMY_TLS_KEY=$cert/privkey.pem
             fi
@@ -106,12 +103,14 @@ case $target in
             # start service
             echo Starting ...
             test $port && export MICRONOMY_PORT=$port
+            test $TMUX && tmux rename-window micronomy
             if id -u | grep -qx 0
             then
                 script -c "perl6 -I lib service.p6" /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
             else
                 perl6 -I lib service.p6
             fi
+            test $TMUX && tmux set automatic-rename
             # wait for optional extra CTRL-C
             sleep 1
         done

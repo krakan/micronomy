@@ -105,7 +105,19 @@ export MICRONOMY_HOST=0.0.0.0
 perl6 -I lib service.p6
 ```
 
-You may want to change port and host IP. There is also a script
-`micronomy.sh` that sets up a proper TLS certificate, HTTP to HTTPS
-redirection and rudimentary logging. You'll most likely need to
-customize it before using it.
+There is also a script `micronomy.sh` that handles Let's Encrypt renewal
+and rudimentary logging. You'll most likely need to customize it before
+using it.
+
+Unfortunately, there seems to be some problem with SSL that under some
+circumstances makes HTTPS connections hang indefinitely. In that case
+one can use the `resources/nginx.conf` file to let Nginx handle the SSL
+termination and then run Micronomy on an unprivileged port - eg.:
+
+```
+sudo sed -Ei "s:^( *ssl_certificate) .*:\1 $MICRONOMY_TLS_CERT;:" resources/nginx.conf
+sudo sed -Ei "s:^( *ssl_certificate_key) .*:\1 $MICRONOMY_TLS_KEY;:" resources/nginx.conf
+sudo cp resources/nginx.conf /etc/nginx/sites-enabled/default
+sudo systemctl restart nginx
+./micronomy.sh --port 8080
+```
