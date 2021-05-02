@@ -9,12 +9,16 @@
         <nav class="nav--bar">
           <form class="nav--panel" action="<.action>" method="POST">
             <input type="hidden" name="date" value="<.previous>">
+            <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
+            <input type="hidden" name="concurrency" value="<.concurrency>">
             <input id="prevWk" type="submit" class="fancy-button arrow" name="submit" value="&lt;">
           </form>
 
           <div class="date-picker">
             <form class="nav--panel" action="<.date-action>" method="POST">
-              <input type="date" class="date-input" name="date" value="<.date>"><!.state>
+              <input type="date" class="date-input" name="date" value="<.date>">
+              <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
+              <input type="hidden" name="concurrency" value="<.concurrency>"><!.state>
               <input type="hidden" name="hours-cache" value="on">
               <input type="hidden" name="set-cache" value="">
               <input type="date" class="date-input" name="end-date" value="<.end-date>"></!>
@@ -23,7 +27,9 @@
 
             <?.state>
             <form class="nav--panel" action="/" method="POST">
-            <input type="hidden" name="date" value="<.today>">
+              <input type="hidden" name="date" value="<.today>">
+              <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
+              <input type="hidden" name="concurrency" value="<.concurrency>">
               <input id="currentWk" type="submit" class="fancy-button" name="submit" value="Idag">
             </form>
             </?>
@@ -31,6 +37,8 @@
 
           <form class="nav--panel" action="<.action>" method="POST">
             <input type="hidden" name="date" value="<.next>">
+            <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
+            <input type="hidden" name="concurrency" value="<.concurrency>">
             <input id="nextWk" type="submit" class="fancy-button arrow" name="submit" value="&gt;">
           </form>
         </nav>
@@ -43,9 +51,11 @@
         </div>
 
         <form class="content__block" action="/" method="POST" id="hourForm">
+          <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
           <input type="hidden" name="concurrency" value="<.concurrency>" />
           <input type="hidden" name="date" value="<.date>" />
           <input type="hidden" name="filler" value="<.filler>" />
+          <input type="hidden" name="rowCount" value="<.rowCount>" />
 
           <div class="panel-shadow">
             <div class="panel-title">Rader</div>
@@ -57,8 +67,6 @@
                 <&HTML(.status)>
               </div>
               <div class="hour-spacer">
-                <input type="hidden" name="concurrency-<.number>" value="<.concurrency>" />
-
                 <@days: $day>
                 <input type="hidden" name="hidden-<.number>-<$day.number>" value="<$day.hours>" /><?$day.disabled>
                 <div class="hour-box"><$day.hours></div></?><!$day.disabled>
@@ -136,6 +144,7 @@
         <?.state>
         <form class="reason-container" action="/submit" method="POST">
           <input type="hidden" name="concurrency" value="<.concurrency>" />
+          <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
           <input type="hidden" name="date" value="<.date>" />
           <input type="text" class="big-text-input" name="reason"
             placeholder="&Auml;ndringsorsak" />

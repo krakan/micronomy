@@ -1,7 +1,6 @@
 unit module Micronomy::Common;
 
 use Digest::MD5;
-use JSON::Fast;
 
 sub trace($message, $token = '') is export {
     my $now = DateTime.now(

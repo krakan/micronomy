@@ -10,7 +10,7 @@ use Micronomy::Demo;
 
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
-    my $registration-path = "containers/v1/b3/timeregistration/data;any";
+    my $auth-path = "maconomy-api/auth/b3";
     my $instances-path = "maconomy-api/containers/b3/timeregistration/instances";
     my $employee-path = "containers/v1/b3/api_currentemployee/";
     my $favorites-path = "containers/v1/b3/jobfavorites";
@@ -53,6 +53,7 @@ class Micronomy {
             previous => $previous,
             today => $today.gist,
             error => $error // '',
+            containerInstanceId => %cache<containerInstanceId>,
             concurrency => %cache<concurrency>,
             employee => %cache<employeeName>,
             date => %cache<currentDate>,
@@ -61,6 +62,7 @@ class Micronomy {
             overtime => %week<totals><overtime>,
             invoiceable => %week<totals><invoiceable>,
             filler => -1,
+            rowCount => +%week<rows>,
             rows => [],
         );
 
@@ -160,9 +162,11 @@ class Micronomy {
         }
     }
 
-    sub parse-week(%content) {
+    sub parse-week($response) {
+        trace "parse-week";
+        my %content = await $response.body;
+
         my %card = %content<panes><card><records>[0]<data>;
-        my %meta = %content<panes><card><records>[0]<meta>;
         my @records = @(%content<panes><table><records>);
         my $rowCount = %content<panes><table><meta><rowCount>;
 
@@ -174,6 +178,8 @@ class Micronomy {
 
         %cache<employeeName> = %card<employeenamevar>;
         %cache<employeeNumber> = %card<employeenumber>;
+        %cache<concurrency> = get-header($response, 'maconomy-concurrency-control');
+        %cache<containerInstanceId> = %content<meta><containerInstanceId>;
 
         my %weekData = (
             name => %card<weeknumbervar> ~ %card<partvar>,
@@ -226,7 +232,6 @@ class Micronomy {
 
         %cache<currentWeek> = %card<periodstartvar>;
         %cache<currentDate> = %card<datevar>;
-        %cache<concurrency> = %meta<concurrencyControl>;
         for ^$rowCount -> $row {
             my %rowData = @records[$row]<data>;
             %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<state> = %rowData<approvalstatus>;
@@ -236,7 +241,8 @@ class Micronomy {
         return %cache;
     }
 
-    method get-month(:$token, :$date) {
+    method get-month(:$token is copy, :$date) {
+        $token = fix-token($token);
         trace "get-month $date", $token;
         my $start-date = $date ?? Date.new($date) !! Date.today;
         $start-date .= truncated-to('month');
@@ -245,7 +251,8 @@ class Micronomy {
         Micronomy.get-period(:$token, :$start-date, :$end-date);
     }
 
-    method get-period(Str :$token, Date :$start-date, Date :$end-date, Int :$hours-cache is copy = 0) {
+    method get-period(Str :$token is copy, Date :$start-date, Date :$end-date, Int :$hours-cache is copy = 0) {
+        $token = fix-token($token);
         trace "get-period $start-date", $token;
 
         my ($employee, $employeeNumber, %cache);
@@ -316,7 +323,7 @@ class Micronomy {
             } elsif $token eq "demo" {
                 %cache = get-demo($current);
             } else {
-                %cache = get-week($token, $current.gist);
+                %cache = get-week($token, $current.gist, previous => %cache);
             }
 
             %totals<reported>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
@@ -441,23 +448,34 @@ class Micronomy {
         template 'timesheet.html.tmpl', %data;
     }
 
-    sub get-week($token, $date is copy = '', Bool :$raw = False) {
+    sub get-week($token, $date is copy = '', :%previous) {
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
         trace "sub get-week $date", $token;
 
         if $token ne "demo" {
-            my $url = "$server/$registration-path?card.datevar=$date";
+            my $containerInstanceId = %previous<containerInstanceId>;
+            my $concurrency = %previous<concurrency>;
+;
+            unless $containerInstanceId and $concurrency {
+                ($containerInstanceId, $concurrency) = get-concurrency($token, $date);
+            }
 
-            my $request = Cro::HTTP::Client.get(
+            my $url = "$server/$instances-path/$containerInstanceId/data/panes/card/0";
+
+            trace "sub get-week request", $token;
+            my $request = Cro::HTTP::Client.post(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
+                    Content-Type => "application/json",
+                    Maconomy-Concurrency-Control => "$concurrency",
                 },
+                body => '{"data": {"datevar": "' ~ $date ~ '"}}',
             );
+
             my $response = await $request;
-            my $body = await $response.body;
-            return $body if $raw;
-            return parse-week($body);
+
+            return parse-week($response);
 
             CATCH {
                 when X::Cro::HTTP::Error {
@@ -472,7 +490,16 @@ class Micronomy {
         }
     }
 
-    method get(:$token, :$date = '') {
+    sub fix-token(Str $token) {
+        given $token.split(":")[1].chars % 4 {
+            # add mysteriously stripped padding
+            when 3 {return "$token="}
+            when 2 {return "$token=="}
+        }
+    }
+
+    method get(:$token is copy, :$date = '') {
+        $token = fix-token($token);
         trace "get $date", $token;
         my %content = get-week($token, $date) and
             show-week($token, %content);
@@ -756,7 +783,8 @@ class Micronomy {
         }
     }
 
-    method edit(:$token, :%parameters) {
+    method edit(:$token is copy, :%parameters) {
+        $token = fix-token($token);
         trace "edit", $token;
         my $date = %parameters<date>;
         $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
@@ -848,13 +876,14 @@ class Micronomy {
             $hours = +$hours.subst(",", ".");
             my $previous = %parameters{"hidden-$row-$day"} || 0;
             if $hours ne $previous {
-                @changes.push("\"numberday$day\": " ~ $hours);
+                @changes.push('"numberday' ~ $day ~ '": ' ~ $hours);
             }
         }
         if @changes {
             trace "setting row $row", $token;
-            my $concurrency = %parameters{"concurrency-$row"};
-            my $url = "$server/$registration-path/table/$row?card.datevar=%parameters<date>";
+            my $concurrency = %parameters<concurrency>;
+            my $containerInstanceId = %parameters<containerInstanceId>;
+            my $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$row";
 
             for ^10 -> $wait {
                 sleep $wait/10;
@@ -864,23 +893,18 @@ class Micronomy {
                         headers => {
                             Authorization => "X-Reconnect $token",
                             Content-Type => "application/json",
-                            Accept => "application/json",
                             Maconomy-Concurrency-Control => $concurrency,
                         },
                         body => '{"data":{' ~ @changes.join(", ") ~ '}}',
                     );
-                    return parse-week(await $response.body);
+                    return parse-week($response);
                 }
 
                 if $! ~~ X::Cro::HTTP::Error and $!.response.status == 409 and $wait < 9 {
                     trace "set received 409 - retrying [{$wait+1}/9]", $token;
-                    my %content = get-week($token, %parameters<date>);
-                    my ($week-name, $start-date, $year, $month, $mday) = get-current-week(%parameters<date>);
-                    $concurrency = %content<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency>;
-                    for 0..* -> $row {
-                        last unless %parameters{"concurrency-$row"};
-                        %parameters{"concurrency-$row"} = %content<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency>;
-                    }
+                    my %content = get-week($token, %parameters<date>, previous => %parameters);
+                    $concurrency = %content<concurrency>;
+                    $containerInstanceId = %content<containerInstanceId>;
                 } else {
                     die $!;
                 }
@@ -888,19 +912,18 @@ class Micronomy {
         }
     }
 
-    method set(:$token, :%parameters) {
+    method set(:$token is copy, :%parameters) {
+        $token = fix-token($token);
         trace "set", $token;
-        for %parameters.keys.sort({.split('-', 2)[1]//''}) -> $key {
-            next if $key ~~ /concurrency/;
+        for %parameters.keys.sort({.split('-', 2)[1]//$_}) -> $key {
             my $value =  %parameters{$key};
             trace "  $key: $value", $token if $value;
         }
 
         my $filler = %parameters<filler> // -1;
         my %content;
-        if (%parameters<concurrency>) {
-            for 0..* -> $row {
-                last unless %parameters{"concurrency-$row"};
+        if (%parameters<rowCount>) {
+            for ^%parameters<rowCount> -> $row {
                 next if $row == $filler;
                 my %result = set(%parameters, $row, $token);
                 %content = %result if %result;
@@ -913,7 +936,7 @@ class Micronomy {
             }
         }
 
-        %content = get-week($token, %parameters<date>);
+        %content = get-week($token, %parameters<date>, previous => %parameters) unless %content;
         %content<last-target> =  %parameters<last-target>;
 
         show-week($token, %content);
@@ -932,28 +955,35 @@ class Micronomy {
         }
     }
 
-    method submit(:$token, :$date = '', :$reason, :$concurrency) {
-        trace "submit $date", $token;
+    method submit(:%parameters, :$token is copy) {
+        $token = fix-token($token);
+        trace "submit %parameters<date>", $token;
+        for %parameters.keys.sort({.split('-', 2)[1]//$_}) -> $key {
+            my $value =  %parameters{$key};
+            trace "  $key: $value", $token if $value;
+        }
+
         my %content;
         if $token ne "demo" {
-            my $url = "$server/$registration-path/card/0/action;name=submittimesheet?card.datevar=$date";
-            $url ~= "&card.resubmissionexplanationvar=$reason" if $reason;
+            my $reason = %parameters<reason>;
+            my $containerInstanceId = %parameters<containerInstanceId>;
+            my $concurrency = %parameters<concurrency>;
+            my $url = "$server/$instances-path/$containerInstanceId/data/panes/card/0/action;name=submittimesheet";
+            $url ~= "?card.resubmissionexplanationvar=$reason" if $reason;
+            trace "submit $url", $token;
             my $response = await Cro::HTTP::Client.post(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
                     Content-Type => "application/json",
-                    Accept => "application/json",
                     Maconomy-Concurrency-Control => $concurrency,
                     Content-Length => 0,
                 },
             );
 
-            %content = await $response.body;
-            %content = parse-week(%content);
+            %content = parse-week($response);
         } else {
-            # submit-demo($date);
-            %content = get-demo($date);
+            %content = get-demo(%parameters<date>);
         }
         show-week($token, %content);
 
@@ -964,7 +994,7 @@ class Micronomy {
                 if .response.status == 401 {
                     Micronomy.get-login(reason => "Var vänlig och logga in!");
                 } else {
-                    %content = get-week($token, $date);
+                    %content = get-week($token, %parameters<date>);
                     show-week($token, %content, error => $body<errorMessage>);
                 }
                 return {};
@@ -995,7 +1025,7 @@ class Micronomy {
             if $username eq $password eq "demo" {
                 $token = "demo";
             } else {
-                my $url = "$server/$employee-path/data;any";
+                my $url = "$server/$auth-path";
                 my $response = await Cro::HTTP::Client.get(
                     $url,
                     auth => {
@@ -1035,7 +1065,8 @@ class Micronomy {
         }
     }
 
-    method logout(:$token) {
+    method logout(:$token is copy) {
+        $token = fix-token($token);
         trace "logout", $token;
         my $status;
         if $token and $token ne "demo" {
