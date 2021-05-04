@@ -926,13 +926,19 @@ class Micronomy {
             for ^%parameters<rowCount> -> $row {
                 next if $row == $filler;
                 my %result = set(%parameters, $row, $token);
-                %content = %result if %result;
+                if %result {
+                    %parameters<concurrency> = %result<concurrency>;
+                    %content = %result;
+                }
             }
             if $token eq "demo" {
                 set-demo-filler(%parameters);
             } elsif set-filler(%content, %parameters, $filler) {
                 my %result = set(%parameters, $filler, $token);
-                %content = %result if %result;
+                if %result {
+                    %parameters<concurrency> = %result<concurrency>;
+                    %content = %result;
+                }
             }
         }
 
