@@ -12,8 +12,8 @@ class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
     my $auth-path = "maconomy-api/auth/b3";
     my $instances-path = "maconomy-api/containers/b3/timeregistration/instances";
-    my $employee-path = "containers/v1/b3/api_currentemployee/";
-    my $favorites-path = "containers/v1/b3/jobfavorites";
+    my $employee-path = "/maconomy-api/environment/b3";
+    my $favorites-path = "maconomy-api/containers/b3/jobfavorites/instances";
     my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline?fields=taskname,description&limit=100";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
     my @months = <Dec Jan Feb Mar Apr Maj Jun Jul Aug Sep Okt Nov Dec>;
@@ -512,17 +512,34 @@ class Micronomy {
         return get-cache("demo-faves") if $token eq "demo";
 
         my $body;
-        my $url = "$server/$favorites-path/data;any";
-        my $request = Cro::HTTP::Client.get(
+        my $url = "$server/$favorites-path";
+        my $request = Cro::HTTP::Client.post(
+            $url,
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Content-Type => "application/json",
+            },
+            body => '{"panes": {}}',
+        );
+        my $response = await $request;
+        $body = await $response.body;
+
+        my $containerInstanceId = $body<meta><containerInstanceId>;
+        my $concurrency = get-header($response, 'maconomy-concurrency-control');
+
+        $url = "$server/$favorites-path/$containerInstanceId/data;any";
+        $request = Cro::HTTP::Client.post(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
                 Content-Type => "application/json",
                 Content-Length => 0,
+                Maconomy-Concurrency-Control => $concurrency,
             },
         );
-        my $response = await $request;
+        $response = await $request;
         $body = await $response.body;
+
         return $body;
 
         CATCH {
