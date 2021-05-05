@@ -1076,7 +1076,7 @@ class Micronomy {
         trace "logout", $token;
         my $status;
         if $token and $token ne "demo" {
-            my $url = "$server/$employee-path/data;any";
+            my $url = "$server/$auth-path";
             my $response = await Cro::HTTP::Client.get(
                 $url,
                 headers => {
