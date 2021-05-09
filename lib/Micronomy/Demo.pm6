@@ -10,6 +10,7 @@ sub get-demo($date) is export {
     my %cache = get-cache("demo");
     %cache<currentDate> = $date;
     %cache<concurrency> = '"card"="demo"';
+    %cache<containerInstanceId> = 'demo';
 
     my ($week, $start-date, $year, $month, $mday) = get-current-week($date);
     %cache<currentWeek> = $start-date.yyyy-mm-dd;
