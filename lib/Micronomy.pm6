@@ -12,7 +12,7 @@ class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
     my $auth-path = "maconomy-api/auth/b3";
     my $instances-path = "maconomy-api/containers/b3/timeregistration/instances";
-    my $employee-path = "/maconomy-api/environment/b3";
+    my $environment-path = "/maconomy-api/environment/b3?variables";
     my $favorites-path = "maconomy-api/containers/b3/jobfavorites/instances";
     my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline?fields=taskname,description&limit=100";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
@@ -257,19 +257,18 @@ class Micronomy {
 
         my ($employee, $employeeNumber, %cache);
         if $token ne "demo" {
-            my $url = "$server/$employee-path/data;any";
+            my $url = "$server/$environment-path=user.employeeinfo.name1,user.info.employeenumber";
             my $request = Cro::HTTP::Client.get(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
                     Content-Type => "application/json",
-                    Content-Length => 0,
                 },
             );
             my $response = await $request;
             my %content = await $response.body;
-            $employee = %content<panes><card><records>[0]<data><name1>;
-            $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
+            $employee = %content<user><employeeinfo><name1><string><value>;
+            $employeeNumber = %content<user><info><employeenumber><string><value>;
             %cache = get-cache($employeeNumber);
         } else {
             %cache = get-demo($start-date);
@@ -307,6 +306,7 @@ class Micronomy {
         my (%sums, %totals);
 
         my $current = $start-date;
+        my $containerInstanceId = "";
         for 0..* -> $week {
             my $bucket = $current.truncated-to($bucketSize);
 
@@ -324,6 +324,7 @@ class Micronomy {
                 %cache = get-demo($current);
             } else {
                 %cache = get-week($token, $current.gist, previous => %cache);
+                $containerInstanceId = %cache<containerInstanceId>;
             }
 
             %totals<reported>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
@@ -373,6 +374,7 @@ class Micronomy {
             previous => $previous,
             today => Date.today.gist,
             error => "",
+            containerInstanceId => $containerInstanceId,
             concurrency => 'read-only',
             employee => $employee,
             date => $start-date.gist,
@@ -383,6 +385,7 @@ class Micronomy {
             invoiceable => %totals<invoiceable><sum>,
             filler => -1,
             rows => [],
+            rowCount => 0,
             hours-cache => $hours-cache == 1,
         );
 
@@ -442,6 +445,7 @@ class Micronomy {
                 %data<rows>.push(%row);
             }
         }
+        %data<rowCount> = +%data<rows>;
 
         trace "sending timesheet", $token;
         header "X-Frame-Options: DENY";
@@ -495,6 +499,7 @@ class Micronomy {
             # add mysteriously stripped padding
             when 3 {return "$token="}
             when 2 {return "$token=="}
+            default {return $token}
         }
     }
 
