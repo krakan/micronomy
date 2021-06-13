@@ -459,7 +459,7 @@ class Micronomy {
         if $token ne "demo" {
             my $containerInstanceId = %previous<containerInstanceId>;
             my $concurrency = %previous<concurrency>;
-;
+
             unless $containerInstanceId and $concurrency {
                 ($containerInstanceId, $concurrency) = get-concurrency($token, $date);
             }
@@ -485,6 +485,7 @@ class Micronomy {
                 when X::Cro::HTTP::Error {
                     warn "error: " ~ .response.status;
                     Micronomy.get-login() if .response.status == 401;
+                    return get-week($token, $date) if .response.status == 404;
                     return {};
                 }
                 Micronomy.get-login(reason => "Ogiltig session! ")
