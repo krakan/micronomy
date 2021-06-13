@@ -13,3 +13,6 @@ Dockerfile.*
 
 # reports
 *.pdf
+
+# logs
+log

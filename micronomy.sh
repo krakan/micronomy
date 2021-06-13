@@ -106,9 +106,10 @@ case $target in
             test $TMUX && tmux rename-window micronomy
             if id -u | grep -qx 0
             then
-                script -c "perl6 -I lib service.p6" /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
+                script -c "perl6 -I lib service.p6" -f /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
             else
-                perl6 -I lib service.p6
+                mkdir -p $scriptdir/log
+                script -c "perl6 -I lib service.p6" -f $scriptdir/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
             fi
             test $TMUX && tmux set automatic-rename
             # wait for optional extra CTRL-C
