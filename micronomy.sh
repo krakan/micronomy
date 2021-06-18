@@ -90,6 +90,7 @@ case $target in
                 valid=$(sudo certbot certificates 2>/dev/null | grep -o 'VALID.*' | cut -d' ' -f2)
                 if test ${valid:-90} -le 30
                 then
+                    sudo systemctl stop nginx
                     sudo certbot renew
                     sudo systemctl restart nginx
                 fi
