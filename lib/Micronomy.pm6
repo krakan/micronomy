@@ -497,6 +497,7 @@ class Micronomy {
     }
 
     sub fix-token(Str $token) {
+        return $token if $token eq 'demo';
         given $token.split(":")[1].chars % 4 {
             # add mysteriously stripped padding
             when 3 {return "$token="}
@@ -1081,7 +1082,6 @@ class Micronomy {
             }
         }
         if $token {
-            trace "$username logged in", $token;
             set-cookie("sessionToken", $token,
                        same-site => Cro::HTTP::Cookie::SameSite::Strict,
                        http-only => True,
