@@ -488,7 +488,8 @@ class Micronomy {
                     return get-week($token, $date) if .response.status == 404;
                     return {};
                 }
-                Micronomy.get-login(reason => "Ogiltig session! ")
+                Micronomy.get-login(reason => "Ogiltig session! ");
+                return {};
             }
         } else {
             return get-demo($date);
@@ -554,7 +555,8 @@ class Micronomy {
                 Micronomy.get-login() if .response.status == 401;
                 return {};
             }
-            Micronomy.get-login(reason => "Ogiltig session! ")
+            Micronomy.get-login(reason => "Ogiltig session! ");
+            return {};
         }
     }
 
@@ -980,7 +982,8 @@ class Micronomy {
                     return;
                 }
             }
-            Micronomy.get-login(reason => "Ogiltig session! ")
+            Micronomy.get-login(reason => "Ogiltig session! ");
+            return;
         }
     }
 
@@ -1063,7 +1066,6 @@ class Micronomy {
                     },
                     headers => {
                         Maconomy-Authentication => 'X-Reconnect',
-                        Set-Cookie => 'sessionToken=',
                     },
                 );
                 $token = get-header($response, 'maconomy-reconnect');
