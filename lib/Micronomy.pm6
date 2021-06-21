@@ -1059,28 +1059,40 @@ class Micronomy {
                 $token = "demo";
             } else {
                 my $url = "$server/$auth-path";
-                my $response = await Cro::HTTP::Client.get(
-                    $url,
-                    auth => {
-                        username => $username,
-                        password => $password
-                    },
-                    headers => {
-                        Maconomy-Authentication => 'X-Reconnect',
-                    },
-                );
-                $token = get-header($response, 'maconomy-reconnect');
-                trace "logged in $username", $token;
+                for ^10 -> $wait {
+                    sleep $wait/10;
 
-                CATCH {
-                    when X::Cro::HTTP::Error {
-                        my $error = (await .response.body)<errorMessage>;
-                        $error = $error ?? '[' ~ .response.status ~ '] ' ~ $error !! .message();
-                        $status = uri_encode_component($error);
+                    my $response = await Cro::HTTP::Client.get(
+                        $url,
+                        auth => {
+                            username => $username,
+                            password => $password
+                        },
+                        headers => {
+                            Maconomy-Authentication => 'X-Reconnect',
+                        },
+                    );
+                    $token = get-header($response, 'maconomy-reconnect');
+                    trace "logged in $username", $token;
+
+                    CATCH {
+                        when X::Cro::HTTP::Error {
+                            my $error = (await .response.body)<errorMessage>;
+                            $error = $error ?? '[' ~ .response.status ~ '] ' ~ $error !! .message();
+                            $status = uri_encode_component($error);
+
+                            if $status eq "[401] An internal error occurred." and $wait < 9 {
+                                trace "login received '$status' - retrying [{$wait+1}/9]", $token;
+                            } else {
+                                last;
+                            }
+                        }
                     }
+                    last;
                 }
             }
         }
+
         if $token {
             set-cookie("sessionToken", $token,
                        same-site => Cro::HTTP::Cookie::SameSite::Strict,
