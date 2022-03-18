@@ -56,19 +56,19 @@ sub calendargenerator($querydate) is export {
         given $daytype {
             when 6 {
                 $uid = "Init-Micronomy-" ~ $startdate.year().Str ~ "-" ~ $counter.Str ~ "\r\n";
-                $summary = "Quarter red day\r\n";
+                $summary = "kvarts röd dag\r\n";
                 $dtstart = sprintf "%04d%02d%02d%s", $startdate.year, $startdate.month, $startdate.day, "T150000\r\n";
                 $dtend = sprintf "%04d%02d%02d%s", $dayafter.year, $dayafter.month, $dayafter.day, "T000000\r\n";
             } 
             when 4 {
                 $uid = "Init-Micronomy-" ~ $startdate.year().Str ~ "-" ~ $counter.Str ~ "\r\n";
-                $summary = "half red day\r\n";
+                $summary = "halv röd dag\r\n";
                 $dtstart = sprintf "%04d%02d%02d%s", $startdate.year, $startdate.month, $startdate.day, "T130000\r\n";
                 $dtend = sprintf "%04d%02d%02d%s", $dayafter.year, $dayafter.month, $dayafter.day, "T000000\r\n";
             } 
             when 0 {
                 $uid = "Init-Micronomy-" ~ $startdate.year().Str ~ "-" ~ $counter.Str ~ "\r\n";
-                $summary = "Full red day\r\n";
+                $summary = "hel röd dag\r\n";
                 $dtstart = sprintf "%04d%02d%02d%s", $startdate.year, $startdate.month, $startdate.day, "T000000\r\n";
                 $dtend = sprintf "%04d%02d%02d%s", $dayafter.year, $dayafter.month, $dayafter.day, "T000000\r\n";
             } 
