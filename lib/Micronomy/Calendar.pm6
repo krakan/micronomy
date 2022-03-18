@@ -83,4 +83,18 @@ sub calendargenerator($querydate) is export {
     }
     $calendarstring = $calendarstring ~ "END:VCALENDAR\r\n";
     return $calendarstring;
+
+    #sends a string that is an ics string shhort example of what it looks like here.
+    #BEGIN:VCALENDAR
+    #PRODID:Init-Micronomy-2023
+    #VERSION:2.0
+    #BEGIN:VEVENT 
+    #UID:Init-Micronomy-2023-121
+    #DTSTAMP:20230101T150000
+    #DTSTART:20231231T000000
+    #DTEND:20240101T000000
+    #SUMMARY:Full red day
+    #END:VEVENT
+    #END:VCALENDAR
+
 }
