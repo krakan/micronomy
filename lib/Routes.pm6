@@ -98,8 +98,26 @@ sub routes() is export {
         get -> 'clockicon.svg', *@path  {
             static "resources/clockicon.svg", @path;
         }
-	get -> 'b3.svg', *@path {
-	    static "resources/b3.svg", @path;
-	}
+    get -> 'b3.svg', *@path {
+        static "resources/b3.svg", @path;
     }
+    }
+
+    post -> 'calendar', :$sessionToken is cookie = '' , :$date {
+        if $sessionToken {
+            request-body -> (:$date){
+                Micronomy.calendar(date => $date);
+            }
+        } else {
+            redirect "/login", :see-other;
+        }
+    }
+    get -> 'calendar', $sessionToken is cookie = '', {
+        if $sessionToken {
+            Micronomy.calendar(date => '');
+        } else {
+            redirect "/login", :see-other;
+}
+    }
+
 }
