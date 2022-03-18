@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<:use 'common.html.tmpl'>
+<&head('rader')>
+    <?.error><div class='error'>Error: <.error></div></?>
+    <div class="center-container">
+      <h2>Init kalender framställning</h2>
+
+      <div class="content">
+        <div class="panel-shadow">
+          <div class="panel-title">Calendar</div>
+          <form action="/calendar" method="POST">
+            <div class="panel">
+              <div class="ics-spacer" id="yearinput">
+                <input type="number" pattern="[0-9]{4}" class="cal-box input__text nav-field" name="date" value="<.date>" >
+              </div>
+              <div>
+                <pre id=ics><.ics></pre>
+              </div>
+            </div>
+            <div class="save-button-container">
+              <input type="submit" class="save-button" value="Uppdatera" />
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <form action="/" method="POST">
+        <input type="hidden" name="date" value="<.date>" />
+        <input class="fancy-button back-button" type="submit" value="Tillbaka" />
+      </form>
+
+    <script src="/script/download.js"></Script>
+      <&foot>
+
+    </div>
+  </body>
+</html>
+
