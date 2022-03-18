@@ -107,7 +107,6 @@ sub routes() is export {
         }
         } 
 
-
         get -> 'styles', *@path {
             static "resources/styles", @path;
         }
