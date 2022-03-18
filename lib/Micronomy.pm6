@@ -7,6 +7,8 @@ use URI::Encode;
 use Micronomy::Cache;
 use Micronomy::Common;
 use Micronomy::Demo;
+use Micronomy::Calendar;
+
 
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
@@ -1134,5 +1136,25 @@ class Micronomy {
                    expires => DateTime.now(),
                   );
         redirect "/login?reason=Utloggad!", :see-other;
+    }
+
+    method calendar(:$date,:$token is copy,) {
+        if $date.Str.chars != 4 { #if date is not given provided "correctly" or if loading first page.
+            header "X-Frame-Options: DENY";
+            template 'calendar.html.tmpl', {
+                ics => "",
+                date => "",
+            }
+        } else { #if we have four characters not safe but working future fix.
+            trace "getting calendar ", $date;
+            my $datestring = $date.Str ~"-01-01";
+            my $querydate = Date.new($datestring);
+            my $data = calendargenerator($querydate);
+            header "X-Frame-Options: DENY";
+            template 'calendar.html.tmpl', {
+                ics => $data,
+                date => $querydate.year,
+            }
+        }
     }
 }
