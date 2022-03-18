@@ -229,7 +229,7 @@ sub sum-up-demo(Str $date, %cache, $filler = -1) {
     return %cache;
 }
 
-sub expected($day) {
+sub expected($day) is export {
     return 0 if $day.day-of-week > 5;
     given sprintf "%02d%02d", $day.month, $day.day {
         when "0101"                   { return 0; }  # Nyårsdagen
