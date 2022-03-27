@@ -336,8 +336,6 @@ input[type="text"] {
     align-items: center;
 }
 
-/* End edit rows page */
-
 select {
     padding: 0.3em;
     border: none;
@@ -351,6 +349,8 @@ select {
     margin: 0 0.5em;
 }
 
+/* End edit rows page */
+
 .month-button {
     margin-top: 1em;
 }
@@ -358,8 +358,6 @@ select {
 .back-button {
     margin-top: 4em;
 }
-
-/* End edit rows page */
 
 
 /* Mobile mode */
@@ -435,7 +433,6 @@ select {
     .login-form {
 	margin-top: 10em;
     }
-
 
     /* Edit rows page */
     .job {

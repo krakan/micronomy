@@ -79,7 +79,12 @@ case $target in
         type perl6 >/dev/null 2>&1 || usage "perl6 command not found"
 
         # stop old processes
-        pgrep 'micronomy|moar' | grep -v $$ | xargs -r kill
+        if test $port
+        then
+            pgrep -f "micronomy.sh.* --port $port"
+        else
+            pgrep -fa "micronomy.sh" | grep -ve --port | cut -d' ' -f1
+        fi | grep -v $$ | xargs -r kill
 
         # keep going
         while true
