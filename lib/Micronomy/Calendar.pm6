@@ -17,12 +17,12 @@ sub initreddaygenerator($requestedyear) {
     }
     loop (my $i = 0; $i < $roof; $i++ ){
         my $tmp = $date +$i; 
-                #call for expected($date) as this will return work hours and inform of what kind of day it is.
-                given my $val = expected($tmp) {
-                        when 6 {@arrayofdates.push(@($tmp, 6));} #quarter day
-                        when 4 {@arrayofdates.push(@($tmp, 4));} #half day
-                        when 0 {@arrayofdates.push(@($tmp, 0));} #full day
-                }
+	next if ( $day.day-of-week > 5 );; 
+	given my $val = expected($tmp) {
+		when 6 {@arrayofdates.push(@($tmp, 6));} #quarter day
+		when 4 {@arrayofdates.push(@($tmp, 4));} #half day
+		when 0 {@arrayofdates.push(@($tmp, 0));} #full day
+	}
     }
     @arrayofdates, $date; #sending: [2021-01-01, 2021-01-05...], 2021-01-01
 }
