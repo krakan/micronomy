@@ -17,7 +17,7 @@ sub initreddaygenerator($requestedyear) {
     }
     loop (my $i = 0; $i < $roof; $i++ ){
         my $tmp = $date +$i; 
-	next if ( $day.day-of-week > 5 );; 
+	next if ( $tmp.day-of-week > 5 );
 	given my $val = expected($tmp) {
 		when 6 {@arrayofdates.push(@($tmp, 6));} #quarter day
 		when 4 {@arrayofdates.push(@($tmp, 4));} #half day

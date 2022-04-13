@@ -1139,6 +1139,7 @@ class Micronomy {
     }
 
     method calendar(:$date,:$token is copy,) {
+	trace "no calendar set date: ", $date;
         if $date.Str.chars != 4 { #if date is not given provided "correctly" or if loading first page.
             header "X-Frame-Options: DENY";
             template 'calendar.html.tmpl', {
