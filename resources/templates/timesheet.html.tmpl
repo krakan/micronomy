@@ -163,6 +163,11 @@
             value="Redigera rader" />
         </form>
 
+        <form action="/calendar" method="post">
+          <input type="hidden" name="date" value="" />
+          <input type="submit" class="fancy-button calendar-button"value="Kalender generator"/> 
+	</form>
+
         <form class="logout-button" action="/logout" method="POST">
           <input type="hidden" name="username" value="" />
           <input type="submit" class="fancy-button" value="Logga ut" />

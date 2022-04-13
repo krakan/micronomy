@@ -183,8 +183,13 @@ span#timestamp {
     justify-content: space-between;
 }
 
+
 .edit-button {
     margin: 1em 0;
+}
+
+.calendar-button {
+    margin-bottom: 1em;
 }
 
 .big-text-input {
