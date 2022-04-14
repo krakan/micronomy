@@ -4,7 +4,7 @@ if (icsElement.innerText != ""){
     var yrinput = document.getElementById("yearinput");
     yrinput.append(a);
     a.setAttribute('download','Calendar.ics');
-    a.innerText = "Hello world!";
+    a.innerText = "Dowload ICS";
     a.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(icsElement.innerText));
     a.setAttribute('class', 'save-button');
 }
