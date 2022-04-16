@@ -21,6 +21,7 @@ xtrace=
 cert=/etc/letsencrypt/live/micronomy.jonaseel.se
 sudo test -d $cert || cert=$scriptdir/resources/fake-tls
 standalone=
+beta=
 while test $# -gt 0
 do
     case $1 in
@@ -28,6 +29,7 @@ do
         -h|--host) export MICRONOMY_HOST=$2; shift;;
         -c|--cert*) cert=$2; shift;;
         -s|--standalone) standalone=1;;
+        -b|--beta) beta=1;;
         -x|--debug) xtrace=on; set -x;;
         -*) usage "unknown option '$1'";;
         *) target=$1;;
@@ -96,6 +98,16 @@ case $target in
             then
                 export MICRONOMY_TLS_CERT=$cert/fullchain.pem
                 export MICRONOMY_TLS_KEY=$cert/privkey.pem
+            fi
+
+            if test $beta
+            then
+                test -f $scriptdir/resources/b3-orig.svg ||
+                    cp $scriptdir/resources/b3.svg $scriptdir/resources/b3-orig.svg
+                cp $scriptdir/resources/beta3.svg $scriptdir/resources/b3.svg
+            elif test -f $scriptdir/resources/b3-orig.svg
+            then
+                cp $scriptdir/resources/b3-orig.svg $scriptdir/resources/b3.svg
             fi
 
             # start service
