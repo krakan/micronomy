@@ -105,9 +105,11 @@ case $target in
                 test -f $scriptdir/resources/b3-orig.svg ||
                     cp $scriptdir/resources/b3.svg $scriptdir/resources/b3-orig.svg
                 cp $scriptdir/resources/beta3.svg $scriptdir/resources/b3.svg
+                sed -i 's/@ B3/@ β3/' $scriptdir/resources/templates/common.html.tmpl
             elif test -f $scriptdir/resources/b3-orig.svg
             then
                 cp $scriptdir/resources/b3-orig.svg $scriptdir/resources/b3.svg
+                sed -i 's/@ β3/@ B3/' $scriptdir/resources/templates/common.html.tmpl
             fi
 
             # start service
