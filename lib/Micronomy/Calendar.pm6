@@ -22,14 +22,14 @@ sub initreddaygenerator($requestedyear) {
             when 0, $daytype ne "Helg"  {@arrayofdates.push(@($tmp, 0, $daytype));} #full day
         }
     }
-    @arrayofdates, $date; #sending: [(2021-01-01 0 "Nyårsdagen"), (2021-01-05 6 "Trettondagsafton")...], 2021-01-01
+    @arrayofdates, $date; #sending: [(2021-01-01 0 "Nyårsdagen - Init ledig dag"), (2021-01-05 6 "Trettondagsafton - Init ledig dag")...], 2021-01-01
 }
 
 #sub calendargenerator(@arrayofdates, $date){
 sub calendargenerator($querydate) is export {
     my $list = initreddaygenerator($querydate);
     trace $list;
-    #@list = [[(2021-01-01 0 "Nyårsdagen")(2021-01-05 6 "Trettondagsafton")...]2021-01-01]
+    #@list = [[(2021-01-01 0 "Nyårsdagen - Init ledig dag")(2021-01-05 6 "Trettondagsafton - Init ledig dag")...]2021-01-01]
     my @arrayofdates = $list[0];
     my $date = $list[1];
     my $calendarstring = ""; 
@@ -99,39 +99,39 @@ sub calendargenerator($querydate) is export {
 
 sub redday($day){
     given sprintf "%02d%02d", $day.month, $day.day {
-        when "0101"                   { return 0, "Nyårsdagen"; }  # Nyårsdagen
-        when "0105"                   { return 6, "Trettondagsafton"; }  # 12-dag Jul
-        when "0106"                   { return 0, "Trettondagjul"; }  # 13-dag Jul
-        when easter($day.year, -3)    { return 4, "Skärtorsdag"; }  # Skärtorsdag
-        when easter($day.year, -2)    { return 0, "Långfredag"; }  # Långfredag
-        when easter($day.year, -1)    { return 0, "Påskafton"; }  # Påskafton
-        when easter($day.year)        { return 0, "Påskdagen"; }  # Påskdagen
-        when easter($day.year,  1)    { return 0, "Annandag påsk"; }  # Annandag Påsk
-        when "0430"                   { return 4, "Valborg"; }  # Valborg
-        when "0501"                   { return 0, "Första Maj"; }  # 1:a Maj
-        when easter($day.year, 39)    { return 0, "Kristi himmelsfärdsdag"; }  # Kristi Himmelfärdsdag
+        when "0101"                   { return 0, "Nyårsdagen - Init ledig dag"; }  # Nyårsdagen
+        when "0105"                   { return 6, "Trettondagsafton - Init ledig dag"; }  # 12-dag Jul
+        when "0106"                   { return 0, "Trettondagjul - Init ledig dag"; }  # 13-dag Jul
+        when easter($day.year, -3)    { return 4, "Skärtorsdag - Init ledig dag"; }  # Skärtorsdag
+        when easter($day.year, -2)    { return 0, "Långfredag - Init ledig dag"; }  # Långfredag
+        when easter($day.year, -1)    { return 0, "Påskafton - Init ledig dag"; }  # Påskafton
+        when easter($day.year)        { return 0, "Påskdagen - Init ledig dag"; }  # Påskdagen
+        when easter($day.year,  1)    { return 0, "Annandag påsk - Init ledig dag"; }  # Annandag Påsk
+        when "0430"                   { return 4, "Valborg - Init ledig dag"; }  # Valborg
+        when "0501"                   { return 0, "Första Maj - Init ledig dag"; }  # 1:a Maj
+        when easter($day.year, 39)    { return 0, "Kristi himmelsfärdsdag - Init ledig dag"; }  # Kristi Himmelfärdsdag
         when easter($day.year, 40)    {
-                                        #return 8 , "Vardag"if $day.day-of-week != 5; #onödigt eftersom kristi flygare alltid är på en torsdag.
-                                        return 0, "Fredag efter Kristi himmelsfärdsdag"; #klämdag
+                                        #return 8 , "Vardag - Init ledig dag"if $day.day-of-week != 5; #onödigt eftersom kristi flygare alltid är på en torsdag.
+                                        return 0, "Fredag efter Kristi himmelsfärdsdag - Init ledig dag"; #klämdag
         }
-        when easter($day.year, 48)    { return 0, "Pingstafton"; }  # Pingstafton
-        when easter($day.year, 49)    { return 0, "Pingstdagen"; }  # Pingstdagen
-        when "0606"                   { return 0, "Nationaldagen"; }  # Nationaldagen
-        when midsummer($day.year, -1) { return 0, "Midsommarafton"; }  # Midsommarafton
-        when midsummer($day.year)     { return 0, "Midsommardagen"; }  # Midsommardagen
-        when allsaints($day.year, -1) { return 4, "Allhelgonaafton"; }  # Allhelgonaafton
-        when allsaints($day.year)     { return 0, "Alla helgons dag"; }  # Alla Helgons Dag
-        when "1223"                   { return 6, "Dagen före dopparedagen"; }  # dan före dopparedan
-        when "1224"                   { return 0, "Julafton"; }  # Julafton
-        when "1225"                   { return 0, "Juldagen"; }  # Juldagen
-        when "1226"                   { return 0, "Annandag jul"; }  # Annandag Jul
-        when "1227"                   { return 0, "Mellandag"; }  # mellandag
-        when "1228"                   { return 0, "Mellandag"; }  # mellandag
-        when "1229"                   { return 0, "Mellandag"; }  # mellandag
-        when "1230"                   { return 0, "Mellandag"; }  # mellandag
-        when "1231"                   { return 0, "Nyårsafton"; }  # Nyårsafton
+        when easter($day.year, 48)    { return 0, "Pingstafton - Init ledig dag"; }  # Pingstafton
+        when easter($day.year, 49)    { return 0, "Pingstdagen - Init ledig dag"; }  # Pingstdagen
+        when "0606"                   { return 0, "Nationaldagen - Init ledig dag"; }  # Nationaldagen
+        when midsummer($day.year, -1) { return 0, "Midsommarafton - Init ledig dag"; }  # Midsommarafton
+        when midsummer($day.year)     { return 0, "Midsommardagen - Init ledig dag"; }  # Midsommardagen
+        when allsaints($day.year, -1) { return 4, "Allhelgonaafton - Init ledig dag"; }  # Allhelgonaafton
+        when allsaints($day.year)     { return 0, "Alla helgons dag - Init ledig dag"; }  # Alla Helgons Dag
+        when "1223"                   { return 6, "Dagen före dopparedagen - Init ledig dag"; }  # dan före dopparedan
+        when "1224"                   { return 0, "Julafton - Init ledig dag"; }  # Julafton
+        when "1225"                   { return 0, "Juldagen - Init ledig dag"; }  # Juldagen
+        when "1226"                   { return 0, "Annandag jul - Init ledig dag"; }  # Annandag Jul
+        when "1227"                   { return 0, "Mellandag - Init ledig dag"; }  # mellandag
+        when "1228"                   { return 0, "Mellandag - Init ledig dag"; }  # mellandag
+        when "1229"                   { return 0, "Mellandag - Init ledig dag"; }  # mellandag
+        when "1230"                   { return 0, "Mellandag - Init ledig dag"; }  # mellandag
+        when "1231"                   { return 0, "Nyårsafton - Init ledig dag"; }  # Nyårsafton
         default {
-                                        return 0, "Helg" if $day.day-of-week > 5;
+                                        return 0, "Helg - Init ledig dag" if $day.day-of-week > 5;
                                         return 8, "Vardag";
         }
     }
