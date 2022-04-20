@@ -28,7 +28,6 @@ sub initreddaygenerator($requestedyear) {
 #sub calendargenerator(@arrayofdates, $date){
 sub calendargenerator($querydate) is export {
     my $list = initreddaygenerator($querydate);
-    trace $list;
     #@list = [[(2021-01-01 0 "Nyårsdagen - Init ledig dag")(2021-01-05 6 "Trettondagsafton - Init ledig dag")...]2021-01-01]
     my @arrayofdates = $list[0];
     my $date = $list[1];
