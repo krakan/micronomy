@@ -90,13 +90,13 @@ sub routes() is export {
         }
 
         post -> 'calendar', :$sessionToken is cookie = '' , :$date {
-		if $sessionToken {
-		    request-body -> (:$date){
-			Micronomy.calendar(date => $date);
-		    }
-		} else {
-		    redirect "/login", :see-other;
-		}
+                if $sessionToken {
+                    request-body -> (:$date){
+                        Micronomy.calendar(date => $date);
+                    }
+                } else {
+                    redirect "/login", :see-other;
+                }
         } 
 
         get -> 'styles', *@path {
