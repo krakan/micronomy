@@ -130,7 +130,7 @@ sub redday($day){
         when "1230"                   { return 0, "Mellandag - Init ledig dag"; }  # mellandag
         when "1231"                   { return 0, "Nyårsafton - Init ledig dag"; }  # Nyårsafton
         default {
-                                        return 0, "Helg - Init ledig dag" if $day.day-of-week > 5;
+                                        return 0, "Helg" if $day.day-of-week > 5;
                                         return 8, "Vardag";
         }
     }
