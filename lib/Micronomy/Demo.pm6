@@ -294,7 +294,7 @@ sub floating-date(Int $year, Int $month, Int $mday, Int $wday, Int :$count = 1, 
     my $later = (7 - ($oday - $wday) % 7) % 7;
     $later += ($count - 1) * 7;
     $later += $diff;
-    return  $origin.later(days => $later + $diff).Str;
+    return  $origin.later(days => $later).Str;
 }
 sub midsummer($year, $diff = 0) {
     # 1st Sat on/after 20 June
