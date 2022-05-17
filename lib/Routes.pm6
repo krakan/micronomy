@@ -4,12 +4,12 @@ use Micronomy;
 sub routes() is export {
     route {
         get -> 'login', :$username = '', :$reason = '' {
-            Micronomy.get-login(username => $username, reason => $reason)
+            Micronomy.get-login(username => $username.lc, reason => $reason)
         }
 
         post -> 'login' {
             request-body -> (:$username = '', :$password = '') {
-                Micronomy.login(username => $username, password => $password)
+                Micronomy.login(username => $username.lc, password => $password)
             }
         }
 
