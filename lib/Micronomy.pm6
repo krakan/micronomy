@@ -1085,6 +1085,9 @@ class Micronomy {
 
                             if $status eq "[401] An internal error occurred." and $wait < 9 {
                                 trace "login received '$status' - retrying [{$wait+1}/9]", $token;
+                            } elsif .response.status == 500 {
+                                trace "login failed '$status' - restarting", $token;
+                                exit 1;
                             } else {
                                 last;
                             }
