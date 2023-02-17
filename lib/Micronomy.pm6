@@ -1076,6 +1076,7 @@ class Micronomy {
                     );
                     $token = get-header($response, 'maconomy-reconnect');
                     trace "logged in $username", $token;
+                    last;
 
                     CATCH {
                         when X::Cro::HTTP::Error {
@@ -1085,7 +1086,7 @@ class Micronomy {
 
                             if $status eq "[401] An internal error occurred." and $wait < 9 {
                                 trace "login received '$status' - retrying [{$wait+1}/9]", $token;
-                                next;
+                                next;c
                             } elsif .response.status == 500 {
                                 trace "login failed '$status' - restarting", $token;
                                 exit 1;
@@ -1096,7 +1097,6 @@ class Micronomy {
                             exit 1;
                         }
                     }
-                    last;
                 }
             }
         }
