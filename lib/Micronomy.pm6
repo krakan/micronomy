@@ -1088,12 +1088,13 @@ class Micronomy {
                             } elsif .response.status == 500 {
                                 trace "login failed '$status' - restarting", $token;
                                 exit 1;
-                            } else {
-                                last;
                             }
                         }
+                        default {
+                            trace "login failed - restarting", $token;
+                            exit 1;
+                        }
                     }
-                    last;
                 }
             }
         }
