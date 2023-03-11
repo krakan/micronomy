@@ -1,12 +1,13 @@
 unit module Micronomy::Common;
 
 use Digest::MD5;
+use experimental :pack;
 
 sub trace($message, $token = '') is export {
     my $now = DateTime.now(
         formatter => { sprintf "%4d-%02d-%02d %02d:%02d:%06.3f",
                        .year, .month, .day, .hour, .minute, .second });
-    my $session = $token ?? Digest::MD5.md5_hex($token).substr(24) !! '-';
+    my $session = $token ?? md5($token).unpack("H*").substr(24) !! '-';
     say "$now  $session  $message";
 }
 
