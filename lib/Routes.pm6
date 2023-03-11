@@ -27,7 +27,8 @@ sub routes() is export {
 
         post -> :$sessionToken is cookie = '' {
             request-body -> (*%parameters) {
-                Micronomy.set(:%parameters, token => $sessionToken)
+                my $status = Micronomy.set(:%parameters, token => $sessionToken);
+                response.status = $status if $status;
             }
         }
 
@@ -97,7 +98,7 @@ sub routes() is export {
                 } else {
                     redirect "/login", :see-other;
                 }
-        } 
+        }
 
         get -> 'styles', *@path {
             static "resources/styles", @path;

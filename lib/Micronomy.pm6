@@ -945,6 +945,10 @@ class Micronomy {
         trace "set", $token;
         for %parameters.keys.sort({.split('-', 2)[1]//$_}) -> $key {
             my $value =  %parameters{$key};
+            unless $key ~~ / ^ <alpha> <[\w-]>+ $ / {
+                trace "  $key: $value [ERROR BAD KEY]", $token;
+                return 406;
+            }
             trace "  $key: $value", $token if $value;
         }
 
