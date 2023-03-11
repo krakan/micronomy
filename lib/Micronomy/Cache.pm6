@@ -9,7 +9,8 @@ sub get-cache($employeeNumber) is export {
     $dir ~~ s/<-[^/]>* $//;
     $dir ||= '.';
     my $cacheFile = "$dir/resources/$employeeNumber.json";
-    return from-json slurp $cacheFile if $cacheFile.IO.e;
+    my $cache = slurp $cacheFile if $cacheFile.IO.e;
+    return from-json $cache if $cache;
 }
 
 sub set-cache(%cache) is export {
