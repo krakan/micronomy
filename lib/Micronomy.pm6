@@ -490,8 +490,11 @@ class Micronomy {
                     return get-week($token, $date) if .response.status == 404;
                     return {};
                 }
-                Micronomy.get-login(reason => "Ogiltig session! ");
-                return {};
+                default {
+                    trace .Str, "$token";
+                    Micronomy.get-login(reason => "Ogiltig session! ");
+                    return {};
+                }
             }
         } else {
             return get-demo($date);
@@ -558,8 +561,11 @@ class Micronomy {
                 Micronomy.get-login() if .response.status == 401;
                 return {};
             }
-            Micronomy.get-login(reason => "Ogiltig session! ");
-            return {};
+            default {
+                trace .Str, "$token";
+                Micronomy.get-login(reason => "Ogiltig session! ");
+                return {};
+            }
         }
     }
 
@@ -989,8 +995,11 @@ class Micronomy {
                     return;
                 }
             }
-            Micronomy.get-login(reason => "Ogiltig session! ");
-            return;
+            default {
+                trace .Str, "$token";
+                Micronomy.get-login(reason => "Ogiltig session! ");
+                return {};
+            }
         }
     }
 
@@ -1097,7 +1106,7 @@ class Micronomy {
                             }
                         }
                         default {
-                            trace "login failed - restarting", $token;
+                            trace "["~.Str~"] login failed - restarting", $token;
                             exit 1;
                         }
                     }
