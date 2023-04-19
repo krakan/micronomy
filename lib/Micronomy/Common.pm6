@@ -32,9 +32,13 @@ sub fetch-url($url, :%auth, :%headers, :$body, :$method) is export {
             my $response = await $request;
             return $response;
         }
-        if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
+        if $! ~~ X::Cro::HTTP::Error and $!.response.status == (404, 409).any and $wait < $retries {
             my $caller = caller('fetch-url');
-            trace "$caller received 404 - retrying [{$wait+1}/$retries]", $token;
+            trace "$caller received {$!.response.status} - retrying [{$wait+1}/$retries]", $token;
+        } elsif $! ~~ X::Cro::HTTP::Error and $!.response.status == 422 {
+            my $caller = caller('fetch-url');
+            trace "$caller received 422", $token;
+            return $!.response;
         } else {
             die $!;
         }

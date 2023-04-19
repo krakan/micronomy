@@ -685,7 +685,7 @@ class Micronomy {
             },
             body => $data,
         );
-        return get-header($response, 'maconomy-concurrency-control');
+        return $response.status == 200 ?? False !! True;
     }
 
     sub delete-row($token, $target, %parameters) {
@@ -704,12 +704,13 @@ class Micronomy {
                 Maconomy-Concurrency-Control => $concurrency,
             },
         );
-        return get-header($response, 'maconomy-concurrency-control');
+        return $response.status == 200 ?? False !! True;
     }
 
     sub edit($token, %parameters) {
         my $numberOfLines = %parameters<rows>;
         my @currentPosition = ^$numberOfLines;
+        my @errors = ();
 
         # delete, update or move lines
         for (^$numberOfLines).sort({@currentPosition[$_]}) -> $row {
@@ -717,7 +718,8 @@ class Micronomy {
             my $target = @currentPosition[$row];
             my $was-kept = %parameters{"was-kept-$row"} eq "True" ?? 2 !! 1;
             if %parameters{"keep-$row"} == 0 {
-                delete-row($token, $target, %parameters);
+                my $rc = delete-row($token, $target, %parameters);
+                @errors.push("borttagning av rad $target nekades") if $rc;
 
                 # mark index as deleted in position array
                 @currentPosition[$row] = -1;
@@ -728,7 +730,8 @@ class Micronomy {
 
             } elsif %parameters{"set-task-$row"} or %parameters{"keep-$row"} != $was-kept {
                 %parameters{"task-$row"} = %parameters{"set-task-$row"};
-                add-data('update', $token, $row, $target, %parameters);
+                my $rc = add-data('update', $token, $row, $target, %parameters);
+                @errors.push("uppdatering av rad $target nekades") if $rc;
             }
 
             # move lines
@@ -736,11 +739,15 @@ class Micronomy {
             if $newTarget != $row and $newTarget != $target {
                 trace "move row $row from $target to $newTarget", $token;
                 if $newTarget < $target {
-                    add-data('add', $token, $row, $newTarget, %parameters);
-                    delete-row($token, $target+1, %parameters);
+                    my $rc = add-data('add', $token, $row, $newTarget, %parameters);
+                    @errors.push("tilläggning av rad $newTarget nekades") if $rc;
+                    $rc = delete-row($token, $target+1, %parameters);
+                    @errors.push("borttagning av rad {$target+1} nekades") if $rc;
                 } else {
-                    add-data('add', $token, $row, $newTarget+1, %parameters);
-                    delete-row($token, $target, %parameters);
+                    my $rc = add-data('add', $token, $row, $newTarget+1, %parameters);
+                    @errors.push("tilläggning av rad {$newTarget+1} nekades") if $rc;
+                    $rc = delete-row($token, $target, %parameters);
+                    @errors.push("borttagning av rad $target nekades") if $rc;
                 }
                 # move indexes in position array
                 @currentPosition[$row] = $newTarget;
@@ -760,8 +767,10 @@ class Micronomy {
             my $task = %parameters{"job-$row"}.split("/")[1];
             %parameters{"task-$row"} = %parameters{"job-$row"}.split("/")[1] if $task;
             %parameters{"job-$row"} = %parameters{"job-$row"}.split("/")[0];
-            add-data('add', $token, $row, %parameters{"position-$row"}, %parameters);
+            my $rc = add-data('add', $token, $row, %parameters{"position-$row"}, %parameters);
+            @errors.push("den nya raden är inte tillåten") if $rc;
         }
+        return @errors.join('<br>');
     }
 
     method edit(:$token is copy, :%parameters) {
@@ -774,7 +783,7 @@ class Micronomy {
         for %parameters.keys.sort -> $key {
             trace "$key: %parameters{$key}";
         }
-        edit($token, %parameters) if %parameters<rows>:exists;
+        my $errorMessage = edit($token, %parameters) if %parameters<rows>:exists;
 
         my %favorites = get-favorites($token) || return;
         my %cache = get-week($token, $date);
@@ -782,7 +791,7 @@ class Micronomy {
 
         my %data = (
             week => $week,
-            error => '',
+            error => $errorMessage // "",
             concurrency => %cache<concurrency>,
             employee => %cache<employeeName>,
             date => $date,
