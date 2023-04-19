@@ -9,7 +9,6 @@ use Micronomy::Common;
 use Micronomy::Demo;
 use Micronomy::Calendar;
 
-
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
     my $auth-path = "maconomy-api/auth/b3";
@@ -19,6 +18,7 @@ class Micronomy {
     my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline?fields=taskname,description&limit=100";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
     my @months = <Dec Jan Feb Mar Apr Maj Jun Jul Aug Sep Okt Nov Dec>;
+    my $retries = 10;
     template-location 'resources/templates/';
 
     sub get-header($response, $header) {
@@ -260,14 +260,14 @@ class Micronomy {
         my ($employee, $employeeNumber, %cache);
         if $token ne "demo" {
             my $url = "$server/$environment-path=user.employeeinfo.name1,user.info.employeenumber";
-            my $request = Cro::HTTP::Client.get(
+
+            my $response = fetch-url(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
                     Content-Type => "application/json",
                 },
             );
-            my $response = await $request;
             my %content = await $response.body;
             $employee = %content<user><employeeinfo><name1><string><value>;
             $employeeNumber = %content<user><info><employeenumber><string><value>;
@@ -467,9 +467,8 @@ class Micronomy {
             }
 
             my $url = "$server/$instances-path/$containerInstanceId/data/panes/card/0";
-
             trace "sub get-week request", $token;
-            my $request = Cro::HTTP::Client.post(
+            my $response = fetch-url(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
@@ -478,9 +477,6 @@ class Micronomy {
                 },
                 body => '{"data": {"datevar": "' ~ $date ~ '"}}',
             );
-
-            my $response = await $request;
-
             return parse-week($response);
 
             CATCH {
@@ -524,9 +520,8 @@ class Micronomy {
         trace "sub get-favorites", $token;
         return get-cache("demo-faves") if $token eq "demo";
 
-        my $body;
         my $url = "$server/$favorites-path";
-        my $request = Cro::HTTP::Client.post(
+        my $response = fetch-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -534,14 +529,13 @@ class Micronomy {
             },
             body => '{"panes": {}}',
         );
-        my $response = await $request;
-        $body = await $response.body;
+        my $body = await $response.body;
 
         my $containerInstanceId = $body<meta><containerInstanceId>;
         my $concurrency = get-header($response, 'maconomy-concurrency-control');
 
         $url = "$server/$favorites-path/$containerInstanceId/data;any";
-        $request = Cro::HTTP::Client.post(
+        $response = fetch-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -550,7 +544,6 @@ class Micronomy {
                 Maconomy-Concurrency-Control => $concurrency,
             },
         );
-        $response = await $request;
         $body = await $response.body;
 
         return $body;
@@ -578,7 +571,7 @@ class Micronomy {
         }
 
         my $url = "$server/$tasks-path";
-        my $request = Cro::HTTP::Client.post(
+        my $response = fetch-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -586,7 +579,6 @@ class Micronomy {
             },
             body => '{"data": {"jobnumber":"' ~ $jobnumber ~ '"}}',
         );
-        my $response = await $request;
         my $body = await $response.body;
 
         my @tasks;
@@ -607,7 +599,7 @@ class Micronomy {
 
         # get card id
         my $url = "$server/$instances-path";
-        my $response = await Cro::HTTP::Client.post(
+        my $response = fetch-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -615,63 +607,41 @@ class Micronomy {
             },
             body => '{"panes":{}}',
         );
+
         my %content = await $response.body;
         my $containerInstanceId = %content<meta><containerInstanceId>;
         my $concurrency = get-header($response, 'maconomy-concurrency-control');
         my $employeeNumber = 0;
 
-        my $retries = 10;
-        for 0 .. $retries -> $wait {
-            try {
-                sleep $wait/10;
-                # refresh data? (seems to be required)
-                $response = await Cro::HTTP::Client.post(
-                    "$url/$containerInstanceId/data;any",
-                    headers => {
-                        Authorization => "X-Reconnect $token",
-                        Maconomy-Concurrency-Control => $concurrency,
-                        Content-Type => "application/json",
-                        Content-Length => 0,
-                    },
-                );
-                $concurrency = get-header($response, 'maconomy-concurrency-control');
-                %content = await $response.body;
-                $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
+        trace "get concurrency employeeNumber", $token;
+        # refresh concurrency (sic!)
+        $response = fetch-url(
+            "$url/$containerInstanceId/data;any",
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Maconomy-Concurrency-Control => $concurrency,
+                Content-Type => "application/json",
+                Content-Length => 0,
+            },
+        );
+        $concurrency = get-header($response, 'maconomy-concurrency-control');
+        %content = await $response.body;
+        $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
 
-                last;
-            }
+        trace "get concurrency concurrency", $token;
+        $response = fetch-url(
+            "$url/$containerInstanceId/data/panes/card/0",
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Maconomy-Concurrency-Control => $concurrency,
+                Content-Type => "application/json",
+            },
+            body => '{"data":{"datevar":"' ~ $date ~ '","employeenumbervar":"' ~ $employeeNumber ~ '"}}',
+        );
+        $concurrency = get-header($response, 'maconomy-concurrency-control');
+        %content = await $response.body;
 
-            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
-                trace "get-concurrency (data;any) received 404 - retrying [{$wait+1}/$retries]", $token;
-            } else {
-                die $!;
-            }
-        }
-
-        for 0 .. $retries -> $wait {
-            try {
-                sleep $wait/10;
-                $response = await Cro::HTTP::Client.post(
-                    "$url/$containerInstanceId/data/panes/card/0",
-                    headers => {
-                        Authorization => "X-Reconnect $token",
-                        Maconomy-Concurrency-Control => $concurrency,
-                        Content-Type => "application/json",
-                    },
-                    body => '{"data":{"datevar":"' ~ $date ~ '","employeenumbervar":"' ~ $employeeNumber ~ '"}}',
-                );
-                $concurrency = get-header($response, 'maconomy-concurrency-control');
-                %content = await $response.body;
-
-                return $containerInstanceId, $concurrency;
-            }
-
-            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
-                trace "get-concurrency (datevar) received 404 - retrying [{$wait+1}/$retries]", $token;
-            } else {
-                die $!;
-            }
-        }
+        return $containerInstanceId, $concurrency;
     }
 
     sub add-data($action, $token, $source, $target, %parameters) {
@@ -691,44 +661,31 @@ class Micronomy {
             }
         }
 
-        my $retries = 9;
-        for 0 .. $retries -> $wait {
-            sleep $wait/10;
-            try {
-                # populate row
-                my @data = ();
-                @data.push('"jobnumber": "' ~ %parameters{"job-$source"} ~ '"') if %parameters{"job-$source"};
-                @data.push('"taskname": "' ~  %parameters{"task-$source"} ~ '"') if %parameters{"task-$source"};
-                @data.push('"permanentline": ' ~ (%parameters{"keep-$source"} == 1 ?? "false" !! "true"));
-                if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
-                    my $day = 0;
-                    for %parameters{"hours-$source"}.split(";") -> $hours {
-                        $day++;
-                        @data.push("\"numberday{$day}\": $hours") if $hours ne "0";
-                    }
-                }
-                my $data = '{"data": {' ~ @data.join(",") ~ '}}';
-                trace "$url $data";
-
-                my $response = await Cro::HTTP::Client.post(
-                    "$url",
-                    headers => {
-                        Authorization => "X-Reconnect $token",
-                        Maconomy-Concurrency-Control => $concurrency,
-                        Content-Type => "application/json",
-                    },
-                    body => $data,
-                );
-
-                return get-header($response, 'maconomy-concurrency-control');
-            }
-
-            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
-                trace "add-data received 404 - retrying [{$wait+1}/$retries]", $token;
-            } else {
-                die $!;
+        # populate row
+        my @data = ();
+        @data.push('"jobnumber": "' ~ %parameters{"job-$source"} ~ '"') if %parameters{"job-$source"};
+        @data.push('"taskname": "' ~  %parameters{"task-$source"} ~ '"') if %parameters{"task-$source"};
+        @data.push('"permanentline": ' ~ (%parameters{"keep-$source"} == 1 ?? "false" !! "true"));
+        if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
+            my $day = 0;
+            for %parameters{"hours-$source"}.split(";") -> $hours {
+                $day++;
+                @data.push("\"numberday{$day}\": $hours") if $hours ne "0";
             }
         }
+        my $data = '{"data": {' ~ @data.join(",") ~ '}}';
+        trace "$url $data", $token;
+
+        my $response = fetch-url(
+            "$url",
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Maconomy-Concurrency-Control => $concurrency,
+                Content-Type => "application/json",
+            },
+            body => $data,
+        );
+        return get-header($response, 'maconomy-concurrency-control');
     }
 
     sub delete-row($token, $target, %parameters) {
@@ -739,25 +696,15 @@ class Micronomy {
 
         # delete row
         my $url = "$server/$instances-path";
-        for ^10 -> $wait {
-            sleep $wait/10;
-            try {
-                my $response = await Cro::HTTP::Client.delete(
-                    "$url/$containerInstanceId/data/panes/table/$target",
-                    headers => {
-                        Authorization => "X-Reconnect $token",
-                        Maconomy-Concurrency-Control => $concurrency,
-                    },
-                );
-                return get-header($response, 'maconomy-concurrency-control');
-            }
-
-            if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < 9 {
-                trace "delete-row received 404 - retrying [{$wait+1}/9]", $token;
-            } else {
-                die $!;
-            }
-        }
+        my $response = fetch-url(
+            "$url/$containerInstanceId/data/panes/table/$target",
+            method => 'delete',
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Maconomy-Concurrency-Control => $concurrency,
+            },
+        );
+        return get-header($response, 'maconomy-concurrency-control');
     }
 
     sub edit($token, %parameters) {
@@ -919,10 +866,10 @@ class Micronomy {
             my $containerInstanceId = %parameters<containerInstanceId>;
             my $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$row";
 
-            for ^10 -> $wait {
+            for 0 .. $retries -> $wait {
                 sleep $wait/10;
                 try {
-                    my $response = await Cro::HTTP::Client.post(
+                    my $response = fetch-url(
                         $url,
                         headers => {
                             Authorization => "X-Reconnect $token",
@@ -1019,7 +966,7 @@ class Micronomy {
             my $url = "$server/$instances-path/$containerInstanceId/data/panes/card/0/action;name=submittimesheet";
             $url ~= "?card.resubmissionexplanationvar=$reason" if $reason;
             trace "submit $url", $token;
-            my $response = await Cro::HTTP::Client.post(
+            my $response = fetch-url(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
@@ -1074,10 +1021,10 @@ class Micronomy {
                 $token = "demo";
             } else {
                 my $url = "$server/$auth-path";
-                for ^10 -> $wait {
+                for 0 .. $retries -> $wait {
                     sleep $wait/10;
 
-                    my $response = await Cro::HTTP::Client.get(
+                    my $response = fetch-url(
                         $url,
                         auth => {
                             username => $username,
@@ -1087,6 +1034,7 @@ class Micronomy {
                             Maconomy-Authentication => 'X-Reconnect',
                         },
                     );
+
                     $token = get-header($response, 'maconomy-reconnect');
                     trace "logged in $username", $token;
                     last;
@@ -1135,7 +1083,7 @@ class Micronomy {
         my $status;
         if $token and $token ne "demo" {
             my $url = "$server/$auth-path";
-            my $response = await Cro::HTTP::Client.get(
+            my $response = fetch-url(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
@@ -1158,8 +1106,8 @@ class Micronomy {
     }
 
     method calendar(:$date,:$token is copy,) {
-	if $date.Str.chars != 4 { #if date is not given provided "correctly" or if loading first page.
-	    trace "no calendar set date: ", $date;
+        if $date.Str.chars != 4 { #if date is not given provided "correctly" or if loading first page.
+            trace "no calendar set date: ", $date;
             header "X-Frame-Options: DENY";
             template 'calendar.html.tmpl', {
                 ics => "",

@@ -1,7 +1,56 @@
 unit module Micronomy::Common;
 
+use Cro::HTTP::Client;
 use Digest::MD5;
 use experimental :pack;
+
+sub fetch-url($url, :%auth, :%headers, :$body, :$method) is export {
+    my $timeout = 2;
+    my $retries = 10;
+    my $token = %headers<Authorization>.split(' ')[1];
+    for 0 .. $retries -> $wait {
+        try {
+            sleep $wait/10;
+            my $request;
+            if $method and $method eq 'delete' {
+                $request = Cro::HTTP::Client.delete($url, :%headers);
+            } elsif $body {
+                $request = Cro::HTTP::Client.post($url, :%headers, :$body);
+            } elsif defined %headers<Content-Length> {
+                $request = Cro::HTTP::Client.post($url, :%headers);
+            } elsif %auth {
+                $request = Cro::HTTP::Client.get($url, :%auth, :%headers);
+            } else {
+                $request = Cro::HTTP::Client.get($url, :%headers);
+            }
+            await Promise.anyof($request, Promise.in($timeout));
+            unless $request {
+                my $caller = caller('fetch-url');
+                trace "$caller timeout $wait", $token;
+                next;
+            }
+            my $response = await $request;
+            return $response;
+        }
+        if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries {
+            my $caller = caller('fetch-url');
+            trace "$caller received 404 - retrying [{$wait+1}/$retries]", $token;
+        } else {
+            die $!;
+        }
+    }
+}
+
+sub caller($callee) {
+    my $trace = Backtrace.new;
+    for 0 .. * -> $idx {
+        my $caller = $trace[$idx].subname;
+        if $caller and $caller ne ('new', 'caller', $callee).any {
+            my $line = $trace[$idx].line;
+            return "$caller:$line";
+        }
+    }
+}
 
 sub trace($message, $token = '') is export {
     my $now = DateTime.now(
