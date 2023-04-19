@@ -7,7 +7,8 @@ use experimental :pack;
 sub fetch-url($url, :%auth, :%headers, :$body, :$method) is export {
     my $timeout = 2;
     my $retries = 10;
-    my $token = %headers<Authorization>.split(' ')[1];
+    my $token = %headers<Authorization>;
+    $token = $token.split(' ')[1] if $token;
     for 0 .. $retries -> $wait {
         try {
             sleep $wait/10;
