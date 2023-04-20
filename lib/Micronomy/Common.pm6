@@ -26,19 +26,16 @@ sub fetch-url($url, :%auth, :%headers, :$body, :$method) is export {
             }
             await Promise.anyof($request, Promise.in($timeout));
             unless $request {
-                my $caller = caller('fetch-url');
-                trace "$caller timeout $wait", $token;
+                trace "{whodunit()} timeout $wait", $token;
                 next;
             }
             my $response = await $request;
             return $response;
         }
         if $! ~~ X::Cro::HTTP::Error and $!.response.status == (404, 409).any and $wait < $retries {
-            my $caller = caller('fetch-url');
-            trace "$caller received {$!.response.status} - retrying [{$wait+1}/$retries]", $token;
+            trace "{whodunit()} received {$!.response.status} - retrying [{$wait+1}/$retries]", $token;
         } elsif $! ~~ X::Cro::HTTP::Error and $!.response.status == 422 {
-            my $caller = caller('fetch-url');
-            trace "$caller received 422", $token;
+            trace "{whodunit()} received 422", $token;
             return $!.response;
         } else {
             die $!;
@@ -46,15 +43,10 @@ sub fetch-url($url, :%auth, :%headers, :$body, :$method) is export {
     }
 }
 
-sub caller($callee) {
-    my $trace = Backtrace.new;
-    for 0 .. * -> $idx {
-        my $caller = $trace[$idx].subname;
-        if $caller and $caller ne ('new', 'caller', $callee).any {
-            my $line = $trace[$idx].line;
-            return "$caller:$line";
-        }
-    }
+sub whodunit() {
+    # subs are (Backtrace.new, this, callee, caller, ...)
+    my $caller = Backtrace.new.grep(*.subname)[3];
+    return "{$caller.subname}:{$caller.line}";
 }
 
 sub trace($message, $token = '') is export {

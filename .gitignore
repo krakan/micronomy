@@ -16,3 +16,6 @@ Dockerfile.*
 
 # logs
 log
+
+# test files
+test.*

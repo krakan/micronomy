@@ -1,9 +1,9 @@
 #!/bin/bash
 #
 # Helper script for micronomy
-# targets 'debug', 'deploy' and 'tmux' require access to the server
+# targets 'deploy' and 'tmux' require access to the server
 # targets 'local' and 'run' require Rakudo and some modules
-# target 'run' alo requires certbot and nginx
+# target 'run' also requires certbot and nginx
 #
 
 usage() {
@@ -84,7 +84,7 @@ case $target in
         while true
         do
             # twiddle nginx reverse proxy
-            if grep -q 'server_name micronomy.jonaseel.se' /etc/nginx/sites-enabled/reverse-proxy
+            if grep -q 'server_name micronomy.jonaseel.se' /etc/nginx/sites-enabled/reverse-proxy 2>/dev/null
             then
                 if test "$port" = 8080 && ! netstat -ln | grep -w LISTEN | grep -q :8081
                 then
