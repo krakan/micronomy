@@ -47,7 +47,7 @@ case $target in
         if test -z $exist || {
                 touch --date=$(docker inspect micronomy:latest | jq -r .[].Created) Dockerfile &&
                     find . -newer Dockerfile -type f | \
-                        egrep '^./((lib|resources)/|^service.p6)' | grep -v ./lib/.precomp;
+                        grep -E '^./((lib|resources)/|^service.p6)' | grep -v ./lib/.precomp;
             }
         then
             docker build -t micronomy .
@@ -59,7 +59,7 @@ case $target in
 
     deploy)
         if rsync -zva --exclude .precomp . micronomy:micronomy/ | tee /dev/tty |
-                egrep -q '^(lib|resources)/|^service.p6'
+                grep -Eq '^(lib|resources)/|^service.p6'
         then
             echo "INFO: restarting micronomy"
             ssh -t micronomy.jonaseel.se sudo pkill moar
@@ -79,6 +79,23 @@ case $target in
         cd $scriptdir
 
         type perl6 >/dev/null 2>&1 || usage "perl6 command not found"
+
+        # twiddle nginx reverse proxy
+        if grep -q 'server_name micronomy.jonaseel.se' /etc/nginx/sites-enabled/reverse-proxy
+        then
+            if test "$port" = 8080 && ! netstat -ln | grep -w LISTEN | grep -q :8081
+            then
+                # let nginx proxy both sites to the same port
+                sudo sed -Ei 's/(proxy_pass.*):8081/\1:8080/' /etc/nginx/sites-enabled/reverse-proxy
+                sudo systemctl reload nginx
+            elif test "$port" = 8081 && ! grep -q 'proxy_pass http://localhost:8081' /etc/nginx/sites-enabled/reverse-proxy
+            then
+                # let nginx proxy the beta site to the separate port
+                sudo sed -Ei '/server_name micronomy.jonaseel.se;/,/^}/{s/(proxy_pass.*):8080/\1:8081/}' \
+                     /etc/nginx/sites-enabled/reverse-proxy
+                sudo systemctl reload nginx
+            fi
+        fi
 
         # keep going
         while true
