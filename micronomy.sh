@@ -80,26 +80,26 @@ case $target in
 
         type perl6 >/dev/null 2>&1 || usage "perl6 command not found"
 
-        # twiddle nginx reverse proxy
-        if grep -q 'server_name micronomy.jonaseel.se' /etc/nginx/sites-enabled/reverse-proxy
-        then
-            if test "$port" = 8080 && ! netstat -ln | grep -w LISTEN | grep -q :8081
-            then
-                # let nginx proxy both sites to the same port
-                sudo sed -Ei 's/(proxy_pass.*):8081/\1:8080/' /etc/nginx/sites-enabled/reverse-proxy
-                sudo systemctl reload nginx
-            elif test "$port" = 8081 && ! grep -q 'proxy_pass http://localhost:8081' /etc/nginx/sites-enabled/reverse-proxy
-            then
-                # let nginx proxy the beta site to the separate port
-                sudo sed -Ei '/server_name micronomy.jonaseel.se;/,/^}/{s/(proxy_pass.*):8080/\1:8081/}' \
-                     /etc/nginx/sites-enabled/reverse-proxy
-                sudo systemctl reload nginx
-            fi
-        fi
-
         # keep going
         while true
         do
+            # twiddle nginx reverse proxy
+            if grep -q 'server_name micronomy.jonaseel.se' /etc/nginx/sites-enabled/reverse-proxy
+            then
+                if test "$port" = 8080 && ! netstat -ln | grep -w LISTEN | grep -q :8081
+                then
+                    # let nginx proxy both sites to the same port
+                    sudo sed -Ei 's/(proxy_pass.*):8081/\1:8080/' /etc/nginx/sites-enabled/reverse-proxy
+                    sudo systemctl reload nginx
+                elif test "$port" = 8081 && ! grep -q 'proxy_pass http://localhost:8081' /etc/nginx/sites-enabled/reverse-proxy
+                then
+                    # let nginx proxy the beta site to the separate port
+                    sudo sed -Ei '/server_name micronomy.jonaseel.se;/,/^}/{s/(proxy_pass.*):8080/\1:8081/}' \
+                         /etc/nginx/sites-enabled/reverse-proxy
+                    sudo systemctl reload nginx
+                fi
+            fi
+
             # update certificate if needed
             if echo "$cert" | grep -q letsencrypt
             then
