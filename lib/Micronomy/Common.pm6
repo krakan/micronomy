@@ -4,8 +4,7 @@ use Cro::HTTP::Client;
 use Digest::MD5;
 use experimental :pack;
 
-sub fetch-url($url, :%auth, :%headers, :$body, :$method) is export {
-    my $timeout = 2;
+sub call-url($url, :%auth, :%headers, :$body, :$method, :$timeout is copy = 2) is export {
     my $retries = 10;
     my $token = %headers<Authorization>;
     $token = $token.split(' ')[1] if $token;
@@ -26,15 +25,16 @@ sub fetch-url($url, :%auth, :%headers, :$body, :$method) is export {
             }
             await Promise.anyof($request, Promise.in($timeout));
             unless $request {
-                trace "{whodunit()} timeout $wait", $token;
+                trace sprintf("{whodunit()} timeout #$wait %.1fs", $timeout), $token;
+                $timeout += 0.5;
                 next;
             }
             my $response = await $request;
             return $response;
         }
-        if $! ~~ X::Cro::HTTP::Error and $!.response.status == (404, 409).any and $wait < $retries {
+        if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries { # 404 Not Found - probably not true - try again
             trace "{whodunit()} received {$!.response.status} - retrying [{$wait+1}/$retries]", $token;
-        } elsif $! ~~ X::Cro::HTTP::Error and $!.response.status == 422 {
+        } elsif $! ~~ X::Cro::HTTP::Error and $!.response.status == (422, 409).any { # 422 Unprocessable Entity, 409 Conflict
             trace "{whodunit()} received 422", $token;
             return $!.response;
         } else {

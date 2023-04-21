@@ -261,7 +261,7 @@ class Micronomy {
         if $token ne "demo" {
             my $url = "$server/$environment-path=user.employeeinfo.name1,user.info.employeenumber";
 
-            my $response = fetch-url(
+            my $response = call-url(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
@@ -468,7 +468,7 @@ class Micronomy {
 
             my $url = "$server/$instances-path/$containerInstanceId/data/panes/card/0";
             trace "sub get-week request", $token;
-            my $response = fetch-url(
+            my $response = call-url(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
@@ -483,7 +483,7 @@ class Micronomy {
                 when X::Cro::HTTP::Error {
                     warn "error: " ~ .response.status;
                     Micronomy.get-login() if .response.status == 401;
-                    return get-week($token, $date) if .response.status == 404;
+                    return get-week($token, $date) if .response.status == (404, 409).any;
                     return {};
                 }
                 default {
@@ -521,7 +521,7 @@ class Micronomy {
         return get-cache("demo-faves") if $token eq "demo";
 
         my $url = "$server/$favorites-path";
-        my $response = fetch-url(
+        my $response = call-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -535,7 +535,7 @@ class Micronomy {
         my $concurrency = get-header($response, 'maconomy-concurrency-control');
 
         $url = "$server/$favorites-path/$containerInstanceId/data;any";
-        $response = fetch-url(
+        $response = call-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -571,7 +571,7 @@ class Micronomy {
         }
 
         my $url = "$server/$tasks-path";
-        my $response = fetch-url(
+        my $response = call-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -599,7 +599,7 @@ class Micronomy {
 
         # get card id
         my $url = "$server/$instances-path";
-        my $response = fetch-url(
+        my $response = call-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -615,7 +615,7 @@ class Micronomy {
 
         trace "get concurrency employeeNumber", $token;
         # refresh concurrency (sic!)
-        $response = fetch-url(
+        $response = call-url(
             "$url/$containerInstanceId/data;any",
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -629,7 +629,7 @@ class Micronomy {
         $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
 
         trace "get concurrency concurrency", $token;
-        $response = fetch-url(
+        $response = call-url(
             "$url/$containerInstanceId/data/panes/card/0",
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -642,12 +642,21 @@ class Micronomy {
         %content = await $response.body;
 
         return $containerInstanceId, $concurrency;
+
+        CATCH {
+            when X::Cro::HTTP::Error and .response.status == 409 {
+                return get-concurrency($token, $date);
+            }
+            default {
+                return {};
+            }
+        }
     }
 
-    sub add-data($action, $token, $source, $target, %parameters) {
+    sub upsert-data($action, $token, $source, $target, %parameters) {
         return add-demo-data($action, $source, $target, %parameters) if $token eq "demo";
 
-        trace "add data [$source -> $target] " ~ %parameters{"position-$source"}, $token;
+        trace "$action data [$source -> $target] " ~ %parameters{"position-$source"}, $token;
         my $numberOfLines = %parameters<rows>;
         my ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
 
@@ -665,7 +674,6 @@ class Micronomy {
         my @data = ();
         @data.push('"jobnumber": "' ~ %parameters{"job-$source"} ~ '"') if %parameters{"job-$source"};
         @data.push('"taskname": "' ~  %parameters{"task-$source"} ~ '"') if %parameters{"task-$source"};
-        @data.push('"permanentline": ' ~ (%parameters{"keep-$source"} == 1 ?? "false" !! "true"));
         if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
             my $day = 0;
             for %parameters{"hours-$source"}.split(";") -> $hours {
@@ -674,10 +682,11 @@ class Micronomy {
             }
         }
         my $data = '{"data": {' ~ @data.join(",") ~ '}}';
-        trace "$url $data", $token;
+        trace "setting row $target to $data", $token;
 
-        my $response = fetch-url(
+        my $response = call-url(
             "$url",
+            timeout => 3,
             headers => {
                 Authorization => "X-Reconnect $token",
                 Maconomy-Concurrency-Control => $concurrency,
@@ -685,19 +694,56 @@ class Micronomy {
             },
             body => $data,
         );
-        return $response.status == 200 ?? False !! True;
+        return upsert-data($action, $token, $source, $target, %parameters) if $response.status == 409;
+        return True if $response.status != 200;
+        $concurrency = get-header($response, 'maconomy-concurrency-control');
+
+        # update permanence
+        my $kept = (%parameters{"was-kept-$source"} // "True") eq "True"; # "True"/"False"
+        my $keep = %parameters{"keep-$source"} == 2; # 0=remove/1=temporary/2=permanent
+        if $action eq "add" or $kept != $keep {
+            my $permanent = $keep.lc;
+            $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$target";
+            trace "set permanence for row $target to $permanent", $token;
+            my $response = call-url(
+                $url,
+                timeout => 3,
+                headers => {
+                    Authorization => "X-Reconnect $token",
+                    Maconomy-Concurrency-Control => $concurrency,
+                    Content-Type => "application/json",
+                },
+                body => '{"data": {"permanentline":' ~ " $permanent}}",
+            );
+        }
+        return upsert-data($action, $token, $source, $target, %parameters) if $response.status == 409;
+        return False;
     }
 
     sub delete-row($token, $target, %parameters) {
         return delete-demo-row($target, %parameters) if $token eq "demo";
+        trace "sub delete-row", $token;
 
-        trace "delete row $target", $token;
         my ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
+        my $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$target";
+
+        # remove permanence
+        trace "prepare row $target for deletion", $token;
+        my $response = call-url(
+            $url,
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Maconomy-Concurrency-Control => $concurrency,
+                Content-Type => "application/json",
+            },
+            body => '{"data": {"permanentline": false}}'
+        );
+        $concurrency = get-header($response, 'maconomy-concurrency-control');
 
         # delete row
-        my $url = "$server/$instances-path";
-        my $response = fetch-url(
-            "$url/$containerInstanceId/data/panes/table/$target",
+        trace "delete row $target", $token;
+        $response = call-url(
+            $url,
             method => 'delete',
             headers => {
                 Authorization => "X-Reconnect $token",
@@ -708,6 +754,7 @@ class Micronomy {
     }
 
     sub edit($token, %parameters) {
+        trace "sub edit", $token;
         my $numberOfLines = %parameters<rows>;
         my @currentPosition = ^$numberOfLines;
         my @errors = ();
@@ -729,8 +776,8 @@ class Micronomy {
                 next;
 
             } elsif %parameters{"set-task-$row"} or %parameters{"keep-$row"} != $was-kept {
-                %parameters{"task-$row"} = %parameters{"set-task-$row"};
-                my $rc = add-data('update', $token, $row, $target, %parameters);
+                %parameters{"task-$row"} = %parameters{"set-task-$row"} if %parameters{"set-task-$row"};
+                my $rc = upsert-data('update', $token, $row, $target, %parameters);
                 @errors.push("uppdatering av rad $target nekades") if $rc;
             }
 
@@ -739,12 +786,12 @@ class Micronomy {
             if $newTarget != $row and $newTarget != $target {
                 trace "move row $row from $target to $newTarget", $token;
                 if $newTarget < $target {
-                    my $rc = add-data('add', $token, $row, $newTarget, %parameters);
+                    my $rc = upsert-data('add', $token, $row, $newTarget, %parameters);
                     @errors.push("tilläggning av rad $newTarget nekades") if $rc;
                     $rc = delete-row($token, $target+1, %parameters);
                     @errors.push("borttagning av rad {$target+1} nekades") if $rc;
                 } else {
-                    my $rc = add-data('add', $token, $row, $newTarget+1, %parameters);
+                    my $rc = upsert-data('add', $token, $row, $newTarget+1, %parameters);
                     @errors.push("tilläggning av rad {$newTarget+1} nekades") if $rc;
                     $rc = delete-row($token, $target, %parameters);
                     @errors.push("borttagning av rad $target nekades") if $rc;
@@ -763,11 +810,11 @@ class Micronomy {
         # add new line
         my $row = $numberOfLines;
         if %parameters{"job-$row"} ne "" {
-            %parameters{"keep-$row"} = 2;
+            %parameters{"keep-$row"} = 1;
             my $task = %parameters{"job-$row"}.split("/")[1];
             %parameters{"task-$row"} = %parameters{"job-$row"}.split("/")[1] if $task;
             %parameters{"job-$row"} = %parameters{"job-$row"}.split("/")[0];
-            my $rc = add-data('add', $token, $row, %parameters{"position-$row"}, %parameters);
+            my $rc = upsert-data('add', $token, $row, %parameters{"position-$row"}, %parameters);
             @errors.push("den nya raden är inte tillåten") if $rc;
         }
         return @errors.join('<br>');
@@ -878,7 +925,7 @@ class Micronomy {
             for 0 .. $retries -> $wait {
                 sleep $wait/10;
                 try {
-                    my $response = fetch-url(
+                    my $response = call-url(
                         $url,
                         headers => {
                             Authorization => "X-Reconnect $token",
@@ -975,7 +1022,7 @@ class Micronomy {
             my $url = "$server/$instances-path/$containerInstanceId/data/panes/card/0/action;name=submittimesheet";
             $url ~= "?card.resubmissionexplanationvar=$reason" if $reason;
             trace "submit $url", $token;
-            my $response = fetch-url(
+            my $response = call-url(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
@@ -1033,8 +1080,9 @@ class Micronomy {
                 for 0 .. $retries -> $wait {
                     sleep $wait/10;
 
-                    my $response = fetch-url(
+                    my $response = call-url(
                         $url,
+                        timeout => 3,
                         auth => {
                             username => $username,
                             password => $password
@@ -1092,7 +1140,7 @@ class Micronomy {
         my $status;
         if $token and $token ne "demo" {
             my $url = "$server/$auth-path";
-            my $response = fetch-url(
+            my $response = call-url(
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
