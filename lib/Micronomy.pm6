@@ -54,6 +54,7 @@ class Micronomy {
             next => $next,
             previous => $previous,
             today => $today.gist,
+            last-of-month => $today.truncated-to('month').later(months => 1).pred,
             error => $error // '',
             containerInstanceId => %cache<containerInstanceId>,
             concurrency => %cache<concurrency>,
@@ -367,6 +368,7 @@ class Micronomy {
              %totals<invoiceable><sum> += %totals<invoiceable>{$bucket};
         }
 
+        my $today = Date.today;
         my %data = (
             period => "$start-date - $end-date",
             action => "/month",
@@ -374,7 +376,8 @@ class Micronomy {
             state => "",
             next => $next,
             previous => $previous,
-            today => Date.today.gist,
+            today => $today.gist,
+            last-of-month => $today.truncated-to('month').later(months => 1).pred,
             error => "",
             containerInstanceId => $containerInstanceId,
             concurrency => 'read-only',

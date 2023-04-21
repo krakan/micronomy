@@ -16,12 +16,12 @@
 
           <div class="date-picker">
             <form class="nav--panel" action="<.date-action>" method="POST">
-              <input type="date" class="date-input" name="date" value="<.date>">
+              <input type="date" min="2019-05-01" max="<.last-of-month>" class="date-input" name="date" value="<.date>">
               <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
               <input type="hidden" name="concurrency" value="<.concurrency>"><!.state>
               <input type="hidden" name="hours-cache" value="on">
               <input type="hidden" name="set-cache" value="">
-              <input type="date" class="date-input" name="end-date" value="<.end-date>"></!>
+              <input type="date" min="2019-05-01" max="<.last-of-month>" class="date-input" name="end-date" value="<.end-date>"></!>
               <input id="selectedWk" type="submit" class="fancy-button" name="submit" value="V&auml;lj">
             </form>
 
@@ -165,8 +165,8 @@
 
         <form action="/calendar" method="post">
           <input type="hidden" name="date" value="" />
-          <input type="submit" class="fancy-button calendar-button"value="Kalendergenerator"/> 
-	</form>
+          <input type="submit" class="fancy-button calendar-button"value="Kalendergenerator"/>
+        </form>
 
         <form class="logout-button" action="/logout" method="POST">
           <input type="hidden" name="username" value="" />
