@@ -255,6 +255,7 @@ class Micronomy {
     }
 
     method get-period(Str :$token is copy, Date :$start-date, Date :$end-date, Int :$hours-cache is copy = 0) {
+        my $timeout = DateTime.now.later(minutes => 1);
         $token = fix-token($token);
         trace "get-period $start-date", $token;
 
@@ -307,57 +308,70 @@ class Micronomy {
         }
 
         my (%sums, %totals);
-
         my $current = $start-date;
         my $containerInstanceId = "";
-        for 0..* -> $week {
-            my $bucket = $current.truncated-to($bucketSize);
+        my $error = "";
+        try {
+            for 0..* -> $week {
+                my $bucket = $current.truncated-to($bucketSize);
 
-            my ($week-name, $week-start, $year, $month, $mday) = get-current-week($current);
-            if %cache<weeks>{$year}{$month}{$mday}:exists {
-                trace "using cached week $current", $token;
-            } elsif $current lt '2019-05-01' {
-                trace "ignoring week before 2019-05-01", $token;
-                %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
-                %cache<weeks>{$year}{$month}{$mday}<totals><fixed> = 0;
-                %cache<weeks>{$year}{$month}{$mday}<totals><overtime> = 0;
-                %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> = 0;
-                %cache<weeks>{$year}{$month}{$mday}<rows> = ();
-            } elsif $token eq "demo" {
-                %cache = get-demo($current);
-            } else {
-                %cache = get-week($token, $current.gist, previous => %cache);
-                $containerInstanceId = %cache<containerInstanceId>;
-            }
+                my ($week-name, $week-start, $year, $month, $mday) = get-current-week($current);
+                if %cache<weeks>{$year}{$month}{$mday}:exists {
+                    trace "using cached week $current", $token;
+                } elsif $current lt '2019-05-01' {
+                    trace "ignoring week before 2019-05-01", $token;
+                    %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
+                    %cache<weeks>{$year}{$month}{$mday}<totals><fixed> = 0;
+                    %cache<weeks>{$year}{$month}{$mday}<totals><overtime> = 0;
+                    %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> = 0;
+                    %cache<weeks>{$year}{$month}{$mday}<rows> = ();
+                } elsif $token eq "demo" {
+                    %cache = get-demo($current);
+                } else {
+                    %cache = get-week($token, $current.gist, previous => %cache);
+                    $containerInstanceId = %cache<containerInstanceId>;
+                }
 
-            %totals<reported>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
-            %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><fixed> // 0;
-            %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><overtime> // 0;;
-            %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> // 0;;
+                %totals<reported>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
+                %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><fixed> // 0;
+                %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><overtime> // 0;;
+                %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> // 0;;
 
-            for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
-                my $job = %row<job>;
-                my $task = %row<task>;
-                for %row<hours>.keys -> $wday {
-                    my $date = $current.later(days => $wday - 1).gist;
-                    next if $date lt $start-date.gist;
-                    last if $date gt $end-date.gist;
+                for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+                    my $job = %row<job>;
+                    my $task = %row<task>;
+                    for %row<hours>.keys -> $wday {
+                        my $date = $current.later(days => $wday - 1).gist;
+                        next if $date lt $start-date.gist;
+                        last if $date gt $end-date.gist;
 
-                    my $hours = %row<hours>{$wday};
-                    unless %sums{$job}{$task}<title>:exists {
-                        %sums{$job}{$task}<title> = title(%cache<jobs>{$job}<name>, %cache<jobs>{$job}<tasks>{$task});
+                        my $hours = %row<hours>{$wday};
+                        unless %sums{$job}{$task}<title>:exists {
+                            %sums{$job}{$task}<title> = title(%cache<jobs>{$job}<name>, %cache<jobs>{$job}<tasks>{$task});
+                        }
+                        %sums{$job}{$task}<bucket>{$bucket} += $hours;
                     }
-                    %sums{$job}{$task}<bucket>{$bucket} += $hours;
+                }
+
+                my $next = $current.later(weeks => 1).truncated-to("week");
+                last if $next gt $end-date;
+                if $next.month != $current.month and $next.day > 1 {
+                    $current = $next.earlier(days => 1).truncated-to('month');
+                } else {
+                    $current = $next;
+                }
+                if DateTime.now > $timeout {
+                    $error = "data collection timed out";
+                    trace $error, $token;
+                    last;
                 }
             }
-
-            my $next = $current.later(weeks => 1).truncated-to("week");
-            last if $next gt $end-date;
-            if $next.month != $current.month and $next.day > 1 {
-                $current = $next.earlier(days => 1).truncated-to('month');
-            } else {
-                $current = $next;
-            }
+        }
+        if $! ~~ X::Cro::HTTP::Error and $!.response.status == 422 {
+            $error = "422 Unprocessable Entity";
+            trace $error, $token;
+        } elsif $! {
+            die $!;
         }
 
         my @buckets = %totals<reported>.keys.sort;
@@ -378,7 +392,7 @@ class Micronomy {
             previous => $previous,
             today => $today.gist,
             last-of-month => $today.truncated-to('month').later(months => 1).pred,
-            error => "",
+            error => $error,
             containerInstanceId => $containerInstanceId,
             concurrency => 'read-only',
             employee => $employee,
@@ -484,9 +498,9 @@ class Micronomy {
 
             CATCH {
                 when X::Cro::HTTP::Error {
-                    warn "error: " ~ .response.status;
+                    trace "error: " ~ .response.status, $token;
                     Micronomy.get-login() if .response.status == 401;
-                    return get-week($token, $date) if .response.status == (404, 409).any;
+                    return get-week($token, $date) if .response.status == (404, 409, 422).any;
                     return {};
                 }
                 default {
