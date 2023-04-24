@@ -255,7 +255,7 @@ class Micronomy {
     }
 
     method get-period(Str :$token is copy, Date :$start-date, Date :$end-date, Int :$hours-cache is copy = 0) {
-        my $timeout = DateTime.now.later(minutes => 1);
+        my $timeout = DateTime.now.later(minutes => 5);
         $token = fix-token($token);
         trace "get-period $start-date", $token;
 
@@ -287,10 +287,10 @@ class Micronomy {
             set-cache(%cache);
         } elsif $hours-cache == -1 {
             %cache = (
-                employeeName => $employee,
-                employeeNumber => $employeeNumber,
-                enabled => False,
-            );
+            employeeName => $employee,
+            employeeNumber => $employeeNumber,
+            enabled => False,
+        );
             set-cache(%cache);
             %cache = get-demo($start-date) if $token eq "demo";
         } else {
@@ -354,12 +354,12 @@ class Micronomy {
                 }
 
                 my $next = $current.later(weeks => 1).truncated-to("week");
-                last if $next gt $end-date;
                 if $next.month != $current.month and $next.day > 1 {
                     $current = $next.earlier(days => 1).truncated-to('month');
                 } else {
                     $current = $next;
                 }
+                last if $next gt $end-date;
                 if DateTime.now > $timeout {
                     $error = "data collection timed out";
                     trace $error, $token;
@@ -370,21 +370,23 @@ class Micronomy {
         if $! ~~ X::Cro::HTTP::Error and $!.response.status == 422 {
             $error = "422 Unprocessable Entity";
             trace $error, $token;
+        } elsif $! ~~ X::Cro::HTTP::Error and $!.response.status == 401 {
+            return Micronomy.get-login(reason => "Ogiltig session! ");
         } elsif $! {
             die $!;
         }
 
         my @buckets = %totals<reported>.keys.sort;
         for @buckets -> $bucket {
-             %totals<reported><sum> += %totals<reported>{$bucket};
-             %totals<fixed><sum> += %totals<fixed>{$bucket};
-             %totals<overtime><sum> += %totals<overtime>{$bucket};
-             %totals<invoiceable><sum> += %totals<invoiceable>{$bucket};
+            %totals<reported><sum> += %totals<reported>{$bucket};
+            %totals<fixed><sum> += %totals<fixed>{$bucket};
+            %totals<overtime><sum> += %totals<overtime>{$bucket};
+            %totals<invoiceable><sum> += %totals<invoiceable>{$bucket};
         }
 
         my $today = Date.today;
         my %data = (
-            period => "$start-date - $end-date",
+            period => "$start-date - {$current.pred}",
             action => "/month",
             date-action => "/period",
             state => "",
@@ -516,6 +518,7 @@ class Micronomy {
 
     sub fix-token(Str $token) {
         return $token if $token eq 'demo';
+        return "bm90IGxvZ2dlZCBpbg==" unless $token;
         given $token.split(":")[1].chars % 4 {
             # add mysteriously stripped padding
             when 3 {return "$token="}

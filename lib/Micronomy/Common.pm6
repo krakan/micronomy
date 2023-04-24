@@ -34,10 +34,8 @@ sub call-url($url, :%auth, :%headers, :$body, :$method, :$timeout is copy = 2) i
         }
         if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries { # 404 Not Found - probably not true - try again
             trace "{whodunit()} received {$!.response.status} - retrying [{$wait+1}/$retries]", $token;
-        } elsif $! ~~ X::Cro::HTTP::Error and $!.response.status == (422, 409).any { # 422 Unprocessable Entity, 409 Conflict
-            trace "{whodunit()} received 422", $token;
-            return $!.response;
         } else {
+            trace "{whodunit()} received {$!.response.status}", $token;
             die $!;
         }
     }

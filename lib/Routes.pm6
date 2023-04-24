@@ -42,7 +42,10 @@ sub routes() is export {
             }
         }
 
-        get -> 'period', :$sessionToken is cookie = '', :$date, :$end-date {
+        get -> 'period',
+               :$sessionToken is cookie = '',
+               :$date = Date.today.truncated-to('month'),
+               :$end-date = Date.today.truncated-to('month').later(months => 1).pred, {
             Micronomy.get-period(token => $sessionToken,
                                  start-date => Date.new($date),
                                  end-date => Date.new($end-date),
