@@ -39,6 +39,8 @@ sub call-url($url, :%auth, :%headers, :$body, :$method, :$timeout is copy = 2) i
             die $!;
         }
     }
+    trace "{whodunit()} timed out too many times", $token;
+    return {};
 }
 
 sub whodunit() {

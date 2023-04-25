@@ -370,8 +370,6 @@ class Micronomy {
         if $! ~~ X::Cro::HTTP::Error and $!.response.status == 422 {
             $error = "422 Unprocessable Entity";
             trace $error, $token;
-        } elsif $! ~~ X::Cro::HTTP::Error and $!.response.status == 401 {
-            return Micronomy.get-login(reason => "Ogiltig session! ");
         } elsif $! {
             die $!;
         }
@@ -471,6 +469,13 @@ class Micronomy {
         trace "sending timesheet", $token;
         header "X-Frame-Options: DENY";
         template 'timesheet.html.tmpl', %data;
+
+        CATCH {
+            default {
+                trace .Str, "$token";
+                return Micronomy.get-login(reason => "Ogiltig session! ");
+            }
+        }
     }
 
     sub get-week($token, $date is copy = '', :%previous) {
@@ -496,6 +501,7 @@ class Micronomy {
                 },
                 body => '{"data": {"datevar": "' ~ $date ~ '"}}',
             );
+            return {} unless $response;
             return parse-week($response);
 
             CATCH {
