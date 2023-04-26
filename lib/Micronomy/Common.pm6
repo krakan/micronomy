@@ -57,12 +57,20 @@ sub trace($message, $token = '') is export {
     say "$now  $session  $message";
 }
 
+sub error($exception, $token = '') is export {
+    trace "ERROR: {$exception.Str}", $token;
+    for $exception.backtrace.grep(*.file.contains('micronomy')).grep(*.subname).reverse -> $trace {
+        my $file = $trace.file.split("/")[*-1].split(" ")[0];
+        trace "-> $file:{$trace.line}  {$trace.subname}()", $token;
+    }
+}
+
 sub title(Str $job, Str $task --> Str) is export {
     "$task / $job";
 }
 
 sub get-current-week($date is copy) is export {
-    $date = Date.new($date);
+    $date = $date ?? Date.new($date) !! Date.today;
     my $week = $date.week-number;
     my $monday = $date.truncated-to("week");
     my $sunday = $monday.later(days => 6);

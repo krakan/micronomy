@@ -158,9 +158,9 @@ class Micronomy {
         template 'timesheet.html.tmpl', %data;
 
         CATCH {
-            warn "error: invalid data";
+            error $_, $token;
             my %content = get-week($token, Date.today.gist);
-            show-week($token, %content, error => 'invalid data');
+            show-week($token, %content, error => 'okänt fel');
             return {};
         }
     }
@@ -252,6 +252,18 @@ class Micronomy {
         my $end-date = $start-date.later(months => 1).pred;
 
         Micronomy.get-period(:$token, :$start-date, :$end-date);
+
+        CATCH {
+            when X::Cro::HTTP::Error {
+                error $_, $token;
+                return Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
+                return Micronomy.get-login(reason => "felstatus {.response.status}");
+            }
+            default {
+                error $_, $token;
+                return Micronomy.get-login(reason => "okänt fel");
+            }
+        }
     }
 
     method get-period(Str :$token is copy, Date :$start-date, Date :$end-date, Int :$hours-cache is copy = 0) {
@@ -361,7 +373,7 @@ class Micronomy {
                 }
                 last if $next gt $end-date;
                 if DateTime.now > $timeout {
-                    $error = "data collection timed out";
+                    $error = "datainsamling tog för lång tid";
                     trace $error, $token;
                     last;
                 }
@@ -471,9 +483,14 @@ class Micronomy {
         template 'timesheet.html.tmpl', %data;
 
         CATCH {
+            when X::Cro::HTTP::Error {
+                error $_, $token;
+                return Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
+                return Micronomy.get-login(reason => "felstatus {.response.status}");
+            }
             default {
-                trace .Str, "$token";
-                return Micronomy.get-login(reason => "Ogiltig session! ");
+                error $_, $token;
+                return Micronomy.get-login(reason => "okänt fel");
             }
         }
     }
@@ -506,14 +523,14 @@ class Micronomy {
 
             CATCH {
                 when X::Cro::HTTP::Error {
-                    trace "error: " ~ .response.status, $token;
-                    Micronomy.get-login() if .response.status == 401;
+                    error $_, $token;
+                    Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
                     return get-week($token, $date) if .response.status == (404, 409, 422).any;
                     return {};
                 }
                 default {
-                    trace .Str, "$token";
-                    Micronomy.get-login(reason => "Ogiltig session! ");
+                    error $_, $token;
+                    Micronomy.get-login(reason => "okänt fel");
                     return {};
                 }
             }
@@ -540,6 +557,17 @@ class Micronomy {
             show-week($token, %content);
 
         trace "get method done", $token;
+        CATCH {
+            when X::Cro::HTTP::Error {
+                error $_, $token;
+                return Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
+                return Micronomy.get-login(reason => "felstatus {.response.status}");
+            }
+            default {
+                error $_, $token;
+                return Micronomy.get-login(reason => "okänt fel");
+            }
+        }
     }
 
     sub get-favorites($token) {
@@ -576,14 +604,13 @@ class Micronomy {
 
         CATCH {
             when X::Cro::HTTP::Error {
-                warn "error: [" ~ .response.status ~ "]:\n    " ~ $body.join("\n    ");
-                Micronomy.get-login() if .response.status == 401;
+                error $_, $token;
+                Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
                 return {};
             }
             default {
-                trace .Str, "$token";
-                Micronomy.get-login(reason => "Ogiltig session! ");
-                return {};
+                error $_, $token;
+                return Micronomy.get-login(reason => "okänt fel");
             }
         }
     }
@@ -670,11 +697,12 @@ class Micronomy {
         return $containerInstanceId, $concurrency;
 
         CATCH {
-            when X::Cro::HTTP::Error and .response.status == 409 {
-                return get-concurrency($token, $date);
-            }
-            default {
-                return {};
+            when X::Cro::HTTP::Error {
+                if .response.status == 409 {
+                    return get-concurrency($token, $date);
+                } else {
+                    die $_;
+                }
             }
         }
     }
@@ -720,8 +748,7 @@ class Micronomy {
             },
             body => $data,
         );
-        return upsert-data($action, $token, $source, $target, %parameters) if $response.status == 409;
-        return True if $response.status != 200;
+
         $concurrency = get-header($response, 'maconomy-concurrency-control');
 
         # update permanence
@@ -742,8 +769,22 @@ class Micronomy {
                 body => '{"data": {"permanentline":' ~ " $permanent}}",
             );
         }
-        return upsert-data($action, $token, $source, $target, %parameters) if $response.status == 409;
-        return False;
+        return True;
+
+        CATCH {
+            when X::Cro::HTTP::Error {
+                if .response.status == 409 {
+                    return upsert-data($action, $token, $source, $target, %parameters);
+                } else {
+                    error $_, $token;
+                    return False;
+                }
+            }
+            default {
+                error $_, $token;
+                return False;
+            }
+        }
     }
 
     sub delete-row($token, $target, %parameters) {
@@ -776,7 +817,22 @@ class Micronomy {
                 Maconomy-Concurrency-Control => $concurrency,
             },
         );
-        return $response.status == 200 ?? False !! True;
+        return True;
+
+        CATCH {
+            when X::Cro::HTTP::Error {
+                if .response.status == 409 {
+                    return delete-row($token, $target, %parameters);
+                } else {
+                    error $_, $token;
+                    return False;
+                }
+            }
+            default {
+                error $_, $token;
+                return False;
+            }
+        }
     }
 
     sub edit($token, %parameters) {
@@ -791,8 +847,8 @@ class Micronomy {
             my $target = @currentPosition[$row];
             my $was-kept = %parameters{"was-kept-$row"} eq "True" ?? 2 !! 1;
             if %parameters{"keep-$row"} == 0 {
-                my $rc = delete-row($token, $target, %parameters);
-                @errors.push("borttagning av rad $target nekades") if $rc;
+                delete-row($token, $target, %parameters) ||
+                @errors.push("borttagning av rad $target nekades");
 
                 # mark index as deleted in position array
                 @currentPosition[$row] = -1;
@@ -803,8 +859,8 @@ class Micronomy {
 
             } elsif %parameters{"set-task-$row"} or %parameters{"keep-$row"} != $was-kept {
                 %parameters{"task-$row"} = %parameters{"set-task-$row"} if %parameters{"set-task-$row"};
-                my $rc = upsert-data('update', $token, $row, $target, %parameters);
-                @errors.push("uppdatering av rad $target nekades") if $rc;
+                upsert-data('update', $token, $row, $target, %parameters) ||
+                @errors.push("uppdatering av rad $target nekades");
             }
 
             # move lines
@@ -812,15 +868,19 @@ class Micronomy {
             if $newTarget != $row and $newTarget != $target {
                 trace "move row $row from $target to $newTarget", $token;
                 if $newTarget < $target {
-                    my $rc = upsert-data('add', $token, $row, $newTarget, %parameters);
-                    @errors.push("tilläggning av rad $newTarget nekades") if $rc;
-                    $rc = delete-row($token, $target+1, %parameters);
-                    @errors.push("borttagning av rad {$target+1} nekades") if $rc;
+                    if not upsert-data('add', $token, $row, $newTarget, %parameters) {
+                        @errors.push("tilläggning av rad $newTarget nekades");
+                    } else {
+                        delete-row($token, $target+1, %parameters) ||
+                        @errors.push("borttagning av rad {$target+1} nekades");
+                    }
                 } else {
-                    my $rc = upsert-data('add', $token, $row, $newTarget+1, %parameters);
-                    @errors.push("tilläggning av rad {$newTarget+1} nekades") if $rc;
-                    $rc = delete-row($token, $target, %parameters);
-                    @errors.push("borttagning av rad $target nekades") if $rc;
+                    if not upsert-data('add', $token, $row, $newTarget+1, %parameters) {
+                        @errors.push("tilläggning av rad {$newTarget+1} nekades");
+                    } else {
+                        delete-row($token, $target, %parameters) ||
+                        @errors.push("borttagning av rad $target nekades");
+                    }
                 }
                 # move indexes in position array
                 @currentPosition[$row] = $newTarget;
@@ -841,7 +901,7 @@ class Micronomy {
             %parameters{"task-$row"} = %parameters{"job-$row"}.split("/")[1] if $task;
             %parameters{"job-$row"} = %parameters{"job-$row"}.split("/")[0];
             my $rc = upsert-data('add', $token, $row, %parameters{"position-$row"}, %parameters);
-            @errors.push("den nya raden är inte tillåten") if $rc;
+            @errors.push("den nya raden är inte tillåten") unless $rc;
         }
         return @errors.join('<br>');
     }
@@ -920,14 +980,17 @@ class Micronomy {
         header "X-Frame-Options: DENY";
         template 'edit.html.tmpl', %data;
 
-        #CATCH {
-        #    when X::Cro::HTTP::Error {
-        #        warn "error: " ~ .response.status;
-        #        Micronomy.get-login() if .response.status == 401;
-        #        return {};
-        #    }
-        #    Micronomy.get-login(reason => "Ogiltig session! ")
-        #}
+        CATCH {
+            when X::Cro::HTTP::Error {
+                error $_, $token;
+                return Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
+                return Micronomy.get-login(reason => "felstatus  {.response.status}");
+            }
+            default {
+                error $_, $token;
+                return Micronomy.get-login(reason => "okänt fel");
+            }
+        }
     }
 
     sub set(%parameters, $row, $token) {
@@ -937,6 +1000,8 @@ class Micronomy {
         for 1..7 -> $day  {
             my $hours = %parameters{"hours-$row-$day"} || "0";
             $hours = +$hours.subst(",", ".");
+            $hours ~~ s:g/<-[\d.]>//;
+            $hours ||= 0;
             my $previous = %parameters{"hidden-$row-$day"} || 0;
             if $hours ne $previous {
                 @changes.push('"numberday' ~ $day ~ '": ' ~ $hours);
@@ -1018,16 +1083,16 @@ class Micronomy {
 
         CATCH {
             when X::Cro::HTTP::Error {
-                warn "error: " ~ .response.status;
                 if .response.status == 401 {
-                    Micronomy.get-login(reason => "Var vänlig och logga in!");
-                    return;
+                    Micronomy.get-login(reason => "Vänligen logga in!");
+                } else {
+                    error $_, $token;
+                    show-week($token, %content);
                 }
             }
             default {
-                trace .Str, "$token";
-                Micronomy.get-login(reason => "Ogiltig session! ");
-                return {};
+                error $_, $token;
+                show-week($token, %content);
             }
         }
     }
@@ -1068,13 +1133,18 @@ class Micronomy {
             when X::Cro::HTTP::Error {
                 my $body = await .response.body;
                 warn "error: [" ~ .response.status ~ "]:\n    " ~ $body.join("\n    ");
+                error $_, $token;
                 if .response.status == 401 {
-                    Micronomy.get-login(reason => "Var vänlig och logga in!");
+                    Micronomy.get-login(reason => "Vänligen logga in!");
                 } else {
                     %content = get-week($token, %parameters<date>);
                     show-week($token, %content, error => $body<errorMessage>);
                 }
-                return {};
+            }
+            default {
+                error $_, $token;
+                %content = get-week($token, %parameters<date>);
+                show-week($token, %content, error => 'okänt fel');
             }
         }
     }
@@ -1137,7 +1207,8 @@ class Micronomy {
                             }
                         }
                         default {
-                            trace "["~.Str~"] login failed - restarting", $token;
+                            error $_, $token;
+                            trace "login failed - restarting", $token;
                             exit 1;
                         }
                     }
