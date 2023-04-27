@@ -8,6 +8,12 @@
       <div class="content">
         <div class="panel-shadow">
           <div class="panel-title">Calendar</div>
+          <div align="right">
+            <form action="/" method="POST">
+              <input type="hidden" name="date" value="" />
+              <input class="fancy-button back-button" type="submit" value="Tillbaka" />
+            </form>
+          </div>
           <form action="/calendar" method="POST">
             <div class="panel">
               <div class="ics-spacer" id="yearinput">
@@ -23,11 +29,6 @@
           </form>
         </div>
       </div>
-
-      <form action="/" method="POST">
-        <input type="hidden" name="date" value="" />
-        <input class="fancy-button back-button" type="submit" value="Tillbaka" />
-      </form>
 
     <script src="/script/download.js"></script>
       <&foot>
