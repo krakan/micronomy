@@ -48,6 +48,7 @@ class Micronomy {
 
         my %data = (
             period => "vecka $week",
+            year => $periodStart.year,
             action => "/",
             date-action => "/",
             state => ", $weekStatus",
@@ -294,10 +295,10 @@ class Micronomy {
             set-cache(%cache);
         } elsif $hours-cache == -1 {
             %cache = (
-            employeeName => $employee,
-            employeeNumber => $employeeNumber,
-            enabled => False,
-        );
+                employeeName => $employee,
+                employeeNumber => $employeeNumber,
+                enabled => False,
+            );
             set-cache(%cache);
             %cache = get-demo($start-date) if $token eq "demo";
         } else {
