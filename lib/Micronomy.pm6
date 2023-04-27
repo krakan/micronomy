@@ -254,11 +254,6 @@ class Micronomy {
         Micronomy.get-period(:$token, :$start-date, :$end-date);
 
         CATCH {
-            when X::Cro::HTTP::Error {
-                error $_, $token;
-                return Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
-                return Micronomy.get-login(reason => "felstatus {.response.status}");
-            }
             default {
                 error $_, $token;
                 return Micronomy.get-login(reason => "okänt fel");
@@ -524,14 +519,12 @@ class Micronomy {
             CATCH {
                 when X::Cro::HTTP::Error {
                     error $_, $token;
-                    Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
                     return get-week($token, $date) if .response.status == (404, 409, 422).any;
-                    return {};
+                    die $_;
                 }
                 default {
                     error $_, $token;
-                    Micronomy.get-login(reason => "okänt fel");
-                    return {};
+                    die $_;
                 }
             }
         } else {
@@ -559,8 +552,8 @@ class Micronomy {
         trace "get method done", $token;
         CATCH {
             when X::Cro::HTTP::Error {
-                error $_, $token;
                 return Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
+                error $_, $token;
                 return Micronomy.get-login(reason => "felstatus {.response.status}");
             }
             default {
@@ -601,18 +594,6 @@ class Micronomy {
         $body = await $response.body;
 
         return $body;
-
-        CATCH {
-            when X::Cro::HTTP::Error {
-                error $_, $token;
-                Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
-                return {};
-            }
-            default {
-                error $_, $token;
-                return Micronomy.get-login(reason => "okänt fel");
-            }
-        }
     }
 
     sub get-tasks($token, $jobnumber) {
@@ -707,16 +688,17 @@ class Micronomy {
         }
     }
 
-    sub upsert-data($action, $token, $source, $target, %parameters) {
+    sub upsert-row($action, $token, $source, $target, %parameters) {
         return add-demo-data($action, $source, $target, %parameters) if $token eq "demo";
 
         trace "$action data [$source -> $target] " ~ %parameters{"position-$source"}, $token;
         my $numberOfLines = %parameters<rows>;
-        my ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
+        (%parameters<containerInstanceId>, %parameters<concurrency>) =
+            get-concurrency($token, %parameters<date>)
+                           unless %parameters<containerInstanceId> and %parameters<concurrency>;
 
-
-        my $url = "$server/$instances-path/$containerInstanceId/data/panes/table";
-        if (%parameters{"position-$source"} < $numberOfLines) {
+        my $url = "$server/$instances-path/%parameters<containerInstanceId>/data/panes/table";
+        if ($target < $numberOfLines) {
             if $action eq "add" {
                 $url ~= "?row=" ~ $target;
             } else {
@@ -739,50 +721,76 @@ class Micronomy {
         trace "setting row $target to $data", $token;
 
         my $response = call-url(
-            "$url",
+            $url,
             timeout => 3,
             headers => {
                 Authorization => "X-Reconnect $token",
-                Maconomy-Concurrency-Control => $concurrency,
+                Maconomy-Concurrency-Control => %parameters<concurrency>,
                 Content-Type => "application/json",
             },
             body => $data,
         );
+        %parameters<concurrency> = get-header($response, 'maconomy-concurrency-control');
+        return %parameters;
 
-        $concurrency = get-header($response, 'maconomy-concurrency-control');
+        CATCH {
+            when X::Cro::HTTP::Error {
+                if .response.status == 409 {
+                    %parameters<concurrency>:delete;
+                    return upsert-row($action, $token, $source, $target, %parameters);
+                } else {
+                    error $_, $token;
+                    return {};
+                }
+            }
+            default {
+                error $_, $token;
+                return {};
+            }
+        }
+    }
+
+    sub update-permanence($token, $source, $target, %parameters) {
+        return if $token eq "demo";
+        trace "sub update-permanence", $token;
+        (%parameters<containerInstanceId>, %parameters<concurrency>) =
+            get-concurrency($token, %parameters<date>)
+                           unless %parameters<containerInstanceId> and %parameters<concurrency>;
 
         # update permanence
         my $kept = (%parameters{"was-kept-$source"} // "True") eq "True"; # "True"/"False"
         my $keep = %parameters{"keep-$source"} == 2; # 0=remove/1=temporary/2=permanent
-        if $action eq "add" or $kept != $keep {
+        if $kept != $keep {
             my $permanent = $keep.lc;
-            $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$target";
+            my $url = "$server/$instances-path/%parameters<containerInstanceId>/data/panes/table/$target";
             trace "set permanence for row $target to $permanent", $token;
             my $response = call-url(
                 $url,
                 timeout => 3,
                 headers => {
                     Authorization => "X-Reconnect $token",
-                    Maconomy-Concurrency-Control => $concurrency,
+                    Maconomy-Concurrency-Control => %parameters<concurrency>,
                     Content-Type => "application/json",
                 },
                 body => '{"data": {"permanentline":' ~ " $permanent}}",
             );
+            %parameters<concurrency> = get-header($response, 'maconomy-concurrency-control');
         }
-        return True;
+        return %parameters;
 
         CATCH {
             when X::Cro::HTTP::Error {
                 if .response.status == 409 {
-                    return upsert-data($action, $token, $source, $target, %parameters);
+                    %parameters<concurrency>:delete;
+                    return update-permanence($token, $source, $target, %parameters);
                 } else {
                     error $_, $token;
-                    return False;
+                    return {};
                 }
             }
             default {
                 error $_, $token;
-                return False;
+                return {};
             }
         }
     }
@@ -791,46 +799,38 @@ class Micronomy {
         return delete-demo-row($target, %parameters) if $token eq "demo";
         trace "sub delete-row", $token;
 
-        my ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
-        my $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$target";
+        (%parameters<containerInstanceId>, %parameters<concurrency>) =
+            get-concurrency($token, %parameters<date>)
+                           unless %parameters<containerInstanceId> and %parameters<concurrency>;
 
-        # remove permanence
-        trace "prepare row $target for deletion", $token;
-        my $response = call-url(
-            $url,
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Maconomy-Concurrency-Control => $concurrency,
-                Content-Type => "application/json",
-            },
-            body => '{"data": {"permanentline": false}}'
-        );
-        $concurrency = get-header($response, 'maconomy-concurrency-control');
+        my $url = "$server/$instances-path/%parameters<containerInstanceId>/data/panes/table/$target";
 
         # delete row
         trace "delete row $target", $token;
-        $response = call-url(
+        my $response = call-url(
             $url,
             method => 'delete',
             headers => {
                 Authorization => "X-Reconnect $token",
-                Maconomy-Concurrency-Control => $concurrency,
+                Maconomy-Concurrency-Control => %parameters<concurrency>,
             },
         );
-        return True;
+        %parameters<concurrency> = get-header($response, 'maconomy-concurrency-control');
+        return $%parameters;
 
         CATCH {
             when X::Cro::HTTP::Error {
                 if .response.status == 409 {
+                    %parameters<concurrency>:delete;
                     return delete-row($token, $target, %parameters);
                 } else {
                     error $_, $token;
-                    return False;
+                    return {};
                 }
             }
             default {
                 error $_, $token;
-                return False;
+                return {};
             }
         }
     }
@@ -842,56 +842,98 @@ class Micronomy {
         my @errors = ();
 
         # delete, update or move lines
-        for (^$numberOfLines).sort({@currentPosition[$_]}) -> $row {
-            trace "positions "~@currentPosition;
+        for ^$numberOfLines -> $row {
+            trace "positions[$row] "~@currentPosition;
             my $target = @currentPosition[$row];
             my $was-kept = %parameters{"was-kept-$row"} eq "True" ?? 2 !! 1;
-            if %parameters{"keep-$row"} == 0 {
-                delete-row($token, $target, %parameters) ||
-                @errors.push("borttagning av rad $target nekades");
+            %parameters{"task-$row"} = %parameters{"set-task-$row"} if %parameters{"set-task-$row"};
 
-                # mark index as deleted in position array
-                @currentPosition[$row] = -1;
-                for ^@currentPosition -> $position {
-                    @currentPosition[$position]-- if @currentPosition[$position] > $target;
+            # delete line
+            if %parameters{"keep-$row"} == 0 {
+                # remove permanence
+                trace "prepare row $target for deletion", $token;
+                my %result = update-permanence($token, $row, $target, %parameters);
+                if %result {
+                    %parameters<containerInstanceId> = %result<containerInstanceId>;
+                    %parameters<concurrency> = %result<concurrency>;
+                }
+                %result = delete-row($token, $target, %parameters);
+                if %result {
+                    # mark index as deleted in position array
+                    @currentPosition[$row] = -1;
+                    for ^@currentPosition -> $position {
+                        @currentPosition[$position]-- if @currentPosition[$position] > $target;
+                    }
+                    %parameters<containerInstanceId> = %result<containerInstanceId>;
+                    %parameters<concurrency> = %result<concurrency>;
+                } else {
+                    @errors.push("borttagning av rad $target misslyckades");
                 }
                 next;
-
-            } elsif %parameters{"set-task-$row"} or %parameters{"keep-$row"} != $was-kept {
-                %parameters{"task-$row"} = %parameters{"set-task-$row"} if %parameters{"set-task-$row"};
-                upsert-data('update', $token, $row, $target, %parameters) ||
-                @errors.push("uppdatering av rad $target nekades");
             }
 
-            # move lines
+            # move line
             my $newTarget = %parameters{"position-$row"};
             if $newTarget != $row and $newTarget != $target {
                 trace "move row $row from $target to $newTarget", $token;
                 if $newTarget < $target {
-                    if not upsert-data('add', $token, $row, $newTarget, %parameters) {
-                        @errors.push("tilläggning av rad $newTarget nekades");
+                    my %result = upsert-row('add', $token, $row, $newTarget, %parameters);
+                    if %result {
+                        %parameters<containerInstanceId> = %result<containerInstanceId>;
+                        %parameters<concurrency> = %result<concurrency>;
+                        %result = update-permanence($token, $row, $newTarget, %parameters) ||
+                                                   @errors.push("uppdatering av rad $target misslyckades");
+                        %parameters<concurrency> = %result<concurrency> if %result;
+                        %result = delete-row($token, $target+1, %parameters) ||
+                                            @errors.push("borttagning av rad {$target+1} misslyckades");
+                        %parameters<concurrency> = %result<concurrency> if %result;
                     } else {
-                        delete-row($token, $target+1, %parameters) ||
-                        @errors.push("borttagning av rad {$target+1} nekades");
+                        @errors.push("tilläggning av rad $newTarget misslyckades");
                     }
                 } else {
-                    if not upsert-data('add', $token, $row, $newTarget+1, %parameters) {
-                        @errors.push("tilläggning av rad {$newTarget+1} nekades");
+                    my %result = upsert-row('add', $token, $row, $newTarget+1, %parameters);
+                    if %result {
+                        %parameters<containerInstanceId> = %result<containerInstanceId>;
+                        %parameters<concurrency> = %result<concurrency>;
+                        %result = update-permanence($token, $row, $newTarget+1, %parameters) ||
+                                             @errors.push("uppdatering av rad $target misslyckades");
+                        %parameters<concurrency> = %result<concurrency> if %result;
+                        %result = delete-row($token, $target, %parameters) ||
+                                            @errors.push("borttagning av rad $target misslyckades");
+                        %parameters<concurrency> = %result<concurrency> if %result;
                     } else {
-                        delete-row($token, $target, %parameters) ||
-                        @errors.push("borttagning av rad $target nekades");
+                        @errors.push("tilläggning av rad {$newTarget+1} misslyckades");
                     }
                 }
                 # move indexes in position array
                 @currentPosition[$row] = $newTarget;
                 for ^@currentPosition -> $position {
+                    next if $position == $row;
                     my $other = @currentPosition[$position];
-                    @currentPosition[$position]-- if $newTarget > $other > $target;
-                    @currentPosition[$position]++ if $newTarget < $other < $target;
+                    @currentPosition[$position]-- if $newTarget >= $other > $target;
+                    @currentPosition[$position]++ if $newTarget <= $other < $target;
+                }
+            } else {
+                # update line without moving
+                if %parameters{"set-task-$row"} {
+                    my %result = upsert-row('update', $token, $row, $target, %parameters) ||
+                                           @errors.push("uppdatering av rad $target misslyckades");
+                    if %result {
+                        %parameters<containerInstanceId> = %result<containerInstanceId>;
+                        %parameters<concurrency> = %result<concurrency>;
+                    }
+                }
+                if %parameters{"keep-$row"} != $was-kept {
+                    my %result = update-permanence($token, $row, $target, %parameters) ||
+                                                  @errors.push("uppdatering av rad $target misslyckades");
+                    if %result {
+                        %parameters<containerInstanceId> = %result<containerInstanceId>;
+                        %parameters<concurrency> = %result<concurrency>;
+                    }
                 }
             }
         }
-        trace "positions "~@currentPosition;
+        trace "positions[*] "~@currentPosition;
 
         # add new line
         my $row = $numberOfLines;
@@ -900,8 +942,8 @@ class Micronomy {
             my $task = %parameters{"job-$row"}.split("/")[1];
             %parameters{"task-$row"} = %parameters{"job-$row"}.split("/")[1] if $task;
             %parameters{"job-$row"} = %parameters{"job-$row"}.split("/")[0];
-            my $rc = upsert-data('add', $token, $row, %parameters{"position-$row"}, %parameters);
-            @errors.push("den nya raden är inte tillåten") unless $rc;
+            upsert-row('add', $token, $row, %parameters{"position-$row"}, %parameters) ||
+            @errors.push("den nya raden är inte tillåten");
         }
         return @errors.join('<br>');
     }
@@ -984,7 +1026,7 @@ class Micronomy {
             when X::Cro::HTTP::Error {
                 error $_, $token;
                 return Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
-                return Micronomy.get-login(reason => "felstatus  {.response.status}");
+                return Micronomy.get-login(reason => "felstatus {.response.status}");
             }
             default {
                 error $_, $token;
@@ -1029,10 +1071,9 @@ class Micronomy {
                 }
 
                 if $! ~~ X::Cro::HTTP::Error and $!.response.status == 409 and $wait < 9 {
+                    ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
+                    $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$row";
                     trace "set received 409 - retrying [{$wait+1}/9]", $token;
-                    my %content = get-week($token, %parameters<date>, previous => %parameters);
-                    $concurrency = %content<concurrency>;
-                    $containerInstanceId = %content<containerInstanceId>;
                 } else {
                     die $!;
                 }
@@ -1084,7 +1125,7 @@ class Micronomy {
         CATCH {
             when X::Cro::HTTP::Error {
                 if .response.status == 401 {
-                    Micronomy.get-login(reason => "Vänligen logga in!");
+                    return Micronomy.get-login(reason => "Vänligen logga in!");
                 } else {
                     error $_, $token;
                     show-week($token, %content);
@@ -1163,6 +1204,7 @@ class Micronomy {
         header "X-Frame-Options: DENY";
         template 'login.html.tmpl', %data;
         trace "sent login page";
+        return {};
     }
 
     method login(:$username = '', :$password) {
@@ -1201,14 +1243,22 @@ class Micronomy {
                             if $status eq "[401] An internal error occurred." and $wait < 9 {
                                 trace "login received '$status' - retrying [{$wait+1}/9]", $token;
                                 next;
+                            } elsif .response.status == 401 {
+                                return Micronomy.get-login(reason => "fel användarnamn eller lösenord");
                             } elsif .response.status == 500 {
                                 trace "login failed '$status' - restarting", $token;
+                                Micronomy.get-login(reason => "$status - försök igen om ett tag");
+                                sleep 2;
                                 exit 1;
+                            } else {
+                                return Micronomy.get-login(reason => "$status");
                             }
                         }
                         default {
                             error $_, $token;
                             trace "login failed - restarting", $token;
+                            Micronomy.get-login(reason => "okänt fel - försök igen om ett tag");
+                            sleep 2;
                             exit 1;
                         }
                     }

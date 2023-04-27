@@ -57,8 +57,8 @@ sub trace($message, $token = '') is export {
     say "$now  $session  $message";
 }
 
-sub error($exception, $token = '') is export {
-    trace "ERROR: {$exception.Str}", $token;
+sub error($exception, $token = '', $label = 'error') is export {
+    trace "$label: {$exception.Str}", $token;
     for $exception.backtrace.grep(*.file.contains('micronomy')).grep(*.subname).reverse -> $trace {
         my $file = $trace.file.split("/")[*-1].split(" ")[0];
         trace "-> $file:{$trace.line}  {$trace.subname}()", $token;
