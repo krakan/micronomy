@@ -176,9 +176,9 @@
         <!.state>
         <form action="/period" method="POST">
           <input type="hidden" name="date" value="<.date>" />
-          <input type="hidden" name="end-date" value="<.end-date>" />
-          <input type="checkbox" name="hours-cache" <?.hours-cache>checked</?> /> Mellanlagra godk&auml;nda timmar
-          <input type="submit" name="set-cache" class="fancy-button edit-button" value="Spara inst&auml;llning" />
+          <input type="hidden" name="end-date" value="<.end-date>" /><!.hours-cache>
+          <input type="submit" name="set-cache" class="fancy-button edit-button" value="Mellanlagra godk&auml;nda timmar" /></!><?.hours-cache>
+          <input type="submit" name="unset-cache" class="fancy-button edit-button" value="Sluta mellanlagra godk&auml;nda timmar" /></?>
         </form>
         <form action="/" method="POST">
           <input type="hidden" name="date" value="<.today>" />

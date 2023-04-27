@@ -54,7 +54,7 @@ sub routes() is export {
 
         post -> 'period', :$sessionToken is cookie = '' {
             request-body -> (*%parameters) {
-                my $hours-cache = %parameters<set-cache> ?? %parameters<hours-cache> ?? 1 !! -1 !! 0;
+                my $hours-cache = %parameters<set-cache> ?? 1 !! %parameters<unset-cache> ?? -1 !! 0;
                 Micronomy.get-period(token => $sessionToken,
                                      start-date => Date.new(%parameters<date>),
                                      end-date => Date.new(%parameters<end-date>),
