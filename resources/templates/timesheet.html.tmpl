@@ -4,7 +4,7 @@
     <div class="center-container">
       <div class="content">
 
-        <h2><.employee>, <.period><.state></h2>
+        <h2><.employee>, <.period><.status></h2>
 
         <nav class="nav--bar">
           <form class="nav--panel" action="<.action>" method="POST">
@@ -18,14 +18,14 @@
             <form class="nav--panel" action="<.date-action>" method="POST">
               <input type="date" min="2019-05-01" max="<.last-of-month>" class="date-input" name="date" value="<.date>">
               <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
-              <input type="hidden" name="concurrency" value="<.concurrency>"><!.state>
+              <input type="hidden" name="concurrency" value="<.concurrency>"><!.status>
               <input type="hidden" name="hours-cache" value="on">
               <input type="hidden" name="set-cache" value="">
               <input type="date" min="2019-05-01" max="<.last-of-month>" class="date-input" name="end-date" value="<.end-date>"></!>
               <input id="selectedWk" type="submit" class="fancy-button" name="submit" value="V&auml;lj">
             </form>
 
-            <?.state>
+            <?.status>
             <form class="nav--panel" action="/" method="POST">
               <input type="hidden" name="date" value="<.today>">
               <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
@@ -83,8 +83,9 @@
 
             </div>
 
-            <?.state>
+            <?.status>
             <div class="save-button-container">
+              <input type="hidden" name="state" value="<.state>" />
               <input type="submit" class="save-button" value="Spara" />
             </div>
             </?>
@@ -141,7 +142,7 @@
           </div>
         </form>
 
-        <?.state>
+        <?.status>
         <form class="reason-container" action="/submit" method="POST">
           <input type="hidden" name="concurrency" value="<.concurrency>" />
           <input type="hidden" name="containerInstanceId" value="<.containerInstanceId>">
@@ -173,7 +174,7 @@
           <input type="submit" class="fancy-button" value="Logga ut" />
         </form>
         </?>
-        <!.state>
+        <!.status>
         <form action="/period" method="POST">
           <input type="hidden" name="date" value="<.date>" />
           <input type="hidden" name="end-date" value="<.end-date>" /><!.hours-cache>

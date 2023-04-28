@@ -51,7 +51,8 @@ class Micronomy {
             year => $periodStart.year,
             action => "/",
             date-action => "/",
-            state => ", $weekStatus",
+            status => ", $weekStatus",
+            state => %week<state>,
             next => $next,
             previous => $previous,
             today => $today.gist,
@@ -395,7 +396,7 @@ class Micronomy {
             period => "$start-date - {$current.pred}",
             action => "/month",
             date-action => "/period",
-            state => "",
+            status => "",
             next => $next,
             previous => $previous,
             today => $today.gist,
@@ -1039,6 +1040,7 @@ class Micronomy {
     sub set(%parameters, $row, $token) {
         return set-demo(%parameters, $row) if $token eq "demo";
 
+        $retries = 2 if %parameters<state> > 1;
         my @changes;
         for 1..7 -> $day  {
             my $hours = %parameters{"hours-$row-$day"} || "0";
@@ -1056,7 +1058,7 @@ class Micronomy {
             my $containerInstanceId = %parameters<containerInstanceId>;
             my $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$row";
 
-            for 0 .. $retries -> $wait {
+            for 0..$retries -> $wait {
                 sleep $wait/10;
                 try {
                     my $response = call-url(
@@ -1071,10 +1073,10 @@ class Micronomy {
                     return parse-week($response);
                 }
 
-                if $! ~~ X::Cro::HTTP::Error and $!.response.status == 409 and $wait < 9 {
+                if $! ~~ X::Cro::HTTP::Error and $!.response.status == 409 and $wait < $retries {
                     ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
                     $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$row";
-                    trace "set received 409 - retrying [{$wait+1}/9]", $token;
+                    trace "set received {$!.response.status} - retrying [{$wait+1}/$retries]", $token;
                 } else {
                     die $!;
                 }
@@ -1129,12 +1131,16 @@ class Micronomy {
                     return Micronomy.get-login(reason => "Vänligen logga in!");
                 } else {
                     error $_, $token;
-                    show-week($token, %content);
+                    %parameters<concurrency>:delete;
+                    %content = get-week($token, %parameters<date>, previous => %parameters) unless %content;
+                    show-week($token, %content, error => "{$_.response.status} - servern tillät inte uppdateringen");
                 }
             }
             default {
                 error $_, $token;
-                show-week($token, %content);
+                %parameters<concurrency>:delete;
+                %content = get-week($token, %parameters<date>, previous => %parameters) unless %content;
+                show-week($token, %content, error => "okänt fel");
             }
         }
     }
@@ -1216,7 +1222,7 @@ class Micronomy {
                 $token = "demo";
             } else {
                 my $url = "$server/$auth-path";
-                for 0 .. $retries -> $wait {
+                for 0..$retries -> $wait {
                     sleep $wait/10;
 
                     my $response = call-url(
