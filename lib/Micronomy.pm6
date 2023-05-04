@@ -1,13 +1,13 @@
 use Cro::HTTP::Router;
-use Cro::HTTP::Client;
 use Cro::WebApp::Template;
 use Cro::HTTP::Cookie;
 use URI::Encode;
 
 use Micronomy::Cache;
+use Micronomy::Calendar;
 use Micronomy::Common;
 use Micronomy::Demo;
-use Micronomy::Calendar;
+use Micronomy::Sync;
 
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
@@ -21,22 +21,23 @@ class Micronomy {
     my $retries = 10;
     template-location 'resources/templates/';
 
-    sub get-header($response, $header) {
-        for $response.headers -> $key {
-            return $key.value if $key.name.lc eq $header.lc;
-        }
-    }
-
     sub show-week($token, %cache, :$error) {
-        trace "show-week", $token;
+        my $date = %cache<currentWeek> || Date.today;
+        trace "show-week $date", $token;
 
-        my ($week-name, $periodStart, $year, $month, $mday) = get-current-week(%cache<currentWeek>);
-        my %week = %cache<weeks>{$year}{$month}{$mday};
+        my ($week-name, $periodStart) = get-current-week($date);
+        my %week = cached-week($periodStart, %cache) || {};
+        if not %week or not %week<synched> or DateTime.new(%week<synched>) < DateTime.now.earlier(minutes => 5) {
+            %week<state> = -1;
+            sync(%cache<employeeNumber>, $token, {week => $periodStart});
+        }
+
         my $week = %week<name>;
         %week<rows> //= ();
 
+        my $weekStatus = "Laddar ...";
         my @weekStatus = <Öppen Avlämnad Godkänd>;
-        my $weekStatus = @weekStatus[%week<state>];
+        $weekStatus = @weekStatus[%week<state>] if %week<state>:exists and %week<state> >= 0;;
 
         my $today = Date.today;
         my $previous = $periodStart.earlier(days => 1);
@@ -50,6 +51,7 @@ class Micronomy {
             period => "vecka $week",
             year => $periodStart.year,
             action => "/",
+            is-week => True,
             date-action => "/",
             status => ", $weekStatus",
             state => %week<state>,
@@ -58,21 +60,21 @@ class Micronomy {
             today => $today.gist,
             last-of-month => $today.truncated-to('month').later(months => 1).pred,
             error => $error // '',
-            containerInstanceId => %cache<containerInstanceId>,
-            concurrency => %cache<concurrency>,
             employee => %cache<employeeName>,
-            date => %cache<currentDate>,
-            total => %week<totals><reported>,
-            fixed => %week<totals><fixed>,
-            overtime => %week<totals><overtime>,
-            invoiceable => %week<totals><invoiceable>,
+            date => $date,
+            total => %week<totals><reported> // 0,
+            fixed => %week<totals><fixed> // 0,
+            overtime => %week<totals><overtime> // 0,
+            invoiceable => %week<totals><invoiceable> // 0,
             filler => -1,
             rowCount => +%week<rows>,
             rows => [],
         );
 
         for ^%week<rows> -> $row {
-            %data<filler> = $row if %cache<jobs>{%week<rows>[$row]<job>}<tasks>{%week<rows>[$row]<task>} eq "Tjänstledig mot RAM";
+            my $jobId = %week<rows>[$row]<job>;
+            my $taskId = %week<rows>[$row]<task>;
+            %data<filler> = $row if %cache<jobs>{$jobId}<tasks>{$taskId} eq "Tjänstledig mot RAM";
         }
 
         for 1..7 -> $wday {
@@ -88,7 +90,7 @@ class Micronomy {
         my @rows;
         for ^%week<rows> -> $row {
             my %rowData = %week<rows>[$row];
-            my $status = %rowData<state>;
+            my $status = %rowData<state> // "nil";
             $status = "approved" if $status eq "nil" and %week<state> == 2;
             given $status {
                 when "nil" {
@@ -116,7 +118,6 @@ class Micronomy {
                 status => $status,
                 disabled => $row == %data<filler>,
             );
-
             my @rowdays = [];
             for 1..7 -> $wday {
                 my $disabled = $periodStart.month ne $previousSunday.later(days => $wday).month;
@@ -161,89 +162,10 @@ class Micronomy {
 
         CATCH {
             error $_, $token;
-            my %content = get-week($token, Date.today.gist);
-            show-week($token, %content, error => 'okänt fel');
+            #my %content = get-week($token, Date.today.gist);
+            #show-week($token, %content, error => 'okänt fel');
             return {};
         }
-    }
-
-    sub parse-week($response) {
-        trace "parse-week";
-        my %content = await $response.body;
-
-        my %card = %content<panes><card><records>[0]<data>;
-        my @records = @(%content<panes><table><records>);
-        my $rowCount = %content<panes><table><meta><rowCount>;
-
-        my $weekstatus = 0;
-        $weekstatus = 1 if @records[0]<data><submitted>;
-        $weekstatus = 2 if %card<approvedvar>;
-
-        my %cache = get-cache(%card<employeenumber>);
-
-        %cache<employeeName> = %card<employeenamevar>;
-        %cache<employeeNumber> = %card<employeenumber>;
-        %cache<concurrency> = get-header($response, 'maconomy-concurrency-control');
-        %cache<containerInstanceId> = %content<meta><containerInstanceId>;
-
-        my %weekData = (
-            name => %card<weeknumbervar> ~ %card<partvar>,
-            state => $weekstatus,
-            totals => {
-                reported => %card<totalnumberofweekvar>,
-                fixed => %card<fixednumberweekvar>,
-                overtime => %card<overtimenumberweekvar>,
-                invoiceable => %card<invoiceabletimedayweekvar>,
-            },
-        );
-
-        for 1..7 -> $wday {
-            my %day;
-            %day<reported> = %card{"totalnumberday{$wday}var"} if %card{"totalnumberday{$wday}var"};
-            %day<fixed> = %card{"fixednumberday{$wday}var"} if %card{"fixednumberday{$wday}var"};
-            %day<overtime> = %card{"overtimenumberday{$wday}var"} if %card{"overtimenumberday{$wday}var"};
-            %day<invoiceable> = %card{"invoiceabletimeday{$wday}var"} if %card{"invoiceabletimeday{$wday}var"};
-            %weekData<totals><days>{$wday} = %day if %day.keys;
-        }
-
-        for ^$rowCount -> $row {
-            my %rowData = @records[$row]<data>;
-            my $jobName = %rowData<jobnamevar>;
-            my $jobNumber = %rowData<jobnumber>;
-            my $taskNumber = %rowData<taskname>;
-            my $taskName = %rowData<entrytext>;
-
-            %cache<jobs>{$jobNumber}<name> = $jobName;
-            %cache<jobs>{$jobNumber}<tasks>{$taskNumber} = $taskName;
-
-            my $total = @records[$row]<data><weektotal>;
-
-            %weekData<rows>[$row] = {
-                job => $jobNumber,
-                task => $taskNumber,
-            };
-            %weekData<rows>[$row]<temp> = True unless @records[$row]<data><permanentline>;
-            %weekData<rows>[$row]<total> = $total if $total;
-            for 1..7 -> $wday {
-                my $hours = @records[$row]<data>{"numberday{$wday}"};
-                %weekData<rows>[$row]<hours>{$wday} = $hours if $hours;
-            }
-        }
-
-        my ($week-name, $periodStart, $year, $month, $mday) = get-current-week(%card<periodstartvar>);
-        %cache<weeks>{$year}{$month}{$mday} = %weekData;
-
-        set-cache(%cache);
-
-        %cache<currentWeek> = %card<periodstartvar>;
-        %cache<currentDate> = %card<datevar>;
-        for ^$rowCount -> $row {
-            my %rowData = @records[$row]<data>;
-            %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<state> = %rowData<approvalstatus>;
-            %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency> = @records[$row]<meta><concurrencyControl>;
-        }
-
-        return %cache;
     }
 
     method get-month(:$token is copy, :$date) {
@@ -268,43 +190,10 @@ class Micronomy {
         $token = fix-token($token);
         trace "get-period $start-date", $token;
 
-        my ($employee, $employeeNumber, %cache);
-        if $token ne "demo" {
-            my $url = "$server/$environment-path=user.employeeinfo.name1,user.info.employeenumber";
-
-            my $response = call-url(
-                $url,
-                headers => {
-                    Authorization => "X-Reconnect $token",
-                    Content-Type => "application/json",
-                },
-            );
-            my %content = await $response.body;
-            $employee = %content<user><employeeinfo><name1><string><value>;
-            $employeeNumber = %content<user><info><employeenumber><string><value>;
-            %cache = get-cache($employeeNumber);
-        } else {
-            %cache = get-demo($start-date);
-            $employee = %cache<employeeName>;
-            $employeeNumber = %cache<employeeNumber>;
-        }
-
-        if $hours-cache == 1 {
-            %cache<employeeName> = $employee;
-            %cache<employeeNumber> = $employeeNumber;
-            %cache<enabled> = True;
-            set-cache(%cache);
-        } elsif $hours-cache == -1 {
-            %cache = (
-                employeeName => $employee,
-                employeeNumber => $employeeNumber,
-                enabled => False,
-            );
-            set-cache(%cache);
-            %cache = get-demo($start-date) if $token eq "demo";
-        } else {
-            $hours-cache = %cache<enabled> // False;
-        }
+        my %employee = get-session($token);
+        my $employee = %employee<name>;
+        my $employeeNumber = %employee<number>;
+        my %cache = get-cache($employeeNumber);
 
         my $bucketSize = 'week';
         my $previous = $start-date.earlier(days => 1);
@@ -320,68 +209,73 @@ class Micronomy {
         my $current = $start-date;
         my $containerInstanceId = "";
         my $error = "";
-        try {
-            for 0..* -> $week {
-                my $bucket = $current.truncated-to($bucketSize);
+        my $status = "";
+        for 0..* -> $week {
+            my $bucket = $current.truncated-to($bucketSize);
 
-                my ($week-name, $week-start, $year, $month, $mday) = get-current-week($current);
-                if %cache<weeks>{$year}{$month}{$mday}:exists {
-                    trace "using cached week $current", $token;
-                } elsif $current lt '2019-05-01' {
+            my ($week-name, $week-start, $year, $month, $mday) = get-current-week($current);
+            if (
+                (%cache<weeks>{$year}{$month}{$mday}:exists) and
+                (
+                    (
+                        %cache<weeks>{$year}{$month}{$mday}<state> == 2
+                    ) or (
+                        %cache<weeks>{$year}{$month}{$mday}<synched> and
+                        DateTime.new(%cache<weeks>{$year}{$month}{$mday}<synched>) >
+                        DateTime.now.earlier(minutes => 5)
+                    )
+                )
+            ) {
+                # cached week is Approved or recently synched
+                trace "using cached week $current", $token;
+            } else {
+                if $current lt '2019-05-01' {
                     trace "ignoring week before 2019-05-01", $token;
-                    %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
-                    %cache<weeks>{$year}{$month}{$mday}<totals><fixed> = 0;
-                    %cache<weeks>{$year}{$month}{$mday}<totals><overtime> = 0;
-                    %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> = 0;
-                    %cache<weeks>{$year}{$month}{$mday}<rows> = ();
-                } elsif $token eq "demo" {
-                    %cache = get-demo($current);
                 } else {
-                    %cache = get-week($token, $current.gist, previous => %cache);
-                    $containerInstanceId = %cache<containerInstanceId>;
+                    $status = ", Laddar ...";
+                    sync($employeeNumber, $token, {week => $week-start});
                 }
+                %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<totals><fixed> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<totals><overtime> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> = 0;
+                %cache<weeks>{$year}{$month}{$mday}<rows> = ();
+            }
 
-                %totals<reported>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
-                %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><fixed> // 0;
-                %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><overtime> // 0;;
-                %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> // 0;;
+            %totals<reported>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
+            %totals<fixed>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><fixed> // 0;
+            %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><overtime> // 0;;
+            %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> // 0;;
 
-                for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> $row {
-                    last unless $row;
-                    my $job = $row<job>;
-                    my $task = $row<task>;
-                    for $row<hours>.keys -> $wday {
-                        my $date = $current.later(days => $wday - 1).gist;
-                        next if $date lt $start-date.gist;
-                        last if $date gt $end-date.gist;
+            for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> $row {
+                last unless $row;
+                my $job = $row<job>;
+                my $task = $row<task>;
+                for $row<hours>.keys -> $wday {
+                    my $date = $current.later(days => $wday - 1).gist;
+                    next if $date lt $start-date.gist;
+                    last if $date gt $end-date.gist;
 
-                        my $hours = $row<hours>{$wday};
-                        unless %sums{$job}{$task}<title>:exists {
-                            %sums{$job}{$task}<title> = title(%cache<jobs>{$job}<name>, %cache<jobs>{$job}<tasks>{$task});
-                        }
-                        %sums{$job}{$task}<bucket>{$bucket} += $hours;
+                    my $hours = $row<hours>{$wday};
+                    unless %sums{$job}{$task}<title>:exists {
+                        %sums{$job}{$task}<title> = title(%cache<jobs>{$job}<name>, %cache<jobs>{$job}<tasks>{$task});
                     }
-                }
-
-                my $next = $current.later(weeks => 1).truncated-to("week");
-                if $next.month != $current.month and $next.day > 1 {
-                    $current = $next.earlier(days => 1).truncated-to('month');
-                } else {
-                    $current = $next;
-                }
-                last if $next gt $end-date;
-                if DateTime.now > $timeout {
-                    $error = "datainsamling tog för lång tid";
-                    trace $error, $token;
-                    last;
+                    %sums{$job}{$task}<bucket>{$bucket} += $hours;
                 }
             }
-        }
-        if $! ~~ X::Cro::HTTP::Error and $!.response.status == 422 {
-            $error = "422 Unprocessable Entity";
-            trace $error, $token;
-        } elsif $! {
-            die $!;
+
+            my $next = $current.later(weeks => 1).truncated-to("week");
+            if $next.month != $current.month and $next.day > 1 {
+                $current = $next.earlier(days => 1).truncated-to('month');
+            } else {
+                $current = $next;
+            }
+            last if $next gt $end-date;
+            if DateTime.now > $timeout {
+                $error = "datainsamling tog för lång tid";
+                trace $error, $token;
+                last;
+            }
         }
 
         my @buckets = %totals<reported>.keys.sort;
@@ -396,8 +290,9 @@ class Micronomy {
         my %data = (
             period => "$start-date - {$current.pred}",
             action => "/month",
+            is-week => False,
             date-action => "/period",
-            status => "",
+            status => $status,
             next => $next,
             previous => $previous,
             today => $today.gist,
@@ -493,48 +388,6 @@ class Micronomy {
         }
     }
 
-    sub get-week($token, $date is copy = '', :%previous) {
-        $date ||= DateTime.now.earlier(hours => 12).yyyy-mm-dd;
-        trace "sub get-week $date", $token;
-
-        if $token ne "demo" {
-            my $containerInstanceId = %previous<containerInstanceId>;
-            my $concurrency = %previous<concurrency>;
-
-            unless $containerInstanceId and $concurrency {
-                ($containerInstanceId, $concurrency) = get-concurrency($token, $date);
-            }
-
-            my $url = "$server/$instances-path/$containerInstanceId/data/panes/card/0";
-            trace "sub get-week request", $token;
-            my $response = call-url(
-                $url,
-                headers => {
-                    Authorization => "X-Reconnect $token",
-                    Content-Type => "application/json",
-                    Maconomy-Concurrency-Control => "$concurrency",
-                },
-                body => '{"data": {"datevar": "' ~ $date ~ '"}}',
-            );
-            return {} unless $response;
-            return parse-week($response);
-
-            CATCH {
-                when X::Cro::HTTP::Error {
-                    error $_, $token;
-                    return get-week($token, $date) if .response.status == (404, 409, 422).any;
-                    die $_;
-                }
-                default {
-                    error $_, $token;
-                    die $_;
-                }
-            }
-        } else {
-            return get-demo($date);
-        }
-    }
-
     sub fix-token(Str $token) {
         return $token if $token eq 'demo';
         return "bm90IGxvZ2dlZCBpbg==" unless $token;
@@ -549,8 +402,11 @@ class Micronomy {
     method get(:$token is copy, :$date = '') {
         $token = fix-token($token);
         trace "get $date", $token;
-        my %content = get-week($token, $date) and
-            show-week($token, %content);
+        my %employee = get-session($token);
+        my %content = get-cache(%employee<number>);
+        %content<currentWeek> = $date;
+        %content<employeeName> //= %employee<name>;
+        show-week($token, %content);
 
         trace "get method done", $token;
         CATCH {
@@ -628,67 +484,6 @@ class Micronomy {
             );
         }
         return @tasks;
-    }
-
-    sub get-concurrency($token, $date) {
-        trace "get concurrency", $token;
-        return '"card"="demo", "table"="demo"' if $token eq "demo";
-
-        # get card id
-        my $url = "$server/$instances-path";
-        my $response = call-url(
-            $url,
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
-            },
-            body => '{"panes":{}}',
-        );
-
-        my %content = await $response.body;
-        my $containerInstanceId = %content<meta><containerInstanceId>;
-        my $concurrency = get-header($response, 'maconomy-concurrency-control');
-        my $employeeNumber = 0;
-
-        trace "get concurrency employeeNumber", $token;
-        # refresh concurrency (sic!)
-        $response = call-url(
-            "$url/$containerInstanceId/data;any",
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Maconomy-Concurrency-Control => $concurrency,
-                Content-Type => "application/json",
-                Content-Length => 0,
-            },
-        );
-        $concurrency = get-header($response, 'maconomy-concurrency-control');
-        %content = await $response.body;
-        $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
-
-        trace "get concurrency concurrency", $token;
-        $response = call-url(
-            "$url/$containerInstanceId/data/panes/card/0",
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Maconomy-Concurrency-Control => $concurrency,
-                Content-Type => "application/json",
-            },
-            body => '{"data":{"datevar":"' ~ $date ~ '","employeenumbervar":"' ~ $employeeNumber ~ '"}}',
-        );
-        $concurrency = get-header($response, 'maconomy-concurrency-control');
-        %content = await $response.body;
-
-        return $containerInstanceId, $concurrency;
-
-        CATCH {
-            when X::Cro::HTTP::Error {
-                if .response.status == 409 {
-                    return get-concurrency($token, $date);
-                } else {
-                    die $_;
-                }
-            }
-        }
     }
 
     sub upsert-row($action, $token, $source, $target, %parameters) {
@@ -1119,9 +914,10 @@ class Micronomy {
             }
         }
 
-        %content = get-week($token, %parameters<date>, previous => %parameters) unless %content;
-        %content<last-target> =  %parameters<last-target>;
-
+        my %employee = get-session($token);
+        %content = get-cache(%employee<number>);
+        %content<currentWeek> = %parameters<date>;
+        %content<employeeName> //= %employee<name>;
         show-week($token, %content);
 
         return;
@@ -1275,6 +1071,23 @@ class Micronomy {
         }
 
         if $token {
+            if $token eq "demo" {
+                cache-session("demo", "demo", "Nils Nilsson");
+            } else {
+                my $url = "$server/$environment-path=user.employeeinfo.name1,user.info.employeenumber";
+                my $response = call-url(
+                    $url,
+                    headers => {
+                        Authorization => "X-Reconnect $token",
+                        Content-Type => "application/json",
+                    },
+                );
+                my %content = await $response.body;
+                my $employeeName = %content<user><employeeinfo><name1><string><value>;
+                my $employeeNumber = %content<user><info><employeenumber><string><value>;
+                cache-session($token, $employeeNumber, $employeeName);
+            }
+
             set-cookie("sessionToken", $token,
                        same-site => Cro::HTTP::Cookie::SameSite::Strict,
                        http-only => True,
@@ -1292,6 +1105,7 @@ class Micronomy {
     method logout(:$token is copy) {
         $token = fix-token($token);
         trace "logout", $token;
+        uncache-session($token);
         my $status;
         if $token and $token ne "demo" {
             my $url = "$server/$auth-path";
