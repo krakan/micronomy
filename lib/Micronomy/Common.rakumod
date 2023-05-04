@@ -4,6 +4,12 @@ use Cro::HTTP::Client;
 use Digest::MD5;
 use experimental :pack;
 
+sub get-header($response, $header) is export {
+    for $response.headers -> $key {
+        return $key.value if $key.name.lc eq $header.lc;
+    }
+}
+
 sub call-url($url, :%auth, :%headers, :$body, :$method, :$timeout is copy = 2) is export {
     my $retries = 10;
     my $token = %headers<Authorization>;
@@ -54,12 +60,12 @@ sub trace($message, $token = '') is export {
         formatter => { sprintf "%4d-%02d-%02d %02d:%02d:%06.3f",
                        .year, .month, .day, .hour, .minute, .second });
     my $session = $token ?? md5($token).unpack("H*").substr(24) !! '-';
-    say "$now  $session  $message";
+    say "$now  $session:{$*THREAD.id}  $message";
 }
 
 sub error($exception, $token = '', $label = 'error') is export {
     trace "$label: {$exception.Str}", $token;
-    for $exception.backtrace.grep(*.file.contains('micronomy')).grep(*.subname).reverse -> $trace {
+    for $exception.backtrace.grep(*.file.contains('micronomy')).grep(*.subname) -> $trace {
         my $file = $trace.file.split("/")[*-1].split(" ")[0];
         trace "-> $file:{$trace.line}  {$trace.subname}()", $token;
     }
