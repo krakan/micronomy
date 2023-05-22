@@ -94,36 +94,3 @@ sub get-current-week($date is copy) is export {
 
     return $week, $start-date, $year, $month, $mday;
 }
-
-sub set-filler(%content, %parameters, $filler --> Bool) is export {
-    trace "set-filler $filler";
-    return False if $filler < 0;
-    return False unless %content<weeks>:exists;
-
-    my ($week, $start-date, $year, $month, $mday) = get-current-week(%content<currentWeek>);
-
-    my $previous = %content<weeks>{$year}{$month}{$mday}<rows>[$filler]<total> // 0;
-    my $fixed = %content<weeks>{$year}{$month}{$mday}<totals><fixed> // 0;
-    my $reported = %content<weeks>{$year}{$month}{$mday}<totals><reported> // 0;
-    my $total = $fixed - $reported + $previous;
-
-    for (1..7).sort(
-        {
-            (%content<weeks>{$year}{$month}{$mday}<totals><days>{$_}<overtime> // 0)
-            -
-            (%content<weeks>{$year}{$month}{$mday}<rows>[$filler]<hours>{$_} // 0)
-        }
-    ) -> $day  {
-        my $previous = %content<weeks>{$year}{$month}{$mday}<rows>[$filler]<hours>{$day} // 0;
-        my $overtime = %content<weeks>{$year}{$month}{$mday}<totals><days>{$day}<overtime> // 0;
-
-        $overtime = $previous - $overtime;
-        $overtime = $total if $overtime > $total;
-        $overtime = 0 if $overtime < 0;
-
-        trace "filling day $day with $overtime";
-        %parameters{"hours-$filler-$day"} = $overtime;
-        $total -= $overtime;
-    }
-    return True;
-}

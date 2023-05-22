@@ -2,6 +2,7 @@ unit module Micronomy::Demo;
 
 use JSON::Fast;
 use Micronomy::Cache;
+use Micronomy::Calendar;
 use Micronomy::Common;
 
 sub get-demo($date) is export {

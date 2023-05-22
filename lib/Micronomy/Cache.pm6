@@ -4,6 +4,7 @@ use JSON::Fast;
 use Micronomy::Common;
 
 sub get-cache($employeeNumber) is export {
+    trace "sub get-cache $employeeNumber";
     my $dir = $*PROGRAM-NAME;
     $dir ~~ s/<-[^/]>* $//;
     $dir ||= '.';
@@ -57,12 +58,14 @@ sub cached-week(Date $date, %cache) is export {
 
 sub set-cache(%cache) is export {
     my $employeeNumber = %cache<employeeNumber>;
+    trace "sub set-cache $employeeNumber";
     my %output = (
         employeeName => %cache<employeeName>,
         employeeNumber => $employeeNumber,
     );
 
     %output<jobs> = %cache<jobs>;
+    %output<favorites> = %cache<favorites>;
 
     for %cache<weeks>.keys -> $year {
         for %cache<weeks>{$year}.keys -> $month {

@@ -96,7 +96,7 @@ sub calendargenerator($querydate) is export {
 
 }
 
-sub redday($day){
+sub redday($day) {
     given sprintf "%02d%02d", $day.month, $day.day {
         when "0101"                   { return 0, "Nyårsdagen - Init ledig dag 8h"; }  # Nyårsdagen
         when "0105"                   { return 6, "Trettondagsafton - Init ledig dag 2h"; }  # 12-dag Jul
@@ -178,3 +178,46 @@ sub allsaints($year, $diff = 0) {
     return floating-date $year, 10, 31, 6, :$diff;
 }
 
+sub set-filler(%content, %parameters, $filler --> Bool) is export {
+    trace "set-filler $filler";
+    return False if $filler < 0;
+    return False unless %content<weeks>:exists;
+
+    my ($week, $start-date, $year, $month, $mday) = get-current-week(%content<currentWeek>);
+
+    my $fixed = 0;
+    my $reported = 0;
+    for 1..7 -> $day {
+        my ($expected, $title) = redday($start-date.later(days => $day-1));
+        %content<weeks>{$year}{$month}{$mday}<totals><days>{$day}<fixed> = $expected;
+        $fixed += $expected;
+        %content<weeks>{$year}{$month}{$mday}<totals><days>{$day}<reported> = 0;
+        for ^(%content<weeks>{$year}{$month}{$mday}<rows>) -> $row {
+            next if $row == $filler;
+            my $hours = %content<weeks>{$year}{$month}{$mday}<rows>[$row]<hours>{$day} // 0;
+            %content<weeks>{$year}{$month}{$mday}<totals><days>{$day}<reported> += $hours;
+            $reported += $hours;
+        }
+    }
+    my $total = $fixed - $reported;
+
+    for (1..7).sort(
+        {
+            (%content<weeks>{$year}{$month}{$mday}<totals><days>{$_}<reported> // 0)
+            -
+            (%content<weeks>{$year}{$month}{$mday}<totals><days>{$_}<fixed> // 0)
+        }
+    ) -> $day  {
+        my $overtime = (%content<weeks>{$year}{$month}{$mday}<totals><days>{$day}<fixed> // 0)
+                           -
+                           (%content<weeks>{$year}{$month}{$mday}<totals><days>{$day}<reported> // 0);
+
+        $overtime = $total if $overtime > $total;
+        $overtime = 0 if $overtime < 0;
+
+        trace "filling day $day with $overtime";
+        %parameters{"hours-$filler-$day"} = $overtime;
+        $total -= $overtime;
+    }
+    return True;
+}
