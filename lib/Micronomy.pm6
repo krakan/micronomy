@@ -346,15 +346,16 @@ class Micronomy {
                 %totals<overtime>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><overtime> // 0;;
                 %totals<invoiceable>{$bucket} += %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> // 0;;
 
-                for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
-                    my $job = %row<job>;
-                    my $task = %row<task>;
-                    for %row<hours>.keys -> $wday {
+                for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> $row {
+                    last unless $row;
+                    my $job = $row<job>;
+                    my $task = $row<task>;
+                    for $row<hours>.keys -> $wday {
                         my $date = $current.later(days => $wday - 1).gist;
                         next if $date lt $start-date.gist;
                         last if $date gt $end-date.gist;
 
-                        my $hours = %row<hours>{$wday};
+                        my $hours = $row<hours>{$wday};
                         unless %sums{$job}{$task}<title>:exists {
                             %sums{$job}{$task}<title> = title(%cache<jobs>{$job}<name>, %cache<jobs>{$job}<tasks>{$task});
                         }
