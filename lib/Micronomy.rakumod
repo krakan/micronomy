@@ -12,10 +12,7 @@ use Micronomy::Sync;
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
     my $auth-path = "maconomy-api/auth/b3";
-    my $instances-path = "maconomy-api/containers/b3/timeregistration/instances";
-    my $environment-path = "/maconomy-api/environment/b3?variables";
-    my $favorites-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=jobfavorite";
-    my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline";
+    my $environment-path = "maconomy-api/environment/b3?variables";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
     my @months = <Dec Jan Feb Mar Apr Maj Jun Jul Aug Sep Okt Nov Dec>;
     my $retries = 10;
@@ -29,7 +26,7 @@ class Micronomy {
         my %week = cached-week($periodStart, %cache) || {};
         if not %week or not %week<synched> or DateTime.new(%week<synched>) < DateTime.now.earlier(minutes => 5) {
             %week<state> = -1;
-            sync(%cache<employeeNumber>, $token, {week => $periodStart});
+            sync(%cache<employeeNumber>, $token, {week => $periodStart, action => "get"});
         }
 
         my $week = %week<name>;
@@ -73,7 +70,7 @@ class Micronomy {
 
         for ^%week<rows> -> $row {
             my $jobId = %week<rows>[$row]<job>;
-            my $taskId = %week<rows>[$row]<task>;
+            my $taskId = %week<rows>[$row]<task> || "";
             %data<filler> = $row if %cache<jobs>{$jobId}<tasks>{$taskId} eq "Tjänstledig mot RAM";
         }
 
@@ -113,7 +110,8 @@ class Micronomy {
             my %row = (
                 number => $row,
                 title => title(%cache<jobs>{%rowData<job>}<name>, %cache<jobs>{%rowData<job>}<tasks>{%rowData<task>}),
-                concurrency => %rowData<concurrency>,
+                job => %rowData<job>,
+                task => %rowData<task> // "",
                 weektotal => %rowData<total> // 0,
                 status => $status,
                 disabled => $row == %data<filler>,
@@ -250,7 +248,7 @@ class Micronomy {
                     trace "ignoring week before 2019-05-01", $token;
                 } else {
                     $status = ", Laddar ...";
-                    sync($employeeNumber, $token, {week => $week-start});
+                    sync($employeeNumber, $token, {week => $week-start, action => get});
                 }
                 %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
                 %cache<weeks>{$year}{$month}{$mday}<totals><fixed> = 0;
@@ -439,6 +437,7 @@ class Micronomy {
         }
     }
 
+<<<<<<< HEAD:lib/Micronomy.rakumod
     sub get-favorites($token) {
         trace "sub get-favorites", $token;
         return get-cache("demo-faves") if $token eq "demo";
@@ -661,76 +660,41 @@ class Micronomy {
     }
 
     sub edit($token, %parameters) {
+=======
+    sub edit($token, $date, %parameters, %cache) {
+>>>>>>> 2e91281 (implement asynchronous puts):lib/Micronomy.pm6
         trace "sub edit", $token;
         my $numberOfLines = %parameters<rows>;
         my @currentPosition = ^$numberOfLines;
         my @errors = ();
+        my %week = cached-week($date, %cache);
 
         # delete, update or move lines
+        my $changed = False;
         for ^$numberOfLines -> $row {
             trace "positions[$row] "~@currentPosition;
             my $target = @currentPosition[$row];
+            my $newTarget = %parameters{"position-$row"};
             my $was-kept = %parameters{"was-kept-$row"} eq "True" ?? 2 !! 1;
             %parameters{"task-$row"} = %parameters{"set-task-$row"} if %parameters{"set-task-$row"};
 
-            # delete line
-            if %parameters{"keep-$row"} == 0 {
-                # remove permanence
-                trace "prepare row $target for deletion", $token;
-                my %result = update-permanence($token, $row, $target, %parameters);
-                if %result {
-                    %parameters<containerInstanceId> = %result<containerInstanceId>;
-                    %parameters<concurrency> = %result<concurrency>;
+            if (%parameters{"keep-$row"} == 0) {
+                # delete line
+                trace "delete row $row", $token;
+                %week<rows>.splice($target, 1);
+                # update positions array
+                @currentPosition[$row] = -1;
+                for ^@currentPosition -> $position {
+                    @currentPosition[$position]-- if @currentPosition[$position] > $target;
                 }
-                %result = delete-row($token, $target, %parameters);
-                if %result {
-                    # mark index as deleted in position array
-                    @currentPosition[$row] = -1;
-                    for ^@currentPosition -> $position {
-                        @currentPosition[$position]-- if @currentPosition[$position] > $target;
-                    }
-                    %parameters<containerInstanceId> = %result<containerInstanceId>;
-                    %parameters<concurrency> = %result<concurrency>;
-                } else {
-                    @errors.push("borttagning av rad $target misslyckades");
-                }
-                next;
-            }
-
-            # move line
-            my $newTarget = %parameters{"position-$row"};
-            if $newTarget != $row and $newTarget != $target {
+                $changed = True;
+            } elsif $newTarget != $row and $newTarget != $target {
+                # move line
                 trace "move row $row from $target to $newTarget", $token;
-                if $newTarget < $target {
-                    my %result = upsert-row('add', $token, $row, $newTarget, %parameters);
-                    if %result {
-                        %parameters<containerInstanceId> = %result<containerInstanceId>;
-                        %parameters<concurrency> = %result<concurrency>;
-                        %result = update-permanence($token, $row, $newTarget, %parameters) ||
-                                                   @errors.push("uppdatering av rad $target misslyckades");
-                        %parameters<concurrency> = %result<concurrency> if %result;
-                        %result = delete-row($token, $target+1, %parameters) ||
-                                            @errors.push("borttagning av rad {$target+1} misslyckades");
-                        %parameters<concurrency> = %result<concurrency> if %result;
-                    } else {
-                        @errors.push("tilläggning av rad $newTarget misslyckades");
-                    }
-                } else {
-                    my %result = upsert-row('add', $token, $row, $newTarget+1, %parameters);
-                    if %result {
-                        %parameters<containerInstanceId> = %result<containerInstanceId>;
-                        %parameters<concurrency> = %result<concurrency>;
-                        %result = update-permanence($token, $row, $newTarget+1, %parameters) ||
-                                             @errors.push("uppdatering av rad $target misslyckades");
-                        %parameters<concurrency> = %result<concurrency> if %result;
-                        %result = delete-row($token, $target, %parameters) ||
-                                            @errors.push("borttagning av rad $target misslyckades");
-                        %parameters<concurrency> = %result<concurrency> if %result;
-                    } else {
-                        @errors.push("tilläggning av rad {$newTarget+1} misslyckades");
-                    }
-                }
-                # move indexes in position array
+                my %data = %week<rows>[$target];
+                %week<rows>.splice(+$target, 1);
+                %week<rows>.splice(+$newTarget, 0, %data);
+                # update positions array
                 @currentPosition[$row] = $newTarget;
                 for ^@currentPosition -> $position {
                     next if $position == $row;
@@ -738,39 +702,54 @@ class Micronomy {
                     @currentPosition[$position]-- if $newTarget >= $other > $target;
                     @currentPosition[$position]++ if $newTarget <= $other < $target;
                 }
+                $changed = True;
             } else {
                 # update line without moving
-                if %parameters{"set-task-$row"} {
-                    my %result = upsert-row('update', $token, $row, $target, %parameters) ||
-                                           @errors.push("uppdatering av rad $target misslyckades");
-                    if %result {
-                        %parameters<containerInstanceId> = %result<containerInstanceId>;
-                        %parameters<concurrency> = %result<concurrency>;
-                    }
+                if (%parameters{"set-task-$row"}) {
+                    trace "set task for row $row to " ~ %parameters{"set-task-$row"}, $token;
+                    %week<rows>[$target]<task> = %parameters{"set-task-$row"};
+                    $changed = True;
                 }
                 if %parameters{"keep-$row"} != $was-kept {
-                    my %result = update-permanence($token, $row, $target, %parameters) ||
-                                                  @errors.push("uppdatering av rad $target misslyckades");
-                    if %result {
-                        %parameters<containerInstanceId> = %result<containerInstanceId>;
-                        %parameters<concurrency> = %result<concurrency>;
+                    trace "set permanence for row $row to " ~ %parameters{"keep-$row"}, $token;
+                    if (%parameters{"keep-$row"} < 2) {
+                        %week<rows>[$target]<temp> = True;
+                    } else {
+                        %week<rows>[$target]<temp>:delete;
                     }
+                    $changed = True;
                 }
             }
+            set-demo(%parameters, $row) if $token eq "demo";
         }
-        trace "positions[*] "~@currentPosition;
 
         # add new line
         my $row = $numberOfLines;
         if %parameters{"job-$row"} ne "" {
-            %parameters{"keep-$row"} = 1;
-            my $task = %parameters{"job-$row"}.split("/")[1];
-            %parameters{"task-$row"} = %parameters{"job-$row"}.split("/")[1] if $task;
-            %parameters{"job-$row"} = %parameters{"job-$row"}.split("/")[0];
-            upsert-row('add', $token, $row, %parameters{"position-$row"}, %parameters) ||
-            @errors.push("den nya raden är inte tillåten");
+            my @job-task = %parameters{"job-$row"}.split("/");
+            my $job = @job-task[0];
+            my $task = @job-task[1];
+            my $target = %parameters{"position-$row"};
+            trace "add job '$job/$task' as row $target", $token;
+
+            %week<rows>[$target]<job> = $job;
+            %week<rows>[$target]<task> = $task if $task;
+            %week<rows>[$target]<temp> = True;
+            $changed = True;
+            set-demo(%parameters, $row) if $token eq "demo";
         }
-        return @errors.join('<br>');
+
+        trace "positions[*] "~@currentPosition;
+
+        if $changed {
+            sync(%cache<employeeNumber>, $token, {week => $date, action => "put", data => %week});
+            %week<synched> = DateTime.now;
+            %cache<weeks>{$date.year}{$date.month}{$date.day} = %week;
+            set-cache(%cache);
+            trace "sub edit done", $token;
+        }
+
+        return $changed;
     }
 
     method edit(:$token is copy, :%parameters) {
@@ -783,64 +762,64 @@ class Micronomy {
         for %parameters.keys.sort -> $key {
             trace "$key: %parameters{$key}";
         }
-        my $errorMessage = edit($token, %parameters) if %parameters<rows>:exists;
 
-        my %favorites = get-favorites($token) || return;
-        my %cache = get-week($token, $date);
-        my $week = %cache<currentWeek>;
+        my %employee = get-session($token);
+        my %cache = get-cache(%employee<number>);
+        my ($week-name, $start-date, $year, $month, $mday) = get-current-week($date);
+
+        my $changed = edit($token, $start-date, %parameters, %cache) if %parameters<rows>:exists;
+
+        sync(%employee<number>, $token, {action => "favorites"}) unless $changed;
 
         my %data = (
-            week => $week,
-            error => $errorMessage // "",
+            week => $week-name,
+            error => "",
             concurrency => %cache<concurrency>,
-            employee => %cache<employeeName>,
+            employee => %employee<name>,
             date => $date,
         );
 
-        my ($week-name, $start-date, $year, $month, $mday) = get-current-week($week);
         my (@rows, %rows);
         my $row = 0;
-        if %cache<weeks>{$year}{$month}{$mday}<rows> {
-            for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
-                my $jobNumber = %row<job>;
-                my $jobName = %cache<jobs>{%row<job>}<name>;
-                my $taskNumber = %row<task> // "";
-                my $taskName = %cache<jobs>{%row<job>}<tasks>{$taskNumber};
-                %rows{$jobNumber}{$taskNumber} = 1;
-                my @hours;
-                for 1..7 -> $wday {
-                    @hours.push(%row<hours>{$wday} || 0);
-                }
-                my %rowData = (
-                    number => $row++,
-                    jobnumber   => $jobNumber,
-                    jobname     => $jobName,
-                    tasknumber  => $taskNumber,
-                    taskname    => $taskName,
-                    concurrency => %row<concurrency>,
-                    keep        => not %row<temp>,
-                    hours       => @hours.join(";"),
-                );
-                if not $taskNumber {
-                    %rowData<tasks> = get-tasks($token, $jobNumber);
-                }
-                @rows.push(%rowData);
+        for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+            my $jobNumber = %row<job>;
+            my $jobName = %cache<jobs>{%row<job>}<name>;
+            my $taskNumber = %row<task> // "";
+            my $taskName = %cache<jobs>{%row<job>}<tasks>{$taskNumber};
+            %rows{$jobNumber}{$taskNumber} = True;
+            my @hours;
+            for 1..7 -> $wday {
+                @hours.push(%row<hours>{$wday} || 0);
             }
+            my %rowData = (
+                number => $row++,
+                jobnumber   => $jobNumber,
+                jobname     => $jobName,
+                tasknumber  => $taskNumber,
+                taskname    => $taskName,
+                concurrency => %row<concurrency>,
+                keep        => not %row<temp>,
+                hours       => @hours.join(";"),
+            );
+            if not $taskNumber {
+                for %cache<jobs>{$jobNumber}<tasks>.kv -> $number, $name {
+                    %rowData<tasks>.push({:$name, :$number});
+                }
+            }
+            @rows.push(%rowData);
         }
         %data<rows> = @rows;
         %data<next> = @rows.elems;
 
         my @favorites;
-        for ^%favorites<panes><filter><meta><rowCount> -> $row {
-            my $jobNumber = %favorites<panes><filter><records>[$row]<data><jobnumber>;
-            my $taskNumber = %favorites<panes><filter><records>[$row]<data><taskname> // "";
+        for %cache<favorites>.keys.sort -> $favorite {
+            my $jobNumber = %cache<favorites>{$favorite}<job>;
+            my $taskNumber = %cache<favorites>{$favorite}<task> // "";
             next if %rows{$jobNumber}{$taskNumber};
             my %favorite = (
-                favorite   => %favorites<panes><filter><records>[$row]<data><favorite>,
+                favorite   => $favorite,
                 jobnumber  => $jobNumber,
-                jobname    => %favorites<panes><filter><records>[$row]<data><jobnamevar>,
                 tasknumber => $taskNumber,
-                taskname   => %favorites<panes><filter><records>[$row]<data><tasktextvar>,
             );
             @favorites.push(%favorite);
         }
@@ -855,64 +834,41 @@ class Micronomy {
                 return Micronomy.get-login(reason => "Vänligen logga in!") if .response.status == 401;
                 return Micronomy.get-login(reason => "felstatus {.response.status}");
             }
-            default {
-                error $_, $token;
-                return Micronomy.get-login(reason => "okänt fel");
-            }
+            #default {
+            #    eror $_, $token;
+            #    return Micronomy.get-login(reason => "okänt fel");
+            #}
         }
     }
 
-    sub set(%parameters, $row, $token) {
+    sub set(%parameters, %cache, $year, $month, $mday, $row, $token) {
         return set-demo(%parameters, $row) if $token eq "demo";
 
-        $retries = 2 if %parameters<state> > 1;
-        my @changes;
+        return unless %parameters{"job-$row"} and %cache<jobs>{%parameters{"job-$row"}};
+        return unless %parameters{"task-$row"} and %cache<jobs>{%parameters{"job-$row"}}<tasks>{%parameters{"task-$row"}};
+
+        %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<job> = %parameters{"job-$row"};
+        %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<task> = %parameters{"task-$row"};
+        my $total = 0;
         for 1..7 -> $day  {
             my $hours = %parameters{"hours-$row-$day"} || "0";
             $hours = +$hours.subst(",", ".");
             $hours ~~ s:g/<-[\d.]>//;
             $hours ||= 0;
-            my $previous = %parameters{"hidden-$row-$day"} || 0;
-            if $hours ne $previous {
-                @changes.push('"numberday' ~ $day ~ '": ' ~ $hours);
+            $total += $hours;
+            if $hours {
+                %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<hours>{$day} = $hours;
+            } else {
+                %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<hours>{$day}:delete;
             }
         }
-        if @changes {
-            trace "setting row $row", $token;
-            my $concurrency = %parameters<concurrency>;
-            my $containerInstanceId = %parameters<containerInstanceId>;
-            my $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$row";
-
-            for 0..$retries -> $wait {
-                sleep $wait/10;
-                try {
-                    my $response = call-url(
-                        $url,
-                        headers => {
-                            Authorization => "X-Reconnect $token",
-                            Content-Type => "application/vnd.deltek.maconomy.containers+json",
-                            Maconomy-Concurrency-Control => $concurrency,
-                        },
-                        body => '{"data":{' ~ @changes.join(", ") ~ '}}',
-                    );
-                    return parse-week($response);
-                }
-
-                if $! ~~ X::Cro::HTTP::Error and $!.response.status == 409 and $wait < $retries {
-                    ($containerInstanceId, $concurrency) = get-concurrency($token, %parameters<date>);
-                    $url = "$server/$instances-path/$containerInstanceId/data/panes/table/$row";
-                    trace "set received {$!.response.status} - retrying [{$wait+1}/$retries]", $token;
-                } else {
-                    die $!;
-                }
-            }
-        }
+        %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<total> = $total;
     }
 
     method set(:$token is copy, :%parameters) {
         $token = fix-token($token);
         trace "set", $token;
-        for %parameters.keys.sort({.split('-', 2)[1]//$_}) -> $key {
+        for %parameters.keys.sort -> $key {
             my $value =  %parameters{$key};
             unless $key ~~ / ^ <alpha> <[\w-]>+ $ / {
                 trace "  $key: $value [ERROR BAD KEY]", $token;
@@ -922,107 +878,57 @@ class Micronomy {
         }
         return Micronomy.get-login(reason => "Vänligen logga in!") unless $token;
 
+        my %employee = get-session($token);
+        my %cache = get-cache(%employee<number>);
+        my ($week-name, $periodStart, $year, $month, $mday) = get-current-week(%parameters<date>);
+        %cache<weeks>{$year}{$month}{$mday}<name> = $week-name;
+
         my $filler = %parameters<filler> // -1;
-        my %content;
         if (%parameters<rowCount>) {
             for ^%parameters<rowCount> -> $row {
                 next if $row == $filler;
-                my %result = set(%parameters, $row, $token);
-                if %result {
-                    %parameters<concurrency> = %result<concurrency>;
-                    %content = %result;
-                }
+                set(%parameters, %cache, $year, $month, $mday, $row, $token);
             }
             if $token eq "demo" {
                 set-demo-filler(%parameters);
-            } elsif set-filler(%content, %parameters, $filler) {
-                my %result = set(%parameters, $filler, $token);
-                if %result {
-                    %parameters<concurrency> = %result<concurrency>;
-                    %content = %result;
-                }
+            } elsif set-filler(%cache, %parameters, $filler) {
+                set(%parameters, %cache, $year, $month, $mday, $filler, $token);
             }
+
+            # remove surplus rows
+            %cache<weeks>{$year}{$month}{$mday}<rows>.splice(+%parameters<rowCount>);
+
+            set-cache(%cache);
+            my %week = cached-week($periodStart, %cache);
+            sync(%cache<employeeNumber>, $token, {week => $periodStart, action => "put", data => %week});
         }
 
-        my %employee = get-session($token);
-        %content = get-cache(%employee<number>);
-        %content<currentWeek> = %parameters<date>;
-        %content<employeeName> //= %employee<name>;
-        show-week($token, %content);
-
-        return;
-
-        CATCH {
-            when X::Cro::HTTP::Error {
-                if .response.status == 401 {
-                    return Micronomy.get-login(reason => "Vänligen logga in!");
-                } else {
-                    error $_, $token;
-                    %parameters<concurrency>:delete;
-                    %content = get-week($token, %parameters<date>, previous => %parameters) unless %content;
-                    show-week($token, %content, error => "{$_.response.status} - servern tillät inte uppdateringen");
-                }
-            }
-            default {
-                error $_, $token;
-                %parameters<concurrency>:delete;
-                %content = get-week($token, %parameters<date>, previous => %parameters) unless %content;
-                show-week($token, %content, error => "okänt fel");
-            }
-        }
+        %cache<currentWeek> = %parameters<date>;
+        %cache<employeeName> //= %employee<name>;
+        show-week($token, %cache);
     }
 
     method submit(:%parameters, :$token is copy) {
         $token = fix-token($token);
         trace "submit %parameters<date>", $token;
+        my %content;
         for %parameters.keys.sort({.split('-', 2)[1]//$_}) -> $key {
             my $value =  %parameters{$key};
             trace "  $key: $value", $token if $value;
         }
 
-        my %content;
         if $token ne "demo" {
-            my $reason = %parameters<reason>;
-            my $containerInstanceId = %parameters<containerInstanceId>;
-            my $concurrency = %parameters<concurrency>;
-            my $url = "$server/$instances-path/$containerInstanceId/data/panes/card/0/action;name=submittimesheet";
-            $url ~= "?card.resubmissionexplanationvar=$reason" if $reason;
-            trace "submit $url", $token;
-            my $response = call-url(
-                $url,
-                headers => {
-                    Authorization => "X-Reconnect $token",
-                    Content-Type => "application/vnd.deltek.maconomy.containers+json",
-                    Maconomy-Concurrency-Control => $concurrency,
-                    Referer => "$server/workspace/weeklytimesheets",
-                },
-                body => '{"offset": 0, "limit": 100}',
-            );
-
-            %content = parse-week($response);
+            %parameters<action> = "submit";
+            %parameters<week> = "FIXME";
+            my %employee = get-session($token);
+            sync(%employee<number>, $token, %parameters);
+            %content = get-cache(%employee<number>);
+            %content<employeeName> //= %employee<name>;
         } else {
             %content = get-demo(%parameters<date>);
         }
+        %content<currentWeek> = %parameters<date>;
         show-week($token, %content);
-
-        CATCH {
-            when X::Cro::HTTP::Error {
-                my $body = await .response.body;
-                warn "error: [" ~ .response.status ~ "]:\n    " ~ $body.join("\n    ");
-                error $_, $token;
-                if .response.status == 401 {
-                    Micronomy.get-login(reason => "Vänligen logga in!");
-                } else {
-                    %content = get-week($token, %parameters<date>);
-                    show-week($token, %content, error => $body<errorMessage>);
-                }
-            }
-            default {
-                error $_, $token;
-                %content = get-week($token, %parameters<date>);
-                show-week($token, %content, error => 'okänt fel');
-            }
-        }
     }
 
     method get-login(:$username = '', :$reason = '') {
