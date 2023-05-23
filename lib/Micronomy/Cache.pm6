@@ -9,9 +9,9 @@ sub get-cache($employeeNumber) is export {
     $dir ~~ s/<-[^/]>* $//;
     $dir ||= '.';
     my $cacheFile = "$dir/resources/$employeeNumber.json";
-    if $cacheFile.IO.e {
-        given $cacheFile.IO.open {
-            .lock: :shared;
+    if $cacheFile.IO.e: :rw {
+        given $cacheFile.IO.open: :rw {
+            .lock;
             my $cache = .slurp;
             .close;
             return from-json $cache if $cache;
@@ -91,7 +91,7 @@ sub cache-session($token, $employeeNumber, $employeeName) is export {
     my $basedir = IO::Path.new($*PROGRAM-NAME).dirname || '.';
     my $sessionsFile = "$basedir/resources/sessions.json";
 
-    given $sessionsFile.IO.open(:rw) {
+    given $sessionsFile.IO.open: :rw {
         .lock;
         my $data = .slurp;
         my %sessions = from-json $data if $data;
@@ -112,7 +112,7 @@ sub cache-session($token, $employeeNumber, $employeeName) is export {
 sub uncache-session($token) is export {
     my $basedir = IO::Path.new($*PROGRAM-NAME).dirname || '.';
     my $sessionsFile = "$basedir/resources/sessions.json";
-    given $sessionsFile.IO.open(:rw) {
+    given $sessionsFile.IO.open: :rw {
         .lock;
         my $data = .slurp;
         my %sessions = from-json $data if $data;
@@ -127,8 +127,8 @@ sub get-session($token) is export {
     my $basedir = IO::Path.new($*PROGRAM-NAME).dirname || '.';
     my $sessionsFile = "$basedir/resources/sessions.json";
 
-    given $sessionsFile.IO.open {
-        .lock: :shared;
+    given $sessionsFile.IO.open: :rw {
+        .lock;
         my $data = .slurp;
         my %sessions = from-json $data if $data;
         .close;
