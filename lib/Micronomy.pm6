@@ -676,7 +676,8 @@ class Micronomy {
 
         if $token ne "demo" {
             %parameters<action> = "submit";
-            %parameters<week> = "FIXME";
+            my ($week-name, $start-date) = get-current-week(%parameters<date>);
+            %parameters<week> = ~$start-date;
             my %employee = get-session($token);
             sync(%employee<number>, $token, %parameters);
             %content = get-cache(%employee<number>);
