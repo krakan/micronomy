@@ -51,9 +51,9 @@
             <div class="panel-title">Rader</div>
             <div class="panel rows-panel">
               <@rows>
-              <div class="title<!{.disabled}> nav-row</!>">
-                <input type="hidden" name="job-<.number>" value="<.job>" />
-                <input type="hidden" name="task-<.number>" value="<.task>" />
+              <div class="title<!{.disabled}> nav-row</!>"><?.job>
+                <input type="hidden" name="job-<.number>" value="<.job>" /></?><?.task>
+                <input type="hidden" name="task-<.number>" value="<.task>" /></?>
                 <div><.title></div>
                 <!-- Backend generated status element. ✔ or ✘ or ~ [text]  -->
                 <&HTML(.status)>
