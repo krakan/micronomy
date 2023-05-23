@@ -48,8 +48,8 @@ sub cached-week(Date $date, %cache) is export {
             %week<state> = -1;
             %week<synched>:delete;
             %week<totals>:delete;
-            for @(%week<rows>) -> %row {
-                %row<hours>:delete;
+            for @(%week<rows>) -> $row {
+                $row<hours>:delete if $row;
             }
         }
     }
