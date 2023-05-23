@@ -231,7 +231,7 @@ class Micronomy {
                     trace "ignoring week before 2019-05-01", $token;
                 } else {
                     $status = ", Laddar ...";
-                    sync($employeeNumber, $token, {week => $week-start, action => get});
+                    sync($employeeNumber, $token, {week => $week-start, action => "get"});
                 }
                 %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
                 %cache<weeks>{$year}{$month}{$mday}<totals><fixed> = 0;
