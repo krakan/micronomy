@@ -205,7 +205,7 @@ sub set-week($token, $date, %week, :%concurrency) is export {
 
                 last;
             }
-            if $! ~~ X::Cro::HTTP::Error and $!.response.status == (404, 409).any and $wait < $retries {
+            if $! ~~ X::Cro::HTTP::Error and $!.response.status == (404, 409, 422).any and $wait < $retries {
                 ($containerInstanceId, $concurrency, $row-count) = get-concurrency($token, $date);
             } elsif $! {
                 die $!
