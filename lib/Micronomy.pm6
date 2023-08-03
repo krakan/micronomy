@@ -537,7 +537,7 @@ class Micronomy {
 
     sub fix-token(Str $token) {
         return $token if $token eq 'demo';
-        return "bm90IGxvZ2dlZCBpbg==" unless $token;
+        return "" unless $token;
         given $token.split(":")[1].chars % 4 {
             # add mysteriously stripped padding
             when 3 {return "$token="}
@@ -1096,6 +1096,7 @@ class Micronomy {
             }
             trace "  $key: $value", $token if $value;
         }
+        return Micronomy.get-login(reason => "Vänligen logga in!") unless $token;
 
         my $filler = %parameters<filler> // -1;
         my %content;
