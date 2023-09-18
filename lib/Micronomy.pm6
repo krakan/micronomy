@@ -978,30 +978,32 @@ class Micronomy {
         my ($week-name, $start-date, $year, $month, $mday) = get-current-week($week);
         my (@rows, %rows);
         my $row = 0;
-        for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
-            my $jobNumber = %row<job>;
-            my $jobName = %cache<jobs>{%row<job>}<name>;
-            my $taskNumber = %row<task> // "";
-            my $taskName = %cache<jobs>{%row<job>}<tasks>{$taskNumber};
-            %rows{$jobNumber}{$taskNumber} = 1;
-            my @hours;
-            for 1..7 -> $wday {
-                @hours.push(%row<hours>{$wday} || 0);
+        if %cache<weeks>{$year}{$month}{$mday}<rows> {
+            for @(%cache<weeks>{$year}{$month}{$mday}<rows>) -> %row {
+                my $jobNumber = %row<job>;
+                my $jobName = %cache<jobs>{%row<job>}<name>;
+                my $taskNumber = %row<task> // "";
+                my $taskName = %cache<jobs>{%row<job>}<tasks>{$taskNumber};
+                %rows{$jobNumber}{$taskNumber} = 1;
+                my @hours;
+                for 1..7 -> $wday {
+                    @hours.push(%row<hours>{$wday} || 0);
+                }
+                my %rowData = (
+                    number => $row++,
+                    jobnumber   => $jobNumber,
+                    jobname     => $jobName,
+                    tasknumber  => $taskNumber,
+                    taskname    => $taskName,
+                    concurrency => %row<concurrency>,
+                    keep        => not %row<temp>,
+                    hours       => @hours.join(";"),
+                );
+                if not $taskNumber {
+                    %rowData<tasks> = get-tasks($token, $jobNumber);
+                }
+                @rows.push(%rowData);
             }
-            my %rowData = (
-                number => $row++,
-                jobnumber   => $jobNumber,
-                jobname     => $jobName,
-                tasknumber  => $taskNumber,
-                taskname    => $taskName,
-                concurrency => %row<concurrency>,
-                keep        => not %row<temp>,
-                hours       => @hours.join(";"),
-            );
-            if not $taskNumber {
-                %rowData<tasks> = get-tasks($token, $jobNumber);
-            }
-            @rows.push(%rowData);
         }
         %data<rows> = @rows;
         %data<next> = @rows.elems;
