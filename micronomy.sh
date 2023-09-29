@@ -47,7 +47,7 @@ case $target in
         if test -z $exist || {
                 touch --date=$(docker inspect micronomy:latest | jq -r .[].Created) Dockerfile &&
                     find . -newer Dockerfile -type f | \
-                        grep -E '^./((lib|resources)/|^service.p6)' | grep -v ./lib/.precomp;
+                        grep -E '^./((lib|resources)/|^service.raku)' | grep -v ./lib/.precomp;
             }
         then
             docker build -t micronomy .
@@ -55,11 +55,11 @@ case $target in
         docker run -it --rm -p 8080:8080 micronomy
         ;;
 
-    local) MICRONOMY_PORT=4443 MICRONOMY_HOST=0.0.0.0 perl6 -I lib service.p6;;
+    local) MICRONOMY_PORT=4443 MICRONOMY_HOST=0.0.0.0 raku -I lib service.raku;;
 
     deploy)
         if rsync -zva --exclude .precomp . micronomy:micronomy/ | tee /dev/tty |
-                grep -Eq '^(lib|resources)/|^service.p6'
+                grep -Eq '^(lib|resources)/|^service.raku'
         then
             echo "INFO: restarting micronomy"
             ssh -t micronomy.jonaseel.se sudo pkill moar
@@ -78,7 +78,7 @@ case $target in
         fi
         cd $scriptdir
 
-        type perl6 >/dev/null 2>&1 || usage "perl6 command not found"
+        type raku >/dev/null 2>&1 || usage "raku command not found"
 
         # keep going
         while true
@@ -135,10 +135,10 @@ case $target in
             test $TMUX && tmux rename-window micronomy
             if id -u | grep -qx 0
             then
-                script -c "perl6 -I lib service.p6" -f /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
+                script -c "raku -I lib service.raku" -f /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
             else
                 mkdir -p $scriptdir/log
-                script -c "perl6 -I lib service.p6" -f $scriptdir/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
+                script -c "raku -I lib service.raku" -f $scriptdir/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
             fi
             test $TMUX && tmux set automatic-rename
             # wait for optional extra CTRL-C

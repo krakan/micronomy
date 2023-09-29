@@ -1,20 +1,19 @@
 {
   "provides": {
-    "Routes.pm6": "lib/Routes.pm6",
-    "Micronomy.pm6": "lib/Micronomy.pm6"
+    "Routes.rakumod": "lib/Routes.rakumod",
+    "Micronomy.rakumod": "lib/Micronomy.rakumod"
   },
   "tags": [],
   "authors": [
-    "jonas.linde3b3.se"
+    "jonas.linde@b3.se"
   ],
   "license": "GPLv3",
   "build-depends": [],
   "version": "0.0.1",
   "test-depends": [],
   "resources": [
-    "fake-tls/ca-crt.pem",
-    "fake-tls/server-crt.pem",
-    "fake-tls/server-key.pem"
+    "fake-tls/fullchain.pem",
+    "fake-tls/privkey.pem"
   ],
   "auth": "Write me!",
   "description": "Write me!",
@@ -27,7 +26,8 @@
   "depends": [
     "Cro::HTTP",
     "Cro::WebApp",
-    "URI::Encode"
+    "URI::Encode",
+    "Digest::MD5"
   ],
   "name": "micronomy"
 }

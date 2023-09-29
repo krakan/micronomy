@@ -16,7 +16,7 @@ RUN curl https://rakudostar.com/latest/star/source/ | tar zx && \
     make && \
     make install
 
-ENV PATH=$PATH:/rakudo/install/bin:/rakudo/install/share/perl6/site/bin
+ENV PATH=$PATH:/rakudo/install/bin:/rakudo/install/share/raku/site/bin
 RUN ln -s /rakudo-star-????.?? /rakudo
 RUN zef install JSON::Tiny Cro::HTTP::Client
 RUN zef install --force-test Terminal::Readsecret
