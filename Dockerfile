@@ -13,9 +13,7 @@ COPY . /app
 WORKDIR /app
 
 RUN raku -c -Ilib service.raku
-ENV MICRONOMY_PORT="443" \
-        MICRONOMY_HOST="0.0.0.0" \
-        MICRONOMY_TLS_CERT=/app/resources/fake-tls/fullchain.pem \
-        MICRONOMY_TLS_KEY=/app/resources/fake-tls/privkey.pem
-EXPOSE 443
+ENV MICRONOMY_PORT="8080" \
+        MICRONOMY_HOST="0.0.0.0"
+EXPOSE 8080
 CMD raku -Ilib service.raku
