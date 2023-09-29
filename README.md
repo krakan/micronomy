@@ -102,7 +102,7 @@ After the server is set up, clone this repo to it and run
 ```
 export MICRONOMY_PORT=443
 export MICRONOMY_HOST=0.0.0.0
-perl6 -I lib service.raku
+raku -I lib service.raku
 ```
 
 There is also a script `micronomy.sh` that handles Let's Encrypt renewal
