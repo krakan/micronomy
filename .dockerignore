@@ -1,1 +1,6 @@
-.precomp/
+*
+!lib/
+!resources/
+!service.raku
+lib/.precomp/
+resources/*.pdf

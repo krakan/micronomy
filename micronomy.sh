@@ -52,7 +52,7 @@ case $target in
         then
             docker build -t micronomy .
         fi
-        docker run -it --rm -p 443:443 micronomy
+        docker run -it --rm -p 8080:8080 micronomy
         ;;
 
     local) MICRONOMY_PORT=4443 MICRONOMY_HOST=0.0.0.0 perl6 -I lib service.p6;;
