@@ -83,6 +83,10 @@ sub routes() is export {
             }
         }
 
+        get -> 'submit', :$sessionToken is cookie = '' {
+            redirect "/", :see-other;
+        }
+
         post -> 'logout', :$sessionToken is cookie = '' {
             if $sessionToken {
                 request-body -> (:$username = '') {
