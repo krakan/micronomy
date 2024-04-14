@@ -1,0 +1,14 @@
+[Unit]
+Description=Run Micronomy proxy service
+Documentation=https://github.com/krakan/micronomy/
+After=systemd-networkd.service
+Requires=systemd-networkd.service
+
+[Service]
+ExecStart=
+ExecStart=/home/jonas/micronomy/micronomy.sh --port 8080
+User=jonas
+Restart=always
+
+[Install]
+WantedBy=default.target

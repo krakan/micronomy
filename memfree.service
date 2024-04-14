@@ -1,0 +1,14 @@
+[Unit]
+Description=Run Micronomy memory guard
+Documentation=https://github.com/krakan/micronomy/
+After=systemd-networkd.service
+Requires=systemd-networkd.service
+
+[Service]
+ExecStart=
+ExecStart=/home/jonas/micronomy/memfree.sh
+User=jonas
+Restart=always
+
+[Install]
+WantedBy=default.target

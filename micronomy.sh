@@ -40,6 +40,12 @@ done
 # set home dir
 test $target = run || cd $scriptdir
 
+# set PATH for raku
+if test -s $HOME/.rakubrew/CURRENT
+then
+    PATH=$HOME/.rakubrew/versions/$(cat $HOME/.rakubrew/CURRENT)/bin:$PATH
+fi
+
 # do your thing
 case $target in
     docker)
