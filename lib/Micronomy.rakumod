@@ -323,7 +323,6 @@ class Micronomy {
         try {
             for 0..* -> $week {
                 my $bucket = $current.truncated-to($bucketSize);
-
                 my ($week-name, $week-start, $year, $month, $mday) = get-current-week($current);
                 if %cache<weeks>{$year}{$month}{$mday}:exists {
                     trace "using cached week $current", $token;
@@ -351,7 +350,7 @@ class Micronomy {
                     my $job = $row<job>;
                     my $task = $row<task>;
                     for $row<hours>.keys -> $wday {
-                        my $date = $current.later(days => $wday - 1).gist;
+                        my $date = $current.truncated-to("week").later(days => $wday - 1).gist;
                         next if $date lt $start-date.gist;
                         last if $date gt $end-date.gist;
 
@@ -363,13 +362,13 @@ class Micronomy {
                     }
                 }
 
-                my $next = $current.later(weeks => 1).truncated-to("week");
-                if $next.month != $current.month and $next.day > 1 {
-                    $current = $next.earlier(days => 1).truncated-to('month');
+                my $next-week = $current.later(weeks => 1).truncated-to("week");
+                if $next-week.month != $current.month and $next-week.day > 1 {
+                    $current = $next-week.earlier(days => 1).truncated-to('month');
                 } else {
-                    $current = $next;
+                    $current = $next-week;
                 }
-                last if $next gt $end-date;
+                last if $current gt $end-date;
                 if DateTime.now > $timeout {
                     $error = "datainsamling tog för lång tid";
                     trace $error, $token;
