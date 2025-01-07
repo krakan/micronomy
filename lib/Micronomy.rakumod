@@ -16,7 +16,7 @@ class Micronomy {
     my $environment-path = "/maconomy-api/environment/b3?variables";
     my $favorites-path = "maconomy-api/containers/b3/jobfavorites/instances";
     my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline?fields=taskname,description&limit=100";
-    my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
+    my @days = <Sön Mån Tis Ons To Fre Lör Sön>;
     my @months = <Dec Jan Feb Mar Apr Maj Jun Jul Aug Sep Okt Nov Dec>;
     my $retries = 10;
     template-location 'resources/templates/';
@@ -176,8 +176,9 @@ class Micronomy {
         my $rowCount = %content<panes><table><meta><rowCount>;
 
         my $weekstatus = 0;
-        $weekstatus = 1 if @records[0]<data><submitted>;
-        $weekstatus = 2 if %card<approvedvar>;
+        $weekstatus = 1 if %card<headerdatesubmittedvar>;
+        $weekstatus = 1 if %card<workflowstatusvar> eq 'submitted';
+        $weekstatus = 2 if %card<workflowstatusvar> eq 'approved';
 
         my %cache = get-cache(%card<employeenumber>);
 
@@ -193,7 +194,7 @@ class Micronomy {
                 reported => %card<totalnumberofweekvar>,
                 fixed => %card<fixednumberweekvar>,
                 overtime => %card<overtimenumberweekvar>,
-                invoiceable => %card<invoiceabletimedayweekvar>,
+                invoiceable => %card<invoiceablepercentageofweekvar>.round(0.1),
             },
         );
 
@@ -202,7 +203,7 @@ class Micronomy {
             %day<reported> = %card{"totalnumberday{$wday}var"} if %card{"totalnumberday{$wday}var"};
             %day<fixed> = %card{"fixednumberday{$wday}var"} if %card{"fixednumberday{$wday}var"};
             %day<overtime> = %card{"overtimenumberday{$wday}var"} if %card{"overtimenumberday{$wday}var"};
-            %day<invoiceable> = %card{"invoiceabletimeday{$wday}var"} if %card{"invoiceabletimeday{$wday}var"};
+            %day<invoiceable> = %card{"invoiceablepercentageday{$wday}var"}.round(0.1) if %card{"invoiceablepercentageday{$wday}var"};
             %weekData<totals><days>{$wday} = %day if %day.keys;
         }
 
@@ -239,7 +240,7 @@ class Micronomy {
         %cache<currentDate> = %card<datevar>;
         for ^$rowCount -> $row {
             my %rowData = @records[$row]<data>;
-            %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<state> = %rowData<approvalstatus>;
+            %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<state> = %rowData<lineapprovaldatevar>;
             %cache<weeks>{$year}{$month}{$mday}<rows>[$row]<concurrency> = @records[$row]<meta><concurrencyControl>;
         }
 
@@ -510,7 +511,8 @@ class Micronomy {
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
-                    Content-Type => "application/json",
+                    Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                    Accept => "application/vnd.deltek.maconomy.containers+json",
                     Maconomy-Concurrency-Control => "$concurrency",
                 },
                 body => '{"data": {"datevar": "' ~ $date ~ '"}}',
@@ -638,10 +640,12 @@ class Micronomy {
         my $response = call-url(
             $url,
             headers => {
+                Accept => "application/vnd.deltek.maconomy.containers+json",
                 Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                Maconomy-Authentication => "X-Reconnect",
             },
-            body => '{"panes":{}}',
+            body => '{"panes":{"card":{"fields":["approvalhierarchyenabledheadervar","approvalhierarchyenabledlinesvar","cardrelationtitlevar","checkinbalanceday1var","checkinbalanceday2var","checkinbalanceday3var","checkinbalanceday4var","checkinbalanceday5var","checkinbalanceday6var","checkinbalanceday7var","checkinbalanceforperiodvar","checkinbalancewarningday1var","checkinbalancewarningday2var","checkinbalancewarningday3var","checkinbalancewarningday4var","checkinbalancewarningday5var","checkinbalancewarningday6var","checkinbalancewarningday7var","checkinbalancewarningforperiodvar","checkinenabledforperiodvar","checkintimeroundedday1var","checkintimeroundedday2var","checkintimeroundedday3var","checkintimeroundedday4var","checkintimeroundedday5var","checkintimeroundedday6var","checkintimeroundedday7var","checkintimeroundedforperiodvar","copyfromdatevar","copyfromweekvar","copyfromyearvar","datevar","employeenamevar","employeenumber","employeenumbervar","excludeovertimeenabledforperiodvar","fixednumberday1var","fixednumberday2var","fixednumberday3var","fixednumberday4var","fixednumberday5var","fixednumberday6var","fixednumberday7var","fixednumberweekvar","flex:accessofflextime","flex:accessofflextimeoptionlist","flex:flextimeeffectvar","flex:incomingflextimevar","flex:manualflextimeadjustmentsvar","flex:outgoingflextimevar","headerapprovaldatevar","headerapprovedorrejectedbyvar","headercurrentapprovalstatusdescriptionvar","headerdatesubmittedvar","headerremarkvar","headersubmittedbyvar","invoiceablepercentageday1var","invoiceablepercentageday2var","invoiceablepercentageday3var","invoiceablepercentageday4var","invoiceablepercentageday5var","invoiceablepercentageday6var","invoiceablepercentageday7var","invoiceablepercentageofweekvar","nextheaderapproverdescriptionvar","nextheaderapproveremployeenumbervar","nextheaderapprovernamevar","numberoflinesmissingapprovalvar","numberofrejectedlinesvar","overtimeday1var","overtimeday2var","overtimeday3var","overtimeday4var","overtimeday5var","overtimeday6var","overtimeday7var","overtimeforperiodvar","overtimenumberday1var","overtimenumberday2var","overtimenumberday3var","overtimenumberday4var","overtimenumberday5var","overtimenumberday6var","overtimenumberday7var","overtimenumberweekvar","partvar","periodendvar","periodstartvar","regulartimebalanceday1var","regulartimebalanceday2var","regulartimebalanceday3var","regulartimebalanceday4var","regulartimebalanceday5var","regulartimebalanceday6var","regulartimebalanceday7var","regulartimebalanceforperiodvar","regulartimeday1var","regulartimeday2var","regulartimeday3var","regulartimeday4var","regulartimeday5var","regulartimeday6var","regulartimeday7var","regulartimeforperiodvar","resubmissionexplanationrequiredvar","resubmissionexplanationvar","tablerelationtitlevar","timeexpectedvar","timesheetstatusvar","totalnumberday1var","totalnumberday2var","totalnumberday3var","totalnumberday4var","totalnumberday5var","totalnumberday6var","totalnumberday7var","totalnumberofweekvar","weeknumbervar","workflowstatusvar"]},"table":{"fields":["b3:overtimetyperestricted","customernamevar","day1textheaderallowchangevar","day2textheaderallowchangevar","day3textheaderallowchangevar","day4textheaderallowchangevar","day5textheaderallowchangevar","day6textheaderallowchangevar","day7textheaderallowchangevar","descriptionday1","descriptionday2","descriptionday3","descriptionday4","descriptionday5","descriptionday6","descriptionday7","favorite","jobnamevar","jobnumber","lineapprovaldatevar","lineapprovedorrejectedbyvar","linecurrentstatusvar","linedetailstypevar","lineremarkvar","nextlineapproverdescriptionvar","nextlineapproveremployeenumbervar","nextlineapprovernamevar","numberday1","numberday2","numberday3","numberday4","numberday5","numberday6","numberday7","permanentline","taskname","tasktextvar","usesdailydescriptionsvar","weektotal","activitynumber","allowamountregintimesheetsvar","companynumber","customernumbervar","employeenumber","entrytext","instancekey","optionlistnumber1","optionlistnumber2","optionlistnumber3","optionlistnumber4","optionlistnumber5","timeregistrationunit"]}}}',
         );
 
         my %content = await $response.body;
@@ -654,11 +658,13 @@ class Micronomy {
         $response = call-url(
             "$url/$containerInstanceId/data;any",
             headers => {
+                Accept => "application/vnd.deltek.maconomy.containers+json",
                 Authorization => "X-Reconnect $token",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                Maconomy-Authentication => "X-Reconnect",
                 Maconomy-Concurrency-Control => $concurrency,
-                Content-Type => "application/json",
-                Content-Length => 0,
             },
+            body => '{"offset": 0, "limit": 100}',
         );
         $concurrency = get-header($response, 'maconomy-concurrency-control');
         %content = await $response.body;
@@ -670,7 +676,8 @@ class Micronomy {
             headers => {
                 Authorization => "X-Reconnect $token",
                 Maconomy-Concurrency-Control => $concurrency,
-                Content-Type => "application/json",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                Accept => "application/vnd.deltek.maconomy.containers+json",
             },
             body => '{"data":{"datevar":"' ~ $date ~ '","employeenumbervar":"' ~ $employeeNumber ~ '"}}',
         );
