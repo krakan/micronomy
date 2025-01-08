@@ -277,7 +277,7 @@ class Micronomy {
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
-                    Content-Type => "application/json",
+                    Content-Type => "application/vnd.deltek.maconomy.containers+json",
                 },
             );
             my %content = await $response.body;
@@ -576,7 +576,7 @@ class Micronomy {
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
             },
             body => '{"panes": {}}',
         );
@@ -590,7 +590,7 @@ class Micronomy {
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
                 Content-Length => 0,
                 Maconomy-Concurrency-Control => $concurrency,
             },
@@ -613,7 +613,7 @@ class Micronomy {
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
-                Content-Type => "application/json",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
             },
             body => '{"data": {"jobnumber":"' ~ $jobnumber ~ '"}}',
         );
@@ -735,7 +735,7 @@ class Micronomy {
             headers => {
                 Authorization => "X-Reconnect $token",
                 Maconomy-Concurrency-Control => %parameters<concurrency>,
-                Content-Type => "application/json",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
             },
             body => $data,
         );
@@ -779,7 +779,7 @@ class Micronomy {
                 headers => {
                     Authorization => "X-Reconnect $token",
                     Maconomy-Concurrency-Control => %parameters<concurrency>,
-                    Content-Type => "application/json",
+                    Content-Type => "application/vnd.deltek.maconomy.containers+json",
                 },
                 body => '{"data": {"permanentline":' ~ " $permanent}}",
             );
@@ -1074,7 +1074,7 @@ class Micronomy {
                         $url,
                         headers => {
                             Authorization => "X-Reconnect $token",
-                            Content-Type => "application/json",
+                            Content-Type => "application/vnd.deltek.maconomy.containers+json",
                             Maconomy-Concurrency-Control => $concurrency,
                         },
                         body => '{"data":{' ~ @changes.join(", ") ~ '}}',
@@ -1175,7 +1175,7 @@ class Micronomy {
                 $url,
                 headers => {
                     Authorization => "X-Reconnect $token",
-                    Content-Type => "application/json",
+                    Content-Type => "application/vnd.deltek.maconomy.containers+json",
                     Maconomy-Concurrency-Control => $concurrency,
                     Content-Length => 0,
                 },
