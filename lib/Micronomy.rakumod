@@ -176,7 +176,6 @@ class Micronomy {
         my $rowCount = %content<panes><table><meta><rowCount>;
 
         my $weekstatus = 0;
-        $weekstatus = 1 if %card<headerdatesubmittedvar>;
         $weekstatus = 1 if %card<workflowstatusvar> eq 'submitted';
         $weekstatus = 2 if %card<workflowstatusvar> eq 'approved';
 
@@ -1177,8 +1176,9 @@ class Micronomy {
                     Authorization => "X-Reconnect $token",
                     Content-Type => "application/vnd.deltek.maconomy.containers+json",
                     Maconomy-Concurrency-Control => $concurrency,
-                    Content-Length => 0,
+                    Referer => "$server/workspace/weeklytimesheets",
                 },
+                body => '{"offset": 0, "limit": 100}',
             );
 
             %content = parse-week($response);
