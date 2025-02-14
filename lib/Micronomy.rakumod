@@ -14,9 +14,9 @@ class Micronomy {
     my $auth-path = "maconomy-api/auth/b3";
     my $instances-path = "maconomy-api/containers/b3/timeregistration/instances";
     my $environment-path = "/maconomy-api/environment/b3?variables";
-    my $favorites-path = "maconomy-api/containers/b3/jobfavorites/instances";
-    my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline?fields=taskname,description&limit=100";
-    my @days = <Sön Mån Tis Ons To Fre Lör Sön>;
+    my $favorites-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=jobfavorite";
+    my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline";
+    my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
     my @months = <Dec Jan Feb Mar Apr Maj Jun Jul Aug Sep Okt Nov Dec>;
     my $retries = 10;
     template-location 'resources/templates/';
@@ -263,6 +263,23 @@ class Micronomy {
         }
     }
 
+    sub get-employee($token) {
+        trace "sub get-employee", $token;
+        my $url = "$server/$environment-path=user.employeeinfo.name1,user.info.employeenumber";
+        my $response = call-url(
+            $url,
+            headers => {
+                Authorization => "X-Reconnect $token",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
+            },
+        );
+        my %content = await $response.body;
+        my $employeeName = %content<user><employeeinfo><name1><string><value>;
+        my $employeeNumber = %content<user><info><employeenumber><string><value>;
+        trace "employee: $employeeNumber, $employeeName", $token;
+        return $employeeNumber, $employeeName;
+    }
+
     method get-period(Str :$token is copy, Date :$start-date, Date :$end-date, Int :$hours-cache is copy = 0) {
         my $timeout = DateTime.now.later(minutes => 5);
         $token = fix-token($token);
@@ -270,18 +287,7 @@ class Micronomy {
 
         my ($employee, $employeeNumber, %cache);
         if $token ne "demo" {
-            my $url = "$server/$environment-path=user.employeeinfo.name1,user.info.employeenumber";
-
-            my $response = call-url(
-                $url,
-                headers => {
-                    Authorization => "X-Reconnect $token",
-                    Content-Type => "application/vnd.deltek.maconomy.containers+json",
-                },
-            );
-            my %content = await $response.body;
-            $employee = %content<user><employeeinfo><name1><string><value>;
-            $employeeNumber = %content<user><info><employeenumber><string><value>;
+            ($employeeNumber, $employee) = get-employee($token);
             %cache = get-cache($employeeNumber);
         } else {
             %cache = get-demo($start-date);
@@ -570,31 +576,22 @@ class Micronomy {
         trace "sub get-favorites", $token;
         return get-cache("demo-faves") if $token eq "demo";
 
+        my ($employeeNumber, $employeeName) = get-employee($token);
+
         my $url = "$server/$favorites-path";
         my $response = call-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
-                Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                Accept => "application/vnd.deltek.maconomy.containers+json; version=6.1",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json; version=6.1",
             },
-            body => '{"panes": {}}',
+            body => {
+                data => {employeenumber => $employeeNumber},
+                fields => <employeenumber favorite jobnumber taskname>,
+            },
         );
         my $body = await $response.body;
-
-        my $containerInstanceId = $body<meta><containerInstanceId>;
-        my $concurrency = get-header($response, 'maconomy-concurrency-control');
-
-        $url = "$server/$favorites-path/$containerInstanceId/data;any";
-        $response = call-url(
-            $url,
-            headers => {
-                Authorization => "X-Reconnect $token",
-                Content-Type => "application/vnd.deltek.maconomy.containers+json",
-                Content-Length => 0,
-                Maconomy-Concurrency-Control => $concurrency,
-            },
-        );
-        $body = await $response.body;
 
         return $body;
     }
@@ -607,14 +604,24 @@ class Micronomy {
             return %tasks{$jobnumber};
         }
 
+        my ($employeeNumber, $employeeName) = get-employee($token);
+
         my $url = "$server/$tasks-path";
         my $response = call-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
-                Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                Accept => "application/vnd.deltek.maconomy.containers+json; version=6.1",
+                Content-Type => "application/vnd.deltek.maconomy.containers+json; version=6.1",
             },
-            body => '{"data": {"jobnumber":"' ~ $jobnumber ~ '"}}',
+            body => {
+                data => {
+                    employeenumber => $employeeNumber,
+                    jobnumber => $jobnumber,
+                },
+                fields => <taskname description>,
+                limit => 25,
+            },
         );
         my $body = await $response.body;
 
@@ -652,7 +659,7 @@ class Micronomy {
         my $concurrency = get-header($response, 'maconomy-concurrency-control');
         my $employeeNumber = 0;
 
-        trace "get concurrency employeeNumber", $token;
+        trace "refresh concurrency", $token;
         # refresh concurrency (sic!)
         $response = call-url(
             "$url/$containerInstanceId/data;any",
@@ -663,13 +670,13 @@ class Micronomy {
                 Maconomy-Authentication => "X-Reconnect",
                 Maconomy-Concurrency-Control => $concurrency,
             },
-            body => '{"offset": 0, "limit": 100}',
+            body => {"offset" => 0, "limit" => 100},
         );
         $concurrency = get-header($response, 'maconomy-concurrency-control');
         %content = await $response.body;
         $employeeNumber = %content<panes><card><records>[0]<data><employeenumber>;
 
-        trace "get concurrency concurrency", $token;
+        trace "get actual concurrency", $token;
         $response = call-url(
             "$url/$containerInstanceId/data/panes/card/0",
             headers => {
@@ -706,27 +713,34 @@ class Micronomy {
                            unless %parameters<containerInstanceId> and %parameters<concurrency>;
 
         my $url = "$server/$instances-path/%parameters<containerInstanceId>/data/panes/table";
+        my $row;
         if ($target < $numberOfLines) {
             if $action eq "add" {
-                $url ~= "?row=" ~ $target;
+                $row = $target;
             } else {
                 $url ~= "/$target";
             }
+        } else {
+            $row = "end";
         }
 
         # populate row
-        my @data = ();
-        @data.push('"jobnumber": "' ~ %parameters{"job-$source"} ~ '"') if %parameters{"job-$source"};
-        @data.push('"taskname": "' ~  %parameters{"task-$source"} ~ '"') if %parameters{"task-$source"};
+        my %body = (
+            offset => 0,
+            limit => 100,
+        );
+        %body<row> = $row if $row;
+        %body<data><jobnumber> = %parameters{"job-$source"} if %parameters{"job-$source"};
+        %body<data><taskname> = %parameters{"task-$source"} if %parameters{"task-$source"};
+
         if %parameters{"position-$source"} ne $source and %parameters{"hours-$source"}:exists {
             my $day = 0;
             for %parameters{"hours-$source"}.split(";") -> $hours {
                 $day++;
-                @data.push("\"numberday{$day}\": $hours") if $hours ne "0";
+                %body<data>{"numberday{$day}"} = $hours if $hours ne "0";
             }
         }
-        my $data = '{"data": {' ~ @data.join(",") ~ '}}';
-        trace "setting row $target to $data", $token;
+        trace "setting row $target to %data", $token;
 
         my $response = call-url(
             $url,
@@ -736,7 +750,7 @@ class Micronomy {
                 Maconomy-Concurrency-Control => %parameters<concurrency>,
                 Content-Type => "application/vnd.deltek.maconomy.containers+json",
             },
-            body => $data,
+            body => %body,
         );
         %parameters<concurrency> = get-header($response, 'maconomy-concurrency-control');
         return %parameters;
@@ -811,17 +825,19 @@ class Micronomy {
             get-concurrency($token, %parameters<date>)
                            unless %parameters<containerInstanceId> and %parameters<concurrency>;
 
-        my $url = "$server/$instances-path/%parameters<containerInstanceId>/data/panes/table/$target";
+        my $url = "$server/$instances-path/%parameters<containerInstanceId>/data/panes/table/$target/delete";
 
         # delete row
         trace "delete row $target", $token;
         my $response = call-url(
             $url,
-            method => 'delete',
             headers => {
                 Authorization => "X-Reconnect $token",
                 Maconomy-Concurrency-Control => %parameters<concurrency>,
+                Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                Accept => "application/vnd.deltek.maconomy.containers+json",
             },
+            body => {offset => 0, limit => 100},
         );
         %parameters<concurrency> = get-header($response, 'maconomy-concurrency-control');
         return $%parameters;
@@ -1014,16 +1030,16 @@ class Micronomy {
         %data<next> = @rows.elems;
 
         my @favorites;
-        for ^%favorites<panes><table><meta><rowCount> -> $row {
-            my $jobNumber = %favorites<panes><table><records>[$row]<data><jobnumber>;
-            my $taskNumber = %favorites<panes><table><records>[$row]<data><taskname> // "";
+        for ^%favorites<panes><filter><meta><rowCount> -> $row {
+            my $jobNumber = %favorites<panes><filter><records>[$row]<data><jobnumber>;
+            my $taskNumber = %favorites<panes><filter><records>[$row]<data><taskname> // "";
             next if %rows{$jobNumber}{$taskNumber};
             my %favorite = (
-                favorite   => %favorites<panes><table><records>[$row]<data><favorite>,
+                favorite   => %favorites<panes><filter><records>[$row]<data><favorite>,
                 jobnumber  => $jobNumber,
-                jobname    => %favorites<panes><table><records>[$row]<data><jobnamevar>,
+                jobname    => %favorites<panes><filter><records>[$row]<data><jobnamevar>,
                 tasknumber => $taskNumber,
-                taskname   => %favorites<panes><table><records>[$row]<data><tasktextvar>,
+                taskname   => %favorites<panes><filter><records>[$row]<data><tasktextvar>,
             );
             @favorites.push(%favorite);
         }
@@ -1073,7 +1089,7 @@ class Micronomy {
                         $url,
                         headers => {
                             Authorization => "X-Reconnect $token",
-                            Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                            Content-Type => "application/vnd.deltek.maconomy.containers+json; version=6.1",
                             Maconomy-Concurrency-Control => $concurrency,
                         },
                         body => '{"data":{' ~ @changes.join(", ") ~ '}}',
