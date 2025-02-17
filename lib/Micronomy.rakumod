@@ -1089,7 +1089,7 @@ class Micronomy {
                         $url,
                         headers => {
                             Authorization => "X-Reconnect $token",
-                            Content-Type => "application/vnd.deltek.maconomy.containers+json; version=6.1",
+                            Content-Type => "application/vnd.deltek.maconomy.containers+json",
                             Maconomy-Concurrency-Control => $concurrency,
                         },
                         body => '{"data":{' ~ @changes.join(", ") ~ '}}',
