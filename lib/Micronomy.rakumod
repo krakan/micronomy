@@ -651,7 +651,77 @@ class Micronomy {
                 Content-Type => "application/vnd.deltek.maconomy.containers+json",
                 Maconomy-Authentication => "X-Reconnect",
             },
-            body => '{"panes":{"card":{"fields":["approvalhierarchyenabledheadervar","approvalhierarchyenabledlinesvar","cardrelationtitlevar","checkinbalanceday1var","checkinbalanceday2var","checkinbalanceday3var","checkinbalanceday4var","checkinbalanceday5var","checkinbalanceday6var","checkinbalanceday7var","checkinbalanceforperiodvar","checkinbalancewarningday1var","checkinbalancewarningday2var","checkinbalancewarningday3var","checkinbalancewarningday4var","checkinbalancewarningday5var","checkinbalancewarningday6var","checkinbalancewarningday7var","checkinbalancewarningforperiodvar","checkinenabledforperiodvar","checkintimeroundedday1var","checkintimeroundedday2var","checkintimeroundedday3var","checkintimeroundedday4var","checkintimeroundedday5var","checkintimeroundedday6var","checkintimeroundedday7var","checkintimeroundedforperiodvar","copyfromdatevar","copyfromweekvar","copyfromyearvar","datevar","employeenamevar","employeenumber","employeenumbervar","excludeovertimeenabledforperiodvar","fixednumberday1var","fixednumberday2var","fixednumberday3var","fixednumberday4var","fixednumberday5var","fixednumberday6var","fixednumberday7var","fixednumberweekvar","flex:accessofflextime","flex:accessofflextimeoptionlist","flex:flextimeeffectvar","flex:incomingflextimevar","flex:manualflextimeadjustmentsvar","flex:outgoingflextimevar","headerapprovaldatevar","headerapprovedorrejectedbyvar","headercurrentapprovalstatusdescriptionvar","headerdatesubmittedvar","headerremarkvar","headersubmittedbyvar","invoiceablepercentageday1var","invoiceablepercentageday2var","invoiceablepercentageday3var","invoiceablepercentageday4var","invoiceablepercentageday5var","invoiceablepercentageday6var","invoiceablepercentageday7var","invoiceablepercentageofweekvar","nextheaderapproverdescriptionvar","nextheaderapproveremployeenumbervar","nextheaderapprovernamevar","numberoflinesmissingapprovalvar","numberofrejectedlinesvar","overtimeday1var","overtimeday2var","overtimeday3var","overtimeday4var","overtimeday5var","overtimeday6var","overtimeday7var","overtimeforperiodvar","overtimenumberday1var","overtimenumberday2var","overtimenumberday3var","overtimenumberday4var","overtimenumberday5var","overtimenumberday6var","overtimenumberday7var","overtimenumberweekvar","partvar","periodendvar","periodstartvar","regulartimebalanceday1var","regulartimebalanceday2var","regulartimebalanceday3var","regulartimebalanceday4var","regulartimebalanceday5var","regulartimebalanceday6var","regulartimebalanceday7var","regulartimebalanceforperiodvar","regulartimeday1var","regulartimeday2var","regulartimeday3var","regulartimeday4var","regulartimeday5var","regulartimeday6var","regulartimeday7var","regulartimeforperiodvar","resubmissionexplanationrequiredvar","resubmissionexplanationvar","tablerelationtitlevar","timeexpectedvar","timesheetstatusvar","totalnumberday1var","totalnumberday2var","totalnumberday3var","totalnumberday4var","totalnumberday5var","totalnumberday6var","totalnumberday7var","totalnumberofweekvar","weeknumbervar","workflowstatusvar"]},"table":{"fields":["b3:overtimetyperestricted","customernamevar","day1textheaderallowchangevar","day2textheaderallowchangevar","day3textheaderallowchangevar","day4textheaderallowchangevar","day5textheaderallowchangevar","day6textheaderallowchangevar","day7textheaderallowchangevar","descriptionday1","descriptionday2","descriptionday3","descriptionday4","descriptionday5","descriptionday6","descriptionday7","favorite","jobnamevar","jobnumber","lineapprovaldatevar","lineapprovedorrejectedbyvar","linecurrentstatusvar","linedetailstypevar","lineremarkvar","nextlineapproverdescriptionvar","nextlineapproveremployeenumbervar","nextlineapprovernamevar","numberday1","numberday2","numberday3","numberday4","numberday5","numberday6","numberday7","permanentline","taskname","tasktextvar","usesdailydescriptionsvar","weektotal","activitynumber","allowamountregintimesheetsvar","companynumber","customernumbervar","employeenumber","entrytext","instancekey","optionlistnumber1","optionlistnumber2","optionlistnumber3","optionlistnumber4","optionlistnumber5","timeregistrationunit"]}}}',
+            body => {
+                panes => {
+                    card => {
+                        fields => <
+                            datevar
+                            employeenamevar
+                            employeenumber
+                            employeenumbervar
+                            fixednumberday1var
+                            fixednumberday2var
+                            fixednumberday3var
+                            fixednumberday4var
+                            fixednumberday5var
+                            fixednumberday6var
+                            fixednumberday7var
+                            fixednumberweekvar
+                            invoiceablepercentageday1var
+                            invoiceablepercentageday2var
+                            invoiceablepercentageday3var
+                            invoiceablepercentageday4var
+                            invoiceablepercentageday5var
+                            invoiceablepercentageday6var
+                            invoiceablepercentageday7var
+                            invoiceablepercentageofweekvar
+                            overtimenumberday1var
+                            overtimenumberday2var
+                            overtimenumberday3var
+                            overtimenumberday4var
+                            overtimenumberday5var
+                            overtimenumberday6var
+                            overtimenumberday7var
+                            overtimenumberweekvar
+                            partvar
+                            periodstartvar
+                            resubmissionexplanationvar
+                            totalnumberday1var
+                            totalnumberday2var
+                            totalnumberday3var
+                            totalnumberday4var
+                            totalnumberday5var
+                            totalnumberday6var
+                            totalnumberday7var
+                            totalnumberofweekvar
+                            weeknumbervar
+                            workflowstatusvar
+                            >
+                    },
+                    table => {
+                        fields => <
+                            favorite
+                            jobnamevar
+                            jobnumber
+                            lineapprovaldatevar
+                            numberday1
+                            numberday2
+                            numberday3
+                            numberday4
+                            numberday5
+                            numberday6
+                            numberday7
+                            permanentline
+                            taskname
+                            tasktextvar
+                            weektotal
+                            activitynumber
+                            employeenumber
+                            entrytext
+                        >
+                    }
+                }
+            },
         );
 
         my %content = await $response.body;
