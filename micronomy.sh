@@ -123,6 +123,10 @@ case $target in
                 export MICRONOMY_TLS_KEY=$cert/privkey.pem
             fi
 
+            # get latest
+            git pull
+
+            # twiddle beta icon
             if test $beta
             then
                 test -f $scriptdir/resources/b3-orig.svg ||
