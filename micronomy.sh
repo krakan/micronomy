@@ -110,7 +110,7 @@ case $target in
             if echo "$cert" | grep -q letsencrypt
             then
                 valid=$(sudo certbot certificates 2>/dev/null | grep -o 'VALID.*' | cut -d' ' -f2)
-                if test ${valid:-90} -le 30
+                if test ${valid:-90} -le 14
                 then
                     sudo systemctl stop nginx
                     sudo certbot renew
