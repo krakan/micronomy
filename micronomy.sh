@@ -148,6 +148,7 @@ case $target in
                 script -c "raku -I lib service.raku" -f /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
             else
                 mkdir -p $scriptdir/log
+                script -c "raku -I lib wait-for-restart.raku" -f $scriptdir/log/restarter-$(date +%Y%m%d%H%M%S).log 2>&1 &
                 script -c "raku -I lib service.raku" -f $scriptdir/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
             fi
             test $TMUX && tmux set automatic-rename
