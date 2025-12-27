@@ -5,7 +5,6 @@ After=systemd-networkd.service
 Requires=systemd-networkd.service
 
 [Service]
-ExecStart=
 ExecStart=/home/jonas/micronomy/micronomy.sh --port 8080
 User=jonas
 Restart=always

@@ -1,11 +1,11 @@
 [Unit]
-Description=Run Micronomy memory guard
+Description=Run Micronomy restart wait service
 Documentation=https://github.com/krakan/micronomy/
 After=systemd-networkd.service
 Requires=systemd-networkd.service
 
 [Service]
-ExecStart=/home/jonas/micronomy/memfree.sh
+ExecStart=/home/jonas/micronomy/micronomy.sh wait-for-restart
 User=jonas
 Restart=always
 
