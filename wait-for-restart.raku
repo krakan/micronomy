@@ -35,7 +35,7 @@ sub wait-for-backend() is export {
                         last WAIT;
                     }
                 }
-                say "waiting for main process ...";
+                say "waiting for main process restart ...";
                 sleep 1;
             }
             response.status = 502;
