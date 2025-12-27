@@ -5,12 +5,15 @@ do
     date "+%FT%T $memf"
     if test $memf -lt 100000
     then
+        # Restart the wait-for-restart service
         sudo systemctl restart wait-for-restart
         for i in $(seq 10)
         do
-            netstat -ln | grep ':8888 .* LISTEN' && break
+            sudo netstat -pln | grep ':8888 .* LISTEN' && break
             sleep 0.5
         done
+
+        # Kill the micronomy process to let it restart
         pkill -fx 'raku -I lib service.raku'
     fi
     sleep 60
