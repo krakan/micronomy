@@ -76,10 +76,7 @@ case $target in
 
     tmux) ssh -t micronomy.jonaseel.se tmux attach;;
 
-    wait-for-restart)
-        mkdir -p $scriptdir/log
-        script -c "raku wait-for-restart.raku" -f $scriptdir/log/restarter-$(date +%Y%m%d%H%M%S).log 2>&1
-        ;;
+    wait-for-restart) raku wait-for-restart.raku;;
 
     run)
         # run as root to allow low port
