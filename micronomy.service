@@ -8,6 +8,7 @@ Requires=systemd-networkd.service
 ExecStart=/home/jonas/micronomy/micronomy.sh --port 8080
 User=jonas
 Restart=always
+LogRateLimitIntervalSec=0
 
 [Install]
 WantedBy=default.target
