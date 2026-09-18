@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: "30 2 * * 1"      # Mondays 02:30 UTC
   push:
-    branches: [ "master", "ci/container-build-push-cosign" ]
+    branches: [ "master" ]
     tags: [ 'v*.*.*' ]
   workflow_dispatch: {}
 
