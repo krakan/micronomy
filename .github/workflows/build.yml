@@ -1,0 +1,93 @@
+name: Build + Push + Cosign
+
+on:
+  schedule:
+    - cron: "30 2 * * 1"      # Mondays 02:30 UTC
+  push:
+    branches: [ "master", "ci/container-build-push-cosign" ]
+    tags: [ 'v*.*.*' ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write   # for cosign
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Docker meta (tags + labels)
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.authors=${{ github.repository_owner }}
+            org.opencontainers.image.vendor=${{ github.repository_owner }}
+            org.opencontainers.image.licenses=${{ github.event.repository.license.spdx_id }}
+            org.opencontainers.image.title=${{ github.event.repository.name }}
+            org.opencontainers.image.documentation=https://github.com/${{ github.repository }}#readme
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.description=Middleware and alternative web GUI to access Maconomy
+            org.opencontainers.image.revision={{sha}}
+            org.opencontainers.image.created={{commit_date 'YYYY-MM-DDTHH:mm:ss[Z]'}}
+
+      - name: Cache container layers
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/containers/storage
+          key: buildah-layers-${{ hashFiles('Dockerfile') }}
+          restore-keys: |
+            buildah-layers-
+
+      - name: Build image
+        id: buildah
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE }}
+          tags: ${{ steps.meta.outputs.tags }}
+          containerfiles: |
+            ./Dockerfile
+          labels: ${{ steps.meta.outputs.labels }}
+          layers: true
+
+      - name: Log in to registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push to registry
+        id: push
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          image: ${{ steps.buildah.outputs.image }}
+          tags: ${{ steps.buildah.outputs.tags }}
+          registry: ghcr.io
+
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: 'v3.0.6'
+
+      - name: Sign image
+        if: github.event_name != 'pull_request'
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          cosign sign --yes ${{ env.IMAGE }}@${DIGEST}
