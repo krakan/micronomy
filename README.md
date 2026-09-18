@@ -106,8 +106,9 @@ raku -I lib service.raku
 ```
 
 There is also a script `micronomy.sh` that handles Let's Encrypt renewal
-and rudimentary logging. You'll most likely need to customize it before
-using it.
+and forwards the service's log output to syslog (tagged `micronomy`, so
+eg. `grep micronomy: /var/log/syslog`). You'll most likely need to
+customize it before using it.
 
 Unfortunately, there seems to be some problem with SSL that under some
 circumstances makes HTTPS connections hang indefinitely. In that case

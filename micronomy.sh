@@ -148,13 +148,7 @@ case $target in
             echo Starting ...
             test $port && export MICRONOMY_PORT=$port
             test $TMUX && tmux rename-window micronomy
-            if id -u | grep -qx 0
-            then
-                script -c "raku -I lib service.raku" -f /var/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
-            else
-                mkdir -p $scriptdir/log
-                script -c "raku -I lib service.raku" -f $scriptdir/log/micronomy-$(date +%Y%m%d%H%M%S).log 2>&1
-            fi
+            stdbuf -oL -eL raku -I lib service.raku 2>&1 | logger -t micronomy
             test $TMUX && tmux set automatic-rename
             # wait for optional extra CTRL-C
             sleep 1
