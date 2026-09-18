@@ -65,6 +65,21 @@ change an already billed week, the changes will probably be ignored by
 the billing system. So don't do that without consulting with you
 manager first.
 
+# Command-line client
+
+For scripting or terminal-only use there's also a CLI client in
+[`cli/`](cli/) that talks to the Maconomy iAccess API directly (it
+does not go through the Micronomy web service). See
+[cli/README.md](cli/README.md) for build instructions and usage, but
+in short:
+
+```
+micronomy login
+micronomy get
+micronomy set --row 0 --day 1 --hours 8.5
+micronomy submit
+```
+
 # Contributing
 
 If you find any bugs or even want to fix one you can go to
@@ -121,3 +136,20 @@ sudo cp resources/nginx.conf /etc/nginx/sites-enabled/default
 sudo systemctl restart nginx
 ./micronomy.sh --port 8080
 ```
+
+## Running as a service
+
+Sample systemd unit files are provided to run Micronomy unattended:
+
+- `micronomy.service` runs `micronomy.sh --port 8080` and restarts it
+  automatically.
+- `memfree.service` runs `memfree.sh`, which monitors free memory and
+  forces garbage collection (or kills `raku` outright) if it drops too
+  low; this works around a memory leak in long-running Raku processes.
+- `wait-for-restart.service` runs `micronomy.sh wait-for-restart`, a
+  small helper that lets Nginx return a friendly "please wait" response
+  while the main process is restarting instead of a connection error.
+
+Copy the ones you need to `/etc/systemd/system/`, adjust the paths and
+`User` to match your setup, then enable them with eg.
+`sudo systemctl enable --now micronomy.service`.
