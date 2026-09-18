@@ -121,8 +121,23 @@ raku -I lib service.raku
 ```
 
 There is also a script `micronomy.sh` that handles Let's Encrypt renewal
-and rudimentary logging. You'll most likely need to customize it before
-using it.
+and forwards the service's log output to syslog (tagged `micronomy`, so
+eg. `grep micronomy: /var/log/syslog`). You'll most likely need to
+customize it before using it.
+
+To split that output into its own log file instead of leaving it mixed
+into the general syslog, install the provided rsyslog and logrotate
+config on the server:
+
+```
+sudo cp resources/rsyslog-micronomy.conf /etc/rsyslog.d/10-micronomy.conf
+sudo cp resources/logrotate-micronomy /etc/logrotate.d/micronomy
+sudo systemctl restart rsyslog
+```
+
+This routes messages tagged `micronomy` to `/var/log/micronomy.log`
+(and stops them from also going to the general syslog), with weekly
+rotation keeping 8 compressed generations.
 
 Unfortunately, there seems to be some problem with SSL that under some
 circumstances makes HTTPS connections hang indefinitely. In that case
