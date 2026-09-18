@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: "30 2 * * 1"      # Mondays 02:30 UTC
   push:
-    branches: [ "master" ]
+    branches: [ "master", "dev" ]
     tags: [ 'v*.*.*' ]
   workflow_dispatch: {}
 
