@@ -1,6 +1,7 @@
 unit module Micronomy::Common;
 
 use Cro::HTTP::Client;
+use Cro::HTTP::Response;
 use Digest::MD5;
 use experimental :pack;
 
@@ -41,6 +42,13 @@ sub call-url($url, :%auth, :%headers, :$body, :$method, :$timeout is copy = 2) i
     }
     trace "{whodunit()} timed out too many times", $token;
     return {};
+}
+
+sub get-header($response, $header) is export {
+    return unless $response ~~ Cro::HTTP::Response;
+    for $response.headers -> $key {
+        return $key.value if $key.name.lc eq $header.lc;
+    }
 }
 
 sub whodunit() {

@@ -27,7 +27,8 @@
     "Cro::HTTP",
     "Cro::WebApp",
     "URI::Encode",
-    "Digest::MD5"
+    "Digest::MD5",
+    "MIME::Base64"
   ],
   "name": "micronomy"
 }

@@ -328,6 +328,14 @@ input[type="text"] {
     font-size: 1.4rem;
 }
 
+/* Sits directly below the login form and lines up with it */
+.sso-form {
+    display: flex;
+    flex-direction: column;
+    width: 23em;
+    padding: 0 1em 1em 1em;
+}
+
 /* End login page */
 
 

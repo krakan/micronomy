@@ -1,5 +1,6 @@
 use Cro::HTTP::Router;
 use Micronomy;
+use Micronomy::OIDC;
 
 sub routes() is export {
     route {
@@ -11,6 +12,25 @@ sub routes() is export {
             request-body -> (:$username = '', :$password = '') {
                 Micronomy.login(username => $username.lc, password => $password)
             }
+        }
+
+        get -> 'login', 'oidc', :$prompt = '' {
+            Micronomy.start-oidc-login(callback-url => get-callback-url(request), :$prompt)
+        }
+
+        get -> 'login', 'oidc', 'callback',
+               :$code = '',
+               :$error = '',
+               :error_description($error-description) = '',
+               :$state = '',
+               :$oidcState is cookie = '' {
+            Micronomy.login-oidc(callback-url => get-callback-url(request),
+                                 :$code,
+                                 :$error,
+                                 :$error-description,
+                                 :$state,
+                                 expected-state => $oidcState,
+                                )
         }
 
         get -> :$sessionToken is cookie = '', :$date = '' {

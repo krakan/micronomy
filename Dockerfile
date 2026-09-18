@@ -7,7 +7,7 @@ RUN apt-get update && \
     apt-get install -y libssl-dev && \
     apt-get clean
 
-RUN zef install Cro::HTTP Cro::WebApp URI::Encode Digest::MD5
+RUN zef install Cro::HTTP Cro::WebApp URI::Encode Digest::MD5 MIME::Base64
 
 RUN mkdir /app
 COPY . /app
