@@ -929,8 +929,8 @@ class Micronomy {
         }
     }
 
-    sub edit($token, %parameters) {
-        trace "sub edit", $token;
+    sub apply-row-edits($token, %parameters) {
+        trace "sub apply-row-edits", $token;
         my $numberOfLines = %parameters<rows>;
         my @currentPosition = ^$numberOfLines;
         my @errors = ();
@@ -1052,7 +1052,7 @@ class Micronomy {
         for %parameters.keys.sort -> $key {
             trace "$key: %parameters{$key}";
         }
-        my $errorMessage = edit($token, %parameters) if %parameters<rows>:exists;
+        my $errorMessage = apply-row-edits($token, %parameters) if %parameters<rows>:exists;
 
         my %favorites = get-favorites($token) || return;
         my %cache = get-week($token, $date);
@@ -1131,7 +1131,7 @@ class Micronomy {
         }
     }
 
-    sub set(%parameters, $row, $token) {
+    sub save-row(%parameters, $row, $token) {
         return set-demo(%parameters, $row) if $token eq "demo";
 
         my $retries = %parameters<state> > 1 ?? 2 !! $default-retries;
@@ -1196,7 +1196,7 @@ class Micronomy {
         if (%parameters<rowCount>) {
             for ^%parameters<rowCount> -> $row {
                 next if $row == $filler;
-                my %result = set(%parameters, $row, $token);
+                my %result = save-row(%parameters, $row, $token);
                 if %result {
                     %parameters<concurrency> = %result<concurrency>;
                     %content = %result;
@@ -1205,7 +1205,7 @@ class Micronomy {
             if $token eq "demo" {
                 set-demo-filler(%parameters);
             } elsif set-filler(%content, %parameters, $filler) {
-                my %result = set(%parameters, $filler, $token);
+                my %result = save-row(%parameters, $filler, $token);
                 if %result {
                     %parameters<concurrency> = %result<concurrency>;
                     %content = %result;
