@@ -54,6 +54,29 @@ sub check-readiness() is export {
     return %(ready => $ok, reason => $reason);
 }
 
+# Both of these read from /proc, so they are Linux-only (which is what the
+# container runs); elsewhere they quietly report 0 rather than fail metrics
+# collection for a couple of gauges.
+
+sub process-memory-bytes() {
+    my $status = try slurp "/proc/self/status";
+    return 0 unless $status and $status ~~ /'VmRSS:' \s* (\d+) \s* 'kB'/;
+    return +$0 * 1024;
+}
+
+sub process-cpu-seconds() {
+    my $stat = try slurp "/proc/self/stat";
+    return 0e0 unless $stat;
+    # The comm field (2nd) is the only one that can contain spaces/parens, so
+    # split after the *last* ')' rather than assuming fixed field positions.
+    my $paren = $stat.rindex(')') // return 0e0;
+    my @fields = $stat.substr($paren + 2).split(' ');
+    # utime/stime are fields 14 and 15 of /proc/pid/stat; @fields[0] here is
+    # field 3 (state), so they land at indices 11 and 12.
+    my constant $CLK-TCK = 100; # USER_HZ has been 100 on Linux for decades
+    return ((@fields[11] // 0).Int + (@fields[12] // 0).Int) / $CLK-TCK;
+}
+
 sub render-metrics() is export {
     my $out = "";
     $lock.protect: {
@@ -99,6 +122,14 @@ sub render-metrics() is export {
     $out ~= "# HELP process_uptime_seconds Seconds since the process started.\n";
     $out ~= "# TYPE process_uptime_seconds gauge\n";
     $out ~= "process_uptime_seconds {(now - $start-time).fmt('%.3f')}\n";
+
+    $out ~= "# HELP process_resident_memory_bytes Resident memory size in bytes.\n";
+    $out ~= "# TYPE process_resident_memory_bytes gauge\n";
+    $out ~= "process_resident_memory_bytes {process-memory-bytes()}\n";
+
+    $out ~= "# HELP process_cpu_seconds_total Total user and system CPU time spent, in seconds.\n";
+    $out ~= "# TYPE process_cpu_seconds_total counter\n";
+    $out ~= "process_cpu_seconds_total {process-cpu-seconds().fmt('%.2f')}\n";
 
     return $out;
 }
