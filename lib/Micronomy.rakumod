@@ -18,7 +18,7 @@ class Micronomy {
     my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
     my @months = <Dec Jan Feb Mar Apr Maj Jun Jul Aug Sep Okt Nov Dec>;
-    my $retries = 10;
+    my $default-retries = 10;
     template-location 'resources/templates/';
 
     sub get-header($response, $header) {
@@ -1134,7 +1134,7 @@ class Micronomy {
     sub set(%parameters, $row, $token) {
         return set-demo(%parameters, $row) if $token eq "demo";
 
-        $retries = 2 if %parameters<state> > 1;
+        my $retries = %parameters<state> > 1 ?? 2 !! $default-retries;
         my @changes;
         for 1..7 -> $day  {
             my $hours = %parameters{"hours-$row-$day"} || "0";
@@ -1318,7 +1318,7 @@ class Micronomy {
                 $token = "demo";
             } else {
                 my $url = "$server/$auth-path";
-                for 0..$retries -> $wait {
+                for 0..$default-retries -> $wait {
                     sleep $wait/10;
 
                     my $response = call-url(
