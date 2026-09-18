@@ -179,61 +179,65 @@ class Micronomy {
         $weekstatus = 1 if %card<workflowstatusvar> eq 'submitted';
         $weekstatus = 2 if %card<workflowstatusvar> eq 'approved';
 
-        my %cache = get-cache(%card<employeenumber>);
+        my (%cache, $year, $month, $mday);
+        cache-lock(%card<employeenumber>).protect: {
+            %cache = get-cache(%card<employeenumber>);
 
-        %cache<employeeName> = %card<employeenamevar>;
-        %cache<employeeNumber> = %card<employeenumber>;
-        %cache<concurrency> = get-header($response, 'maconomy-concurrency-control');
-        %cache<containerInstanceId> = %content<meta><containerInstanceId>;
+            %cache<employeeName> = %card<employeenamevar>;
+            %cache<employeeNumber> = %card<employeenumber>;
+            %cache<concurrency> = get-header($response, 'maconomy-concurrency-control');
+            %cache<containerInstanceId> = %content<meta><containerInstanceId>;
 
-        my %weekData = (
-            name => %card<weeknumbervar> ~ %card<partvar>,
-            state => $weekstatus,
-            totals => {
-                reported => %card<totalnumberofweekvar>,
-                fixed => %card<fixednumberweekvar>,
-                overtime => %card<overtimenumberweekvar>,
-                invoiceable => %card<invoiceablepercentageofweekvar>.round(0.1),
-            },
-        );
+            my %weekData = (
+                name => %card<weeknumbervar> ~ %card<partvar>,
+                state => $weekstatus,
+                totals => {
+                    reported => %card<totalnumberofweekvar>,
+                    fixed => %card<fixednumberweekvar>,
+                    overtime => %card<overtimenumberweekvar>,
+                    invoiceable => %card<invoiceablepercentageofweekvar>.round(0.1),
+                },
+            );
 
-        for 1..7 -> $wday {
-            my %day;
-            %day<reported> = %card{"totalnumberday{$wday}var"} if %card{"totalnumberday{$wday}var"};
-            %day<fixed> = %card{"fixednumberday{$wday}var"} if %card{"fixednumberday{$wday}var"};
-            %day<overtime> = %card{"overtimenumberday{$wday}var"} if %card{"overtimenumberday{$wday}var"};
-            %day<invoiceable> = %card{"invoiceablepercentageday{$wday}var"}.round(0.1) if %card{"invoiceablepercentageday{$wday}var"};
-            %weekData<totals><days>{$wday} = %day if %day.keys;
-        }
-
-        for ^$rowCount -> $row {
-            my %rowData = @records[$row]<data>;
-            my $jobName = %rowData<jobnamevar>;
-            my $jobNumber = %rowData<jobnumber>;
-            my $taskNumber = %rowData<taskname>;
-            my $taskName = %rowData<entrytext>;
-
-            %cache<jobs>{$jobNumber}<name> = $jobName;
-            %cache<jobs>{$jobNumber}<tasks>{$taskNumber} = $taskName;
-
-            my $total = @records[$row]<data><weektotal>;
-
-            %weekData<rows>[$row] = {
-                job => $jobNumber,
-                task => $taskNumber,
-            };
-            %weekData<rows>[$row]<temp> = True unless @records[$row]<data><permanentline>;
-            %weekData<rows>[$row]<total> = $total if $total;
             for 1..7 -> $wday {
-                my $hours = @records[$row]<data>{"numberday{$wday}"};
-                %weekData<rows>[$row]<hours>{$wday} = $hours if $hours;
+                my %day;
+                %day<reported> = %card{"totalnumberday{$wday}var"} if %card{"totalnumberday{$wday}var"};
+                %day<fixed> = %card{"fixednumberday{$wday}var"} if %card{"fixednumberday{$wday}var"};
+                %day<overtime> = %card{"overtimenumberday{$wday}var"} if %card{"overtimenumberday{$wday}var"};
+                %day<invoiceable> = %card{"invoiceablepercentageday{$wday}var"}.round(0.1) if %card{"invoiceablepercentageday{$wday}var"};
+                %weekData<totals><days>{$wday} = %day if %day.keys;
             }
+
+            for ^$rowCount -> $row {
+                my %rowData = @records[$row]<data>;
+                my $jobName = %rowData<jobnamevar>;
+                my $jobNumber = %rowData<jobnumber>;
+                my $taskNumber = %rowData<taskname>;
+                my $taskName = %rowData<entrytext>;
+
+                %cache<jobs>{$jobNumber}<name> = $jobName;
+                %cache<jobs>{$jobNumber}<tasks>{$taskNumber} = $taskName;
+
+                my $total = @records[$row]<data><weektotal>;
+
+                %weekData<rows>[$row] = {
+                    job => $jobNumber,
+                    task => $taskNumber,
+                };
+                %weekData<rows>[$row]<temp> = True unless @records[$row]<data><permanentline>;
+                %weekData<rows>[$row]<total> = $total if $total;
+                for 1..7 -> $wday {
+                    my $hours = @records[$row]<data>{"numberday{$wday}"};
+                    %weekData<rows>[$row]<hours>{$wday} = $hours if $hours;
+                }
+            }
+
+            my $week-name;
+            ($week-name, my $periodStart, $year, $month, $mday) = get-current-week(%card<periodstartvar>);
+            %cache<weeks>{$year}{$month}{$mday} = %weekData;
+
+            set-cache(%cache);
         }
-
-        my ($week-name, $periodStart, $year, $month, $mday) = get-current-week(%card<periodstartvar>);
-        %cache<weeks>{$year}{$month}{$mday} = %weekData;
-
-        set-cache(%cache);
 
         %cache<currentWeek> = %card<periodstartvar>;
         %cache<currentDate> = %card<datevar>;
@@ -288,28 +292,31 @@ class Micronomy {
         my ($employee, $employeeNumber, %cache);
         if $token ne "demo" {
             ($employeeNumber, $employee) = get-employee($token);
-            %cache = get-cache($employeeNumber);
         } else {
             %cache = get-demo($start-date);
             $employee = %cache<employeeName>;
             $employeeNumber = %cache<employeeNumber>;
         }
 
-        if $hours-cache == 1 {
-            %cache<employeeName> = $employee;
-            %cache<employeeNumber> = $employeeNumber;
-            %cache<enabled> = True;
-            set-cache(%cache);
-        } elsif $hours-cache == -1 {
-            %cache = (
-                employeeName => $employee,
-                employeeNumber => $employeeNumber,
-                enabled => False,
-            );
-            set-cache(%cache);
-            %cache = get-demo($start-date) if $token eq "demo";
-        } else {
-            $hours-cache = %cache<enabled> // False;
+        cache-lock($employeeNumber).protect: {
+            %cache = get-cache($employeeNumber) if $token ne "demo";
+
+            if $hours-cache == 1 {
+                %cache<employeeName> = $employee;
+                %cache<employeeNumber> = $employeeNumber;
+                %cache<enabled> = True;
+                set-cache(%cache);
+            } elsif $hours-cache == -1 {
+                %cache = (
+                    employeeName => $employee,
+                    employeeNumber => $employeeNumber,
+                    enabled => False,
+                );
+                set-cache(%cache);
+                %cache = get-demo($start-date) if $token eq "demo";
+            } else {
+                $hours-cache = %cache<enabled> // False;
+            }
         }
 
         my $bucketSize = 'week';
