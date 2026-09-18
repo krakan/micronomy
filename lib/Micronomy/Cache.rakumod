@@ -2,6 +2,7 @@ unit module Micronomy::Cache;
 
 use JSON::Fast;
 use Micronomy::Common;
+use Micronomy::Observability;
 
 my %locks;
 my $locks-mutex = Lock.new;
@@ -50,5 +51,12 @@ sub set-cache(%cache) is export {
         }
     }
 
-    spurt cache-file($employeeNumber), to-json(%output, :sorted-keys);
+
+    try {
+        spurt cache-file($employeeNumber), to-json(%output, :sorted-keys);
+    }
+    if $! {
+        record-cache-error();
+        error $!, $employeeNumber, "cache write failed";
+    }
 }
