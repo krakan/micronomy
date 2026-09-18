@@ -5,7 +5,7 @@
 
 use JSON::Fast;
 use Cro::HTTP::Client;
-use Terminal::Readsecret;
+use Prompt::Hidden;
 
 my %*SUB-MAIN-OPTS = :named-anywhere;
 my $config = "%*ENV<HOME>" ~ '/.micronomy';
@@ -28,7 +28,7 @@ multi MAIN(
     Str :s(:$server) = $defaultServer,
 ) {
     $user //= prompt('Username: ');
-    $pass //= getsecret('Password: ');
+    $pass //= prompt('Password: ', :hidden);
     my $uri = "$server/containers/v1/b3/api_currentemployee/data;any";
 
     my $resp = await Cro::HTTP::Client.get(

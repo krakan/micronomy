@@ -1,5 +1,5 @@
 FROM rakudo-star:bookworm
-ENV PATH $PATH:/root/.raku/bin
+ENV PATH=$PATH:/root/.raku/bin
 
 RUN apt-get update && \
     apt-get upgrade -y && \
