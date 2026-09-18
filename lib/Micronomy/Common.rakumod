@@ -2,6 +2,7 @@ unit module Micronomy::Common;
 
 use Cro::HTTP::Client;
 use Digest::MD5;
+use Micronomy::Observability;
 use experimental :pack;
 
 sub call-url($url, :%auth, :%headers, :$body, :$method, :$timeout is copy = 2) is export {
@@ -30,15 +31,19 @@ sub call-url($url, :%auth, :%headers, :$body, :$method, :$timeout is copy = 2) i
                 next;
             }
             my $response = await $request;
+            record-maconomy-call('ok');
             return $response;
         }
         if $! ~~ X::Cro::HTTP::Error and $!.response.status == 404 and $wait < $retries { # 404 Not Found - probably not true - try again
+            record-maconomy-call('retry_404');
             trace "{whodunit()} received {$!.response.status} - retrying [{$wait+1}/$retries]", $token;
         } else {
+            record-maconomy-call('error');
             trace "{whodunit()} received {$!.response.status}", $token;
             die $!;
         }
     }
+    record-maconomy-call('timeout');
     trace "{whodunit()} timed out too many times", $token;
     return {};
 }

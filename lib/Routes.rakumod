@@ -1,8 +1,35 @@
 use Cro::HTTP::Router;
+use JSON::Fast;
 use Micronomy;
+use Micronomy::Observability;
 
 sub routes() is export {
     route {
+        before {
+            request.annotations<observability-start> = now;
+        }
+
+        after {
+            my $req = response.request;
+            my $start = $req.annotations<observability-start>;
+            my $duration = $start ?? (now - $start) !! 0;
+            record-http-request($req.path, $req.method.Str, (response.status // 0).Str, $duration);
+        }
+
+        get -> 'healthz' {
+            content 'application/json', to-json(%(status => check-liveness() ?? 'ok' !! 'error'));
+        }
+
+        get -> 'readyz' {
+            my %result = check-readiness();
+            response.status = %result<ready> ?? 200 !! 503;
+            content 'application/json', to-json(%(status => %result<ready> ?? 'ready' !! 'not-ready', reason => %result<reason>));
+        }
+
+        get -> 'metrics' {
+            content 'text/plain; version=0.0.4', render-metrics();
+        }
+
         get -> 'login', :$username = '', :$reason = '' {
             Micronomy.get-login(username => $username.lc, reason => $reason)
         }
