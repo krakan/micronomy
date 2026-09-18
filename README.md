@@ -9,7 +9,9 @@ work with than the main Maconomy GUI.
 ## Connecting
 
 Point you browser at https://micronomy.init.se/ and log in with your
-B3 Maconomy credentials.
+B3 Maconomy credentials, or with the "Logga in med Microsoft" button if
+single sign-on is available - see [Single sign-on](#single-sign-on-oidc)
+below. Both methods work side by side.
 
 To run it locally you can either install Rakudo and the required
 modules or make sure you have a working Docker installation and build
@@ -105,7 +107,7 @@ eval "$($HOME/.rakubrew/bin/rakubrew init Bash)"
 rakubrew download
 rakubrew build zef
 
-zef install --serial Cro::WebApp URI::Encode Digest::MD5
+zef install --serial Cro::WebApp URI::Encode Digest::MD5 MIME::Base64
 ```
 
 Basing this on Debian is of course optional - any platform that can
@@ -136,6 +138,63 @@ sudo cp resources/nginx.conf /etc/nginx/sites-enabled/default
 sudo systemctl restart nginx
 ./micronomy.sh --port 8080
 ```
+
+## Single sign-on (OIDC)
+
+If the Maconomy tenant has an OpenID Connect provider configured -
+B3's has Azure AD (Entra ID) - the login page offers a "Logga in med
+Microsoft" button alongside the password form. Micronomy asks Maconomy
+what it supports on every login page (cached for an hour) and only
+shows the button when the `x-oidc-code` scheme is actually advertised,
+so a tenant without SSO, or one where it is temporarily unavailable,
+simply gets the password form. The `demo`/`demo` account is unaffected.
+
+Micronomy never handles a client secret and never talks to the identity
+provider's token endpoint. It redirects the browser to the provider,
+receives an authorization code back, and hands that code to Maconomy,
+which performs the exchange itself and returns the same
+`Maconomy-Reconnect` token a password login would have produced. In
+outline:
+
+1. anonymous `GET maconomy-api/auth/b3` with
+   `Accept: application/vnd.deltek.maconomy.authentication+json` returns
+   the available schemes and `openIDProviders[0].links.authorization-url.template`
+2. `{redirect-uri}` in that template is replaced with Micronomy's own
+   callback URL, and the browser is sent there with a random `state`
+3. the provider redirects back to the callback with `?code=...&state=...`;
+   the state has to match the `oidcState` cookie set in step 2
+4. `GET maconomy-api/auth/b3` with
+   `Authorization: X-OIDC-Code <base64("<redirect-uri>:code")>` - note the
+   angle brackets, which is how Maconomy finds the separator in a string
+   that contains colons of its own - returns the session token
+
+### Configuration
+
+The callback URL must match a redirect URI registered with the identity
+provider byte for byte. Micronomy derives it from the request `Host`
+(assuming `https` unless `X-Forwarded-Proto` says otherwise, since Nginx
+terminates TLS), which works for a plain deployment, but set it
+explicitly when anything in front of the service makes that guess wrong:
+
+```
+export MICRONOMY_CALLBACK_URL=https://micronomy.init.se/login/oidc/callback
+```
+
+That same URL has to be added to the app registration's allowed redirect
+URIs on the provider side, and Maconomy has to be able to map the
+verified identity to a Maconomy employee, or the exchange in step 4 will
+fail. Both are administrative tasks outside this repository.
+
+The session cookie set by an SSO login is `SameSite=Lax` rather than the
+password login's `Strict`: the browser arrives at the callback from the
+provider, across sites, and a `Strict` cookie would be withheld from the
+redirect that follows. `Lax` still keeps the cookie off every cross-site
+`POST`, and every state change in Micronomy is a `POST`.
+
+The notes from working the protocol out - including what the web client's
+own JavaScript does, and the open questions for B3 IT - are in git
+history: `git show 845ef9c:sso-oidc-investigation.md` and
+`git show 845ef9c:sso-oidc-todo.md`.
 
 ## Running as a service
 
