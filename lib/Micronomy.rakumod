@@ -13,6 +13,7 @@ use Micronomy::Calendar;
 class Micronomy {
     my $server = "https://b3iaccess.deltekenterprise.com";
     my $auth-path = "maconomy-api/auth/b3";
+    my $oidc-path = "/login/oidc";
     my $instances-path = "maconomy-api/containers/b3/timeregistration/instances";
     my $environment-path = "/maconomy-api/environment/b3?variables";
     my $favorites-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=jobfavorite";
@@ -1389,13 +1390,22 @@ class Micronomy {
         my %provider = get-oidc-provider("$server/$auth-path") // {};
         # the button is only shown when SSO is on offer, so a cached "no" is worth re-checking
         %provider = get-oidc-provider("$server/$auth-path", :refresh) // {} unless %provider;
-        my $url = %provider ?? get-authorization-url(%provider, $callback-url, :$prompt) !! Nil;
+        my $state = new-oidc-state();
+        my $url = %provider ?? get-authorization-url(%provider, $callback-url, :$prompt, :$state) !! Nil;
 
         unless $url {
             trace "oidc login unavailable";
             return Micronomy.get-login(reason => "SSO är inte tillgängligt just nu");
         }
 
+        # Lax and scoped to the callback, for the same reason as the session cookie: the
+        # browser comes back to us from the identity provider, across sites
+        set-cookie("oidcState", $state,
+                   same-site => Cro::HTTP::Cookie::SameSite::Lax,
+                   http-only => True,
+                   path => $oidc-path,
+                   expires => DateTime.now.later(minutes => 10),
+                  );
         redirect $url, :see-other;
         trace "redirected from login to identity provider";
         return {};
@@ -1403,8 +1413,17 @@ class Micronomy {
 
     #| step two: hand the authorization code the identity provider sent us to Maconomy,
     #| which does the actual token exchange and gives us an ordinary reconnect token
-    method login-oidc(:$code = '', :$callback-url, :$error = '', :$error-description = '') {
+    method login-oidc(:$code = '', :$callback-url, :$error = '', :$error-description = '',
+                      :$state = '', :$expected-state = '') {
         my ($token, $status);
+
+        # one use only, whichever way this ends
+        set-cookie("oidcState", "",
+                   same-site => Cro::HTTP::Cookie::SameSite::Lax,
+                   http-only => True,
+                   path => $oidc-path,
+                   expires => DateTime.now(),
+                  );
 
         if $error {
             trace "oidc login denied: $error {$error-description}";
@@ -1416,6 +1435,13 @@ class Micronomy {
         unless $code {
             trace "oidc callback without code";
             return Micronomy.get-login(reason => "SSO-inloggningen misslyckades - försök igen");
+        }
+
+        # the callback has to belong to the browser that started the flow, or it is
+        # someone else's login being pushed onto this one
+        unless $state and $state eq $expected-state {
+            trace "oidc state mismatch";
+            return Micronomy.get-login(reason => "SSO-inloggningen misslyckades - börja om från inloggningssidan");
         }
 
         $token = exchange-oidc-code("$server/$auth-path", $callback-url, $code);

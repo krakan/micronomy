@@ -21,11 +21,15 @@ sub routes() is export {
         get -> 'login', 'oidc', 'callback',
                :$code = '',
                :$error = '',
-               :error_description($error-description) = '' {
+               :error_description($error-description) = '',
+               :$state = '',
+               :$oidcState is cookie = '' {
             Micronomy.login-oidc(callback-url => get-callback-url(request),
                                  :$code,
                                  :$error,
                                  :$error-description,
+                                 :$state,
+                                 expected-state => $oidcState,
                                 )
         }
 

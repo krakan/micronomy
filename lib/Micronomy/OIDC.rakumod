@@ -39,6 +39,19 @@ sub get-callback-url($request) is export {
     return "$scheme://$host/login/oidc/callback";
 }
 
+#| a random value tying a callback to the browser that started the flow: it goes out in
+#| the authorization URL, is kept in a short-lived cookie, and has to match on the way back
+sub new-oidc-state(--> Str) is export {
+    my $bytes;
+    my $handle = try "/dev/urandom".IO.open(:bin);
+    if $handle {
+        $bytes = $handle.read(16);
+        $handle.close;
+    }
+    $bytes //= Blob.new((^256).roll(16));
+    return $bytes.list.map({ sprintf "%02x", $_ }).join;
+}
+
 #| the cached answer to "does Maconomy offer OIDC logins?" - pass :refresh to ask again
 sub get-oidc-provider($auth-url, :$refresh) is export {
     my $ttl = %provider-cache ?? $provider-ttl !! $failure-ttl;
@@ -94,7 +107,7 @@ sub fetch-oidc-provider($auth-url) {
 }
 
 #| build the identity provider's authorization URL from the template Maconomy gave us
-sub get-authorization-url(%provider, $callback-url, :$prompt = '') is export {
+sub get-authorization-url(%provider, $callback-url, :$prompt = '', :$state = '') is export {
     my $template = %provider<links><authorization-url><template> // return Nil;
     my $url = $template.subst(
         '{redirect-uri}',
@@ -103,6 +116,8 @@ sub get-authorization-url(%provider, $callback-url, :$prompt = '') is export {
     );
     # the web client forwards prompt (e.g. select_account) to let the user switch account
     $url ~= "&prompt={uri_encode_component($prompt)}" if $prompt;
+    # state is ours, not Maconomy's - the identity provider hands it back untouched
+    $url ~= "&state={uri_encode_component($state)}" if $state;
     return $url;
 }
 

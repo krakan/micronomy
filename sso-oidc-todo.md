@@ -11,7 +11,9 @@ Based on the findings in [`sso-oidc-investigation.md`](./sso-oidc-investigation.
 - [ ] Decide Micronomy's OIDC callback URL, e.g. `https://micronomy.init.se/login/oidc/callback`.
 - [ ] Get that callback URL added to the Azure AD app registration's allowed redirect URIs in
       Entra ID (or get a new/dedicated app registration created and configured on the Maconomy
-      side, if reusing the existing one isn't appropriate).
+      side, if reusing the existing one isn't appropriate). Note that the registration already
+      accepts `http://localhost/login/oidc/callback` — a live login through it succeeded on
+      2026-09-18 — so only the production URL is actually missing.
 - [ ] Confirm how Maconomy maps an Azure AD identity (UPN? email? object id?) to a Maconomy
       employee number, and confirm every employee who needs Micronomy access already has that
       mapping set up on the Maconomy side.
@@ -39,10 +41,12 @@ timing out. `MIME::Base64` was added to `META6.json` and the `Dockerfile`'s `zef
       same `maconomy-api/auth/b3` endpoint, read `Maconomy-Reconnect` from the response headers
       via the existing `get-header()` helper. (`exchange-oidc-code($auth-url, $callback-url, $code)`.)
 
-Verified: `get-oidc-provider()` was run against the live tenant (anonymous GET only) and returns
-the Azure AD provider from the investigation; the URL/base64 helpers were checked against the
-template it returns. `exchange-oidc-code()` is still unverified end-to-end — it needs a real
-authorization code, i.e. the section 1 prerequisites and a live test (section 6).
+Verified end to end against the live tenant on 2026-09-18: discovery returns the Azure AD provider
+from the investigation, and `exchange-oidc-code()` turned a real authorization code into a working
+session. The first attempt failed with `401 Credentials could not be extracted from authorization
+parameters.` because the base64 payload lacked the angle brackets around the URL; the stub used in
+testing now parses the payload the way Maconomy does, so that format is covered by a test rather
+than by memory.
 
 ## 3. Routes &amp; login flow (`Routes.rakumod`, `lib/Micronomy.rakumod`)
 
@@ -73,11 +77,21 @@ redirects with the correct `redirect_uri` and optional `prompt`; a good code set
 neither show their login-page errors; discovery being down or not offering `x-oidc-code` falls back
 to "SSO är inte tillgängligt just nu"; the password login page is unchanged.
 
-Not implemented (not in this plan, worth a decision):
+Added beyond the original plan:
 
-- No `state` parameter is sent with the authorization request, so nothing ties a callback to the
-  browser that started the flow. Maconomy's own template doesn't include one either, but adding
-  `&state=<random>` plus a short-lived cookie would protect against login-CSRF.
+- [x] **`state` parameter** (login-CSRF protection). `new-oidc-state()` reads 16 bytes from
+      `/dev/urandom` (falling back to `.roll` if that can't be opened) and hex-encodes them.
+      `/login/oidc` appends `&state=<value>` to the authorization URL — the parameter is ours, not
+      Maconomy's, and the identity provider hands it back untouched — and stores the same value in
+      an `oidcState` cookie: `HttpOnly`, `SameSite=Lax`, `Path=/login/oidc`, expiring in 10
+      minutes. The callback requires the query value to match the cookie before it will exchange
+      the code, and clears the cookie either way, so a state is good for one attempt.
+      Verified with the stub: consecutive starts get different states; a matching state logs in; a
+      wrong state and a missing cookie are both refused with "börja om från inloggningssidan", and
+      in neither case is the code sent to Maconomy.
+
+Cookie decisions worth knowing about:
+
 - ~~The `sessionToken` cookie is `SameSite=Strict`~~ — **resolved 2026-09-18, and the cause was
   not SameSite.** The first two live logins succeeded at Maconomy but bounced back to the login
   page, because the cookie was set without a `Path`: a browser then scopes it to the directory of
@@ -114,6 +128,9 @@ Not implemented (not in this plan, worth a decision):
       `get-login` asks `oidc-available()` and hides the button; someone who reaches `/login/oidc`
       anyway (bookmark, stale page) gets "SSO är inte tillgängligt just nu" instead of a broken
       redirect.
+- [x] Callback whose `state` doesn't match the `oidcState` cookie, or that arrives with no cookie
+      at all (replayed link, expired attempt, someone else's callback) → refused before the code is
+      exchanged, with "börja om från inloggningssidan".
 
 Discovery is cached in `Micronomy::OIDC` so rendering the login page doesn't cost a round trip to
 Maconomy every time: a positive answer is kept for an hour, a negative one for a minute (so a
@@ -122,15 +139,24 @@ hiccup doesn't hide SSO for an hour), and `/login/oidc` re-checks before giving 
 Verified with the stubbed Maconomy: the login page offers both methods; six renders trigger exactly
 one discovery call; `demo` and the password form still log in and set the same cookie; and the SSO
 button disappears — with the password form untouched — both when Maconomy drops `x-oidc-code` and
-when it is unreachable. The button's appearance in a real browser hasn't been eyeballed yet.
+when it is unreachable. The button has since been clicked through in a real browser (Firefox) for a
+successful live login.
 
 ## 6. Testing &amp; rollout
 
-- [ ] End-to-end test against a non-production/sandbox Maconomy + Azure AD setup if one exists;
+- [x] End-to-end test against a non-production/sandbox Maconomy + Azure AD setup if one exists;
       otherwise coordinate a controlled first test in production with B3 IT.
+      Done informally on 2026-09-18: Micronomy running locally in Docker on `http://localhost/`,
+      against the live Maconomy tenant and the real Azure AD app registration. A full login
+      succeeded. Notably **the existing app registration already accepts
+      `http://localhost/login/oidc/callback`**, so this local setup needs no Entra ID change and
+      can serve as the test rig for the production callback work in section 1.
+      Not yet repeated after the `state` parameter was added, nor by a second person.
 - [ ] Verify everything downstream of login (week fetch, concurrency control, caching) behaves
       identically for an OIDC-derived session — it should, since it's the same reconnect token
-      shape, but confirm empirically.
+      shape, but confirm empirically. The first live login did reach the timesheet, so the week
+      fetch works; editing, submitting and the month/period views are still unexercised on an
+      OIDC-derived session.
 - [ ] Decide rollout strategy: keep dual-mode long-term, or eventually make SSO the
       `preferred` method and demote/remove the password form.
 - [ ] Update `README.md` to document the new login option once shipped.
