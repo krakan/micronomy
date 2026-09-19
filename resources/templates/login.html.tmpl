@@ -13,11 +13,11 @@
           <input type="password" name="password" placeholder="L&ouml;senord"
              class="login-text-input center-text">
           <input type="submit" class="login-button" value="Logga in">
+          <?.sso>
+            <input type="button" class="login-button" onclick="location.href='/login/oidc'" value="Logga in med SSO">
+          </?>
         </form>
-<?.sso>        <form name="sso" class="sso-form" method="GET" action="/login/oidc">
-          <input type="submit" class="login-button" value="Logga in med Microsoft">
-        </form>
-</?>      </div>
+      </div>
 
       <script>
         <!--
