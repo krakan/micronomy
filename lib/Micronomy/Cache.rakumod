@@ -2,6 +2,7 @@ unit module Micronomy::Cache;
 
 use JSON::Fast;
 use Micronomy::Common;
+use Micronomy::Observability;
 
 sub get-cache($employeeNumber) is export {
 
@@ -39,5 +40,11 @@ sub set-cache(%cache) is export {
     $dir ~~ s/<-[^/]>* $//;
     $dir ||= '.';
     my $cacheFile = "$dir/resources/$employeeNumber.json";
-    spurt $cacheFile, to-json(%output, :sorted-keys);
+    try {
+        spurt $cacheFile, to-json(%output, :sorted-keys);
+    }
+    if $! {
+        record-cache-error();
+        error $!, $employeeNumber, "cache write failed";
+    }
 }
