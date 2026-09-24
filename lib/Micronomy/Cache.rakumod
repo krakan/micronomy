@@ -3,12 +3,27 @@ unit module Micronomy::Cache;
 use JSON::Fast;
 use Micronomy::Common;
 
-sub get-cache($employeeNumber) is export {
+my %locks;
+my $locks-mutex = Lock.new;
 
+# One Lock per employee number, so a caller can hold a lock across a whole
+# get-cache -> mutate -> set-cache sequence for one employee, without
+# blocking cache access for any other employee.
+sub cache-lock(Str() $employeeNumber --> Lock) is export {
+    $locks-mutex.protect: {
+        %locks{$employeeNumber} //= Lock.new;
+    }
+}
+
+sub cache-file($employeeNumber) {
     my $dir = $*PROGRAM-NAME;
     $dir ~~ s/<-[^/]>* $//;
     $dir ||= '.';
-    my $cacheFile = "$dir/resources/$employeeNumber.json";
+    "$dir/resources/$employeeNumber.json";
+}
+
+sub get-cache($employeeNumber) is export {
+    my $cacheFile = cache-file($employeeNumber);
     my $cache = slurp $cacheFile if $cacheFile.IO.e;
     return from-json $cache if $cache;
 }
@@ -35,9 +50,5 @@ sub set-cache(%cache) is export {
         }
     }
 
-    my $dir = $*PROGRAM-NAME;
-    $dir ~~ s/<-[^/]>* $//;
-    $dir ||= '.';
-    my $cacheFile = "$dir/resources/$employeeNumber.json";
-    spurt $cacheFile, to-json(%output, :sorted-keys);
+    spurt cache-file($employeeNumber), to-json(%output, :sorted-keys);
 }
