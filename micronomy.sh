@@ -144,6 +144,15 @@ case $target in
                 sed -i 's/@ β3/@ B3/' $scriptdir/resources/templates/common.html.tmpl
             fi
 
+            # setup logging
+            cmp resources/rsyslog-micronomy.conf /etc/rsyslog.d/10-micronomy.conf > /dev/null 2>&1 ||
+                sudo cp resources/rsyslog-micronomy.conf /etc/rsyslog.d/10-micronomy.conf
+            if ! cmp resources/logrotate-micronomy /etc/logrotate.d/micronomy > /dev/null 2>&1
+            then
+                sudo cp resources/logrotate-micronomy /etc/logrotate.d/micronomy
+                sudo systemctl restart rsyslog
+            fi
+
             # start service
             echo Starting ...
             test $port && export MICRONOMY_PORT=$port
