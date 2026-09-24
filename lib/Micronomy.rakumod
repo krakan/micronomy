@@ -15,7 +15,7 @@ class Micronomy {
     my $auth-path = "maconomy-api/auth/b3";
     my $oidc-path = "/login/oidc";
     my $instances-path = "maconomy-api/containers/b3/timeregistration/instances";
-    my $environment-path = "/maconomy-api/environment/b3?variables";
+    my $environment-path = "maconomy-api/environment/b3";
     my $favorites-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=jobfavorite";
     my $tasks-path = "maconomy-api/containers/b3/timeregistration/search/table;foreignkey=taskname_tasklistline";
     my @days = <Sön Mån Tis Ons Tor Fre Lör Sön>;
@@ -265,17 +265,18 @@ class Micronomy {
 
     sub get-employee($token) {
         trace "sub get-employee", $token;
-        my $url = "$server/$environment-path=user.employeeinfo.name1,user.info.employeenumber";
+        my $url = "$server/$environment-path";
         my $response = call-url(
             $url,
             headers => {
                 Authorization => "X-Reconnect $token",
-                Content-Type => "application/vnd.deltek.maconomy.containers+json",
+                Content-Type => "application/vnd.deltek.maconomy.environment+json",
             },
+            body => '{"keys":["user.employeeinfo.name1","user.info.employeenumber"]}',
         );
         my %content = await $response.body;
-        my $employeeName = %content<user><employeeinfo><name1><string><value>;
-        my $employeeNumber = %content<user><info><employeenumber><string><value>;
+        my $employeeName = %content<user.employeeinfo.name1><value>;
+        my $employeeNumber = %content<user.info.employeenumber><value>;
         trace "employee: $employeeNumber, $employeeName", $token;
         return $employeeNumber, $employeeName;
     }
