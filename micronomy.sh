@@ -148,7 +148,7 @@ case $target in
             echo Starting ...
             test $port && export MICRONOMY_PORT=$port
             test $TMUX && tmux rename-window micronomy
-            stdbuf -oL -eL raku -I lib service.raku 2>&1 | logger -t micronomy
+            script -c "raku -I lib service.raku" -f >(logger -t micronomy)
             test $TMUX && tmux set automatic-rename
             # wait for optional extra CTRL-C
             sleep 1
