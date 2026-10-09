@@ -11,7 +11,7 @@ use Micronomy::OIDC;
 use Micronomy::Calendar;
 
 class Micronomy {
-    my $server = "https://b3iaccess.deltekenterprise.com";
+    my $server = "https://b3maconomy.deltekenterprise.com";
     my $auth-path = "maconomy-api/auth/b3";
     my $oidc-path = "/login/oidc";
     my $instances-path = "maconomy-api/containers/b3/timeregistration/instances";
@@ -1453,6 +1453,9 @@ class Micronomy {
         }
 
         $token = exchange-oidc-code("$server/$auth-path", $callback-url, $code);
+
+        my ($employeeNumber, $employee) = get-employee($token);
+        trace "logged in $employee", $token;
 
         CATCH {
             when X::Cro::HTTP::Error {

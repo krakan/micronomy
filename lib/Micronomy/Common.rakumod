@@ -2,7 +2,7 @@ unit module Micronomy::Common;
 
 use Cro::HTTP::Client;
 use Cro::HTTP::Response;
-use Digest::MD5;
+use Digest::SHA256::Native;
 use Micronomy::Observability;
 use experimental :pack;
 
@@ -66,7 +66,7 @@ sub trace($message, $token = '') is export {
     my $now = DateTime.now(
         formatter => { sprintf "%4d-%02d-%02d %02d:%02d:%06.3f",
                        .year, .month, .day, .hour, .minute, .second });
-    my $session = $token ?? md5($token).unpack("H*").substr(24) !! '-';
+    my $session = $token ?? sha256($token).unpack("H*").substr(*-8) !! '-';
     say "$now  $session  $message";
 }
 
