@@ -191,7 +191,7 @@ class Micronomy {
                     reported => %card<totalnumberofweekvar>,
                     fixed => %card<fixednumberweekvar>,
                     overtime => %card<overtimenumberweekvar>,
-                    invoiceable => %card<invoiceablepercentageofweekvar>.round(0.1),
+                    invoiceable => (%card<totalnumberofweekvar> * %card<invoiceablepercentageofweekvar> / 100).round(0.1),
                 },
             );
 
@@ -200,7 +200,7 @@ class Micronomy {
                 %day<reported> = %card{"totalnumberday{$wday}var"} if %card{"totalnumberday{$wday}var"};
                 %day<fixed> = %card{"fixednumberday{$wday}var"} if %card{"fixednumberday{$wday}var"};
                 %day<overtime> = %card{"overtimenumberday{$wday}var"} if %card{"overtimenumberday{$wday}var"};
-                %day<invoiceable> = %card{"invoiceablepercentageday{$wday}var"}.round(0.1) if %card{"invoiceablepercentageday{$wday}var"};
+                %day<invoiceable> = (%day<reported> * %card{"invoiceablepercentageday{$wday}var"} / 100 if %card{"invoiceablepercentageday{$wday}var"}).round(0.1);
                 %weekData<totals><days>{$wday} = %day if %day.keys;
             }
 
@@ -336,6 +336,12 @@ class Micronomy {
                 my ($week-name, $week-start, $year, $month, $mday) = get-current-week($current);
                 if %cache<weeks>{$year}{$month}{$mday}:exists {
                     trace "using cached week $current", $token;
+                    if %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> > %cache<weeks>{$year}{$month}{$mday}<totals><reported> {
+                        %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> = (
+                            %cache<weeks>{$year}{$month}{$mday}<totals><invoiceable> *
+                            %cache<weeks>{$year}{$month}{$mday}<totals><reported> / 100
+                        ).round(0.1);
+                    }
                 } elsif $current lt '2019-05-01' {
                     trace "ignoring week before 2019-05-01", $token;
                     %cache<weeks>{$year}{$month}{$mday}<totals><reported> = 0;
